@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, IsEnum } from 'class-validator';
+import { IsNotEmpty, IsString, IsEnum, IsOptional } from 'class-validator';
 
 export enum DeliveryMethod {
     EMAIL_LINK = 'email_link',
@@ -9,9 +9,9 @@ export enum DeliveryMethod {
 export class ForgotPasswordDto {
     @IsString()
     @IsNotEmpty()
-    identifier: string;
+    identifier: string; // Email or Phone
 
+    @IsOptional()
     @IsEnum(DeliveryMethod)
-    @IsNotEmpty()
-    delivery: DeliveryMethod;
+    deliveryMethod?: DeliveryMethod;
 }

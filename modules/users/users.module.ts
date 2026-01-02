@@ -7,11 +7,14 @@ import { MediaService } from '../../services/media/media.service';
 import { UserFindRepository } from '../../repos/users/user-find.repository';
 import { UserCreateRepository } from '../../repos/users/user-create.repository';
 import { UserUpdateRepository } from '../../repos/users/user-update.repository';
+import { UserDeleteRepository } from '../../repos/users/user-delete.repository';
 import { AuthCodeRepository } from '../../repos/users/auth-code.repository';
+import { UserContactRepository } from '../../repos/users/user-contact.repository';
 import { VerificationRepository } from '../../repos/users/verification.repository';
 import { UserRegistrationController } from '../../controllers/users/user-registration.controller';
-import { UserProfileController } from '../../controllers/users/user-profile.controller';
-import { AvatarController } from '../../controllers/users/avatar.controller';
+// import { UserProfileController } from '../../controllers/users/user-profile.controller';
+// import { AvatarController } from '../../controllers/users/avatar.controller';
+import { UsersController } from '../../controllers/users/users.controller';
 
 @Module({
     imports: [PrismaModule, forwardRef(() => AuthModule)],
@@ -22,13 +25,16 @@ import { AvatarController } from '../../controllers/users/avatar.controller';
         UserFindRepository,
         UserCreateRepository,
         UserUpdateRepository,
+        UserDeleteRepository,
+        UserContactRepository,
         AuthCodeRepository,
         VerificationRepository
     ],
     controllers: [
         UserRegistrationController,
-        UserProfileController,
-        AvatarController
+        // UserProfileController, // Removed in favor of UsersController
+        // AvatarController, // Removed in favor of UsersController
+        UsersController
     ],
     exports: [
         UserManagementService,
@@ -36,6 +42,8 @@ import { AvatarController } from '../../controllers/users/avatar.controller';
         UserFindRepository,
         UserCreateRepository,
         UserUpdateRepository,
+        UserDeleteRepository,
+        UserContactRepository,
         AuthCodeRepository,
         VerificationRepository
     ],

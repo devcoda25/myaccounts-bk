@@ -1,14 +1,50 @@
-import { Controller, Get, Post, Query, Body, Res, Req, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Query, Body, Res, Req, BadRequestException, UnauthorizedException, Param, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '../../common/guards/auth.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { OidcService } from '../../services/auth/oidc.service';
 import { FastifyReply, FastifyRequest } from 'fastify';
+import { KeyManager } from '../../utils/keys';
+import { jwtVerify, importJWK } from 'jose';
 
-@Controller('oauth')
+@Controller('auth')
 export class OidcController {
     constructor(private oidcService: OidcService) { }
 
-    @Get('.well-known/jwks.json')
-    async jwks() {
-        return { keys: [] }; // Mock JWKS for now
+    @Get('client/:clientId')
+    async getClient(@Param('clientId') clientId: string) {
+        return this.oidcService.getClient(clientId);
+    }
+
+    @Post('consent')
+    @UseGuards(AuthGuard)
+    async grantConsent(@Body() body: { clientId: string, scopes: string[] }, @CurrentUser() user: any) {
+        return this.oidcService.grantConsent(user.sub || user.id, body.clientId, body.scopes);
+    }
+
+    @Get('userinfo')
+    async userinfo(@Req() req: FastifyRequest) {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            throw new UnauthorizedException('Missing or invalid Authorization header');
+        }
+
+        const token = authHeader.split(' ')[1];
+        try {
+            const publicJwk = await KeyManager.getPublicJWK();
+            const publicKey = await importJWK(publicJwk, 'ES256');
+            const { payload } = await jwtVerify(token, publicKey, { algorithms: ['ES256'] });
+
+            // Return standard OIDC claims
+            return {
+                sub: payload.sub,
+                email: payload.email,
+                name: payload.name || '',
+                picture: payload.picture || '',
+                email_verified: true // Assuming verified if they have a token in this system
+            };
+        } catch (e) {
+            throw new UnauthorizedException('Invalid token');
+        }
     }
 
     @Get('authorize')
@@ -22,10 +58,22 @@ export class OidcController {
         @Req() req: FastifyRequest,
         @Res() res: FastifyReply,
     ) {
-        // 1. Session Check (Simulated)
-        const sessionUserId = (req.headers['x-user-id'] as string);
-        if (!sessionUserId) {
-            return res.status(401).send({ error: 'login_required', message: 'Please login first (set x-user-id header)' });
+        // 1. Session Check (Cookie Based)
+        const token = req.cookies['access_token'];
+        if (!token) {
+            // Redirect to login if needed, or error
+            return res.status(401).send({ error: 'login_required', message: 'Please login first' });
+        }
+
+        let sessionUserId: string;
+        try {
+            // Verify the OIDC session (could be same as access token for now)
+            const publicJwk = await KeyManager.getPublicJWK();
+            const publicKey = await importJWK(publicJwk, 'ES256');
+            const { payload } = await jwtVerify(token, publicKey, { algorithms: ['ES256'] });
+            sessionUserId = payload.sub;
+        } catch (e) {
+            return res.status(401).send({ error: 'login_required', message: 'Invalid session' });
         }
 
         if (responseType !== 'code') {

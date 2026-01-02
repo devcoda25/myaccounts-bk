@@ -9,7 +9,7 @@ import { TransactionCreateRepository } from '../../repos/wallet/transaction-crea
 import { WalletCoreService } from '../../services/wallet/wallet-core.service';
 import { WalletTransactionService } from '../../services/wallet/wallet-transaction.service';
 import { WalletController } from '../../controllers/wallet/wallet.controller';
-import { WalletTransactionController } from '../../controllers/wallet/wallet-transaction.controller';
+// import { WalletTransactionController } from '../../controllers/wallet/wallet-transaction.controller';
 
 @Module({
     imports: [PrismaModule, forwardRef(() => AuthModule)],
@@ -22,7 +22,7 @@ import { WalletTransactionController } from '../../controllers/wallet/wallet-tra
         WalletCoreService,
         WalletTransactionService
     ],
-    controllers: [WalletController, WalletTransactionController],
+    controllers: [WalletController],
     exports: [WalletCoreService, WalletTransactionService], // Export if needed
 })
 export class WalletModule { }

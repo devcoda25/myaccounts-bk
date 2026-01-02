@@ -9,50 +9,83 @@ datasource db {
 
 // User Core
 model User {
-  id                String    @id @default(uuid())
-  email             String    @unique
-  firstName         String?
-  otherNames        String?
-  inviteCode        String?
-  phoneNumber       String?
-  passwordHash      String?
-  
-  // Profile
-  dob               DateTime?
-  country           String?
-  avatarUrl         String?
+  id           String  @id @default(uuid())
+  email        String  @unique
+  firstName    String?
+  otherNames   String?
+  inviteCode   String?
+  phoneNumber  String?
+  passwordHash String?
 
-  emailVerified     Boolean   @default(false)
-  phoneVerified     Boolean   @default(false)
-  twoFactorEnabled  Boolean   @default(false)
-  twoFactorSecret   String?   // Encrypted TOTP secret
-  
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  // Profile
+  dob         DateTime?
+  country     String?
+  avatarUrl   String?
+  role        String    @default("USER") // e.g., "SUPER_ADMIN", "ADMIN", "USER"
+  preferences Json? // User settings (theme, notifications, etc.)
+
+  emailVerified    Boolean @default(false)
+  phoneVerified    Boolean @default(false)
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret  String? // Encrypted TOTP secret
+  recoveryCodes    String[] // Hashed recovery codes
+
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  credentials       UserCredential[]
-  memberships       UserOrganization[]
-  sessions          Session[]
-  wallet            Wallet?
-  auditLogs         AuditLog[]
-  paymentMethods    PaymentMethod[]
-  kyc               Kycrecord?
-  consents          OAuthConsent[]
+  credentials    UserCredential[]
+  contacts       UserContact[]
+  memberships    UserOrganization[]
+  sessions       Session[]
+  wallet         Wallet?
+  auditLogs      AuditLog[]
+  paymentMethods PaymentMethod[]
+  kyc            Kycrecord?
+  consents       OAuthConsent[]
+
+  // Parental Control Relations
+  ownedHousehold       Household?        @relation("HouseholdOwner")
+  householdMemberships HouseholdMember[]
+  supervisedChildren   ChildProfile[]    @relation("GuardianToChildren")
+
+  // Developer Relations
+  apiKeys      ApiKey[]
+  ownedClients OAuthClient[] @relation("ClientOwner")
 
   @@map("users")
 }
 
+model UserContact {
+  id           String  @id @default(uuid())
+  userId       String
+  type         String // "EMAIL", "PHONE"
+  label        String // "Personal", "Work", "Other"
+  value        String
+  verified     Boolean @default(false)
+  isPrimary    Boolean @default(false)
+  capabilities Json? // { login: boolean, sms: boolean, whatsapp: boolean }
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  lastUsedAt DateTime?
+
+  @@map("user_contacts")
+}
+
 // Multi-Authentication Methods (Social, Enterprise, etc.)
 model UserCredential {
-  id           String   @id @default(uuid())
+  id           String  @id @default(uuid())
   userId       String
-  providerType String   // "password", "google", "saml"
-  providerId   String   // external ID or same as email for password
-  secretHash   String?  // password hash or token
-  metadata     Json?    // e.g., profile data from provider
+  providerType String // "password", "google", "saml"
+  providerId   String // external ID or same as email for password
+  secretHash   String? // password hash or token
+  metadata     Json? // e.g., profile data from provider
 
-  user         User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
   @@unique([providerType, providerId])
   @@map("user_credentials")
@@ -60,28 +93,98 @@ model UserCredential {
 
 // Organizations (Tenants)
 model Organization {
-  id          String   @id @default(uuid())
-  name        String
-  domain      String?  @unique // for formatting business emails or federation
-  type        String   // "enterprise", "provider", "individual"
-  metadata    Json?    // SAML config, branding, etc.
+  id       String  @id @default(uuid())
+  name     String
+  domain   String? @unique // for formatting business emails or federation
+  type     String // "enterprise", "provider", "individual"
+  country  String? // Added for Org Profile
+  metadata Json? // SAML config, branding, etc.
 
-  members     UserOrganization[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  // SSO Configuration
+  ssoEnabled Boolean  @default(false)
+  ssoDomains String[] // ["example.com", "corp.example.com"]
+
+  // Wallet Feature Flag
+  walletEnabled Boolean @default(false)
+
+  members   UserOrganization[]
+  wallets   Wallet[]
+  auditLogs AuditLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invites   OrgInvite[]
+  domains   OrgDomain[]
+  ssoConfig OrgSSO?
 
   @@map("organizations")
 }
 
+// Organization Invites
+model OrgInvite {
+  id        String   @id @default(uuid())
+  email     String
+  role      String
+  token     String   @unique
+  status    String   @default("PENDING") // PENDING, ACCEPTED, REVOKED
+  expiresAt DateTime
+  orgId     String
+
+  organization Organization @relation(fields: [orgId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("org_invites")
+}
+
+// Organization Verified Domains
+model OrgDomain {
+  id                String    @id @default(uuid())
+  domain            String
+  status            String    @default("PENDING") // PENDING, VERIFIED, FAILED
+  verificationToken String // DNS TXT value
+  verifiedAt        DateTime?
+  orgId             String
+
+  requireSso            Boolean @default(false)
+  allowPasswordFallback Boolean @default(true)
+  defaultRole           String  @default("Member")
+
+  organization Organization @relation(fields: [orgId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("org_domains")
+}
+
+// Enterprise SSO Configuration
+model OrgSSO {
+  id        String  @id @default(uuid())
+  orgId     String  @unique
+  provider  String // SAML, OIDC
+  isEnabled Boolean @default(true)
+  config    Json // issuer, certs, entryPoint, etc.
+
+  organization Organization @relation(fields: [orgId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("org_sso")
+}
+
 // Membership (Users <-> Orgs)
 model UserOrganization {
-  userId      String
-  orgId       String
-  role        String   // "admin", "member", "owner" (can be normalized to role table later)
-  joinedAt    DateTime @default(now())
+  userId   String
+  orgId    String
+  role     String // "admin", "member", "owner" (can be normalized to role table later)
+  status   String   @default("ACTIVE") // "PENDING", "ACTIVE", "SUSPENDED"
+  joinedAt DateTime @default(now())
 
-  user        User         @relation(fields: [userId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
   organization Organization @relation(fields: [orgId], references: [id])
 
   @@id([userId, orgId])
@@ -90,64 +193,86 @@ model UserOrganization {
 
 // OIDC Clients (EVzone Services)
 model OAuthClient {
-  id                String   @id @default(uuid()) // client_id
-  clientId          String   @unique
-  clientSecretHash  String?  // for confidential clients
-  name              String
-  redirectUris      String[] 
-  grantTypes        String[] // "authorization_code", "refresh_token"
-  isPublic          Boolean  @default(false)
-  isFirstParty      Boolean  @default(true) // skip consent if true
-  
-  sessions          Session[]
-  consents          OAuthConsent[]
+  id               String   @id @default(uuid()) // client_id
+  clientId         String   @unique
+  clientSecretHash String? // for confidential clients
+  name             String
+  redirectUris     String[]
+  grantTypes       String[] // "authorization_code", "refresh_token"
+  isPublic         Boolean  @default(false)
+  isFirstParty     Boolean  @default(true) // skip consent if true
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  sessions Session[]
+  consents OAuthConsent[]
+
+  ownerId String?
+  owner   User?   @relation("ClientOwner", fields: [ownerId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("oauth_clients")
 }
 
+model ApiKey {
+  id         String    @id @default(uuid())
+  userId     String
+  name       String
+  keyHash    String    @unique
+  prefix     String
+  scopes     String[]
+  status     String    @default("Active") // "Active", "Revoked"
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
+}
+
 // Sessions & Refresh Tokens
 model Session {
-  id                String   @id @default(uuid())
-  userId            String
-  clientId          String?
-  refreshTokenHash  String?  @unique
-  expiresAt         DateTime
-  deviceInfo        Json?    // IP, UserAgent
-  
-  user              User        @relation(fields: [userId], references: [id])
-  client            OAuthClient? @relation(fields: [clientId], references: [id])
+  id               String   @id @default(uuid())
+  userId           String
+  clientId         String?
+  refreshTokenHash String?  @unique
+  expiresAt        DateTime
+  deviceInfo       Json? // IP, UserAgent
+  passkeyChallenge String? // For WebAuthn challenge verification (stateful)
 
-  createdAt         DateTime @default(now())
-  lastUsedAt        DateTime @default(now())
+
+  user   User         @relation(fields: [userId], references: [id])
+  client OAuthClient? @relation(fields: [clientId], references: [id])
+
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
 
   @@map("sessions")
 }
 
 model AuthCode {
-  code        String   @id @unique
-  clientId    String
-  userId      String
-  redirectUri String
-  codeChallenge String
-  codeChallengeMethod String @default("S256")
-  expiresAt   DateTime
-  used        Boolean  @default(false)
+  code                String   @id @unique
+  clientId            String
+  userId              String
+  redirectUri         String
+  codeChallenge       String
+  codeChallengeMethod String   @default("S256")
+  expiresAt           DateTime
+  used                Boolean  @default(false)
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@map("auth_codes")
 }
 
 model VerificationRequest {
-  id          String   @id @default(uuid())
-  identifier  String   // email or phone
-  token       String   // OTP or hash
-  type        String   // "EMAIL_VERIFY", "PASSWORD_RESET"
-  expiresAt   DateTime
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  identifier String // email or phone
+  token      String // OTP or hash
+  type       String // "EMAIL_VERIFY", "PASSWORD_RESET"
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
 
   @@unique([identifier, type, token])
   @@map("verification_requests")
@@ -158,56 +283,59 @@ model VerificationRequest {
 // -----------------------------------------------------------------------------
 
 model Wallet {
-  id          String   @id @default(uuid())
-  userId      String   @unique // One wallet per user for MVP
-  currency    String   @default("USD")
-  balance     Decimal  @default(0.00) @db.Decimal(15, 2)
-  status      String   @default("active") // active, frozen
-  
-  user        User     @relation(fields: [userId], references: [id])
+  id           String  @id @default(uuid())
+  userId       String? @unique // Optional if org wallet, but usually unique if present
+  orgId        String? // Optional for User Wallets
+  currency     String  @default("USD")
+  balance      Decimal @default(0.00) @db.Decimal(15, 2)
+  monthlyLimit Decimal @default(0.00) @db.Decimal(15, 2)
+  status       String  @default("active") // active, frozen
+
+  user         User?         @relation(fields: [userId], references: [id])
+  organization Organization? @relation(fields: [orgId], references: [id])
   transactions Transaction[]
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("wallets")
 }
 
 model Transaction {
-  id            String   @id @default(uuid())
-  walletId      String
-  amount        Decimal  @db.Decimal(15, 2)
-  currency      String
-  type          String   // "deposit", "withdrawal", "payment", "refund"
-  status        String   // "pending", "completed", "failed"
-  referenceId   String?  // External Order ID or Payment Gateway ID
-  description   String?
-  
-  wallet        Wallet   @relation(fields: [walletId], references: [id])
+  id          String  @id @default(uuid())
+  walletId    String
+  amount      Decimal @db.Decimal(15, 2)
+  currency    String
+  type        String // "deposit", "withdrawal", "payment", "refund"
+  status      String // "pending", "completed", "failed"
+  referenceId String? // External Order ID or Payment Gateway ID
+  description String?
+
+  wallet Wallet @relation(fields: [walletId], references: [id])
 
   // New fields for frontend alignment
-  providerRef   String?
-  counterparty  String?
-  channel       String?  @default("Wallet") // Wallet, Charging, Marketplace, etc.
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt // Added updatedAt
+  providerRef  String?
+  counterparty String?
+  channel      String? @default("Wallet") // Wallet, Charging, Marketplace, etc.
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt // Added updatedAt
 
   @@map("wallet_transactions")
 }
 
 model PaymentMethod {
-  id          String   @id @default(uuid())
-  userId      String
-  type        String   // "card", "mobile_money"
-  provider    String   // "stripe", "mtn"
-  token       String   // Gateway token (PCI safe)
-  details     Json?    // last4, brand, etc.
-  isDefault   Boolean  @default(false)
+  id        String  @id @default(uuid())
+  userId    String
+  type      String // "card", "mobile_money"
+  provider  String // "stripe", "mtn"
+  token     String // Gateway token (PCI safe)
+  details   Json? // last4, brand, etc.
+  isDefault Boolean @default(false)
 
-  user        User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@map("payment_methods")
 }
@@ -217,44 +345,206 @@ model PaymentMethod {
 // -----------------------------------------------------------------------------
 
 model Kycrecord {
-  id             String   @id @default(uuid())
-  userId         String   @unique
-  status         String   // "pending", "verified", "rejected"
-  level          Int      @default(1)
-  documentsRegex Json?    // References to stored docs
-  notes          String?
-  
-  user           User     @relation(fields: [userId], references: [id])
+  id        String  @id @default(uuid())
+  userId    String  @unique
+  status    String // "Pending", "Verified", "Rejected", "In Review"
+  level     Int     @default(1)
+  documents Json? // URLs for idFront, idBack, selfie
+  docType   String? // "National ID", "Passport", etc.
+  riskScore String  @default("Low")
+  notes     String?
 
-  submittedAt    DateTime @default(now())
-  verifiedAt     DateTime?
+  user User @relation(fields: [userId], references: [id])
+
+  submittedAt DateTime  @default(now())
+  verifiedAt  DateTime?
 
   @@map("kyc_records")
 }
 
 model OAuthConsent {
-  userId      String
-  clientId    String
-  scopes      String[]
-  grantedAt   DateTime @default(now())
+  userId    String
+  clientId  String
+  scopes    String[]
+  grantedAt DateTime @default(now())
 
-  user        User        @relation(fields: [userId], references: [id])
-  client      OAuthClient @relation(fields: [clientId], references: [id])
+  user   User        @relation(fields: [userId], references: [id])
+  client OAuthClient @relation(fields: [clientId], references: [id])
 
   @@id([userId, clientId])
   @@map("oauth_consents")
 }
 
 model AuditLog {
-  id        String   @id @default(uuid())
+  id        String  @id @default(uuid())
   userId    String?
-  action    String   // "login", "password_change", "wallet_deposit"
+  orgId     String?
+  action    String // "login", "password_change", "wallet_deposit"
   details   Json?
   ipAddress String?
-  
-  user      User?    @relation(fields: [userId], references: [id])
+
+  // Enhanced Audit Details
+  severity  String  @default("info") // "info", "warning", "critical"
+  actorName String? // Snapshot of actor name (e.g. "Admin", "System", "Ronald")
+
+  user         User?         @relation(fields: [userId], references: [id])
+  organization Organization? @relation(fields: [orgId], references: [id])
 
   createdAt DateTime @default(now())
 
   @@map("audit_logs")
+}
+
+// -----------------------------------------------------------------------------
+// Parental Control Module
+// -----------------------------------------------------------------------------
+
+model ChildProfile {
+  id                   String    @id @default(uuid())
+  parentId             String
+  name                 String
+  dob                  DateTime
+  school               String?
+  grade                String?
+  country              String?
+  status               String    @default("Active") // "Active", "Paused"
+  guardianVerified     Boolean   @default(false)
+  consentVersion       String?
+  consentAt            DateTime?
+  template             String    @default("Custom")
+  guardianRelationship String    @default("Parent")
+
+  // Wallet / Spending
+  currency                       String   @default("UGX")
+  dailyLimit                     Decimal  @default(0) @db.Decimal(15, 2)
+  weeklyLimit                    Decimal  @default(0) @db.Decimal(15, 2)
+  requireApprovalAbove           Decimal  @default(0) @db.Decimal(15, 2)
+  requireApprovalForAllPurchases Boolean  @default(true)
+  allowWithdrawals               Boolean  @default(false)
+  allowPeerTransfers             Boolean  @default(false)
+  allowSavedCards                Boolean  @default(false)
+  categoryBlocks                 String[]
+  sellerWhitelist                String[]
+
+  // Communication
+  allowTeacherMentorChat Boolean @default(true)
+  allowAttachments       Boolean @default(false)
+  allowVoiceCalls        Boolean @default(false)
+  allowUnknownContacts   Boolean @default(false)
+
+  // Notifications
+  guardianChannels Json? // { Email: boolean, SMS: boolean, WhatsApp: boolean }
+
+  // Screen time / Schedule
+  preset           String  @default("Custom")
+  bedtimeLock      Boolean @default(true)
+  dailyWindowStart String? // HH:mm
+  dailyWindowEnd   String? // HH:mm
+
+  // Curfew
+  curfewEnabled     Boolean @default(false)
+  curfewStart       String?
+  curfewEnd         String?
+  curfewHardLock    Boolean @default(true)
+  curfewAllowSchool Boolean @default(true)
+
+  // Geofences
+  geofencesEnabled Boolean @default(false)
+  geofencesAlerts  Boolean @default(true)
+  homeAddress      String?
+  homeRadius       Float?
+  schoolAddress    String?
+  schoolRadius     Float?
+
+  // Apps
+  apps Json? // Record<AppKey, boolean>
+
+  // Charging
+  chargingEnabled     Boolean  @default(false)
+  dailyKwhCap         Float?
+  sessionKwhCap       Float?
+  reqApprovalAboveKwh Float?
+  allowedStations     String[]
+
+  // Privacy
+  locationSharing Boolean @default(false)
+  publicProfile   Boolean @default(false)
+  marketingOptOut Boolean @default(true)
+
+  parent     User               @relation("GuardianToChildren", fields: [parentId], references: [id])
+  approvals  ParentalApproval[]
+  activities ParentalActivity[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("parental_child_profiles")
+}
+
+model Household {
+  id           String  @id @default(uuid())
+  ownerId      String  @unique
+  name         String?
+  approvalMode String  @default("Any guardian") // "Any guardian", "Both guardians"
+
+  owner   User              @relation("HouseholdOwner", fields: [ownerId], references: [id])
+  members HouseholdMember[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("parental_households")
+}
+
+model HouseholdMember {
+  id          String  @id @default(uuid())
+  householdId String
+  userId      String? // If they are already a user
+  name        String
+  role        String // "Guardian", "Co-guardian", "Emergency contact"
+  email       String?
+  phone       String?
+  status      String  @default("Active") // "Active", "Pending"
+  channels    Json? // Notification preferences
+  isPrimary   Boolean @default(false)
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user      User?     @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("parental_household_members")
+}
+
+model ParentalApproval {
+  id       String   @id @default(uuid())
+  childId  String
+  title    String
+  amount   Decimal? @db.Decimal(15, 2)
+  currency String?
+  app      String
+  vendor   String?
+  kind     String // "Purchase", "Ride", "Trip", "Service Booking"
+  reason   String?
+  details  String?
+  status   String   @default("Pending") // "Pending", "Approved", "Declined"
+  at       DateTime @default(now())
+
+  child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@map("parental_approvals")
+}
+
+model ParentalActivity {
+  id       String   @id @default(uuid())
+  childId  String
+  kind     String
+  summary  String
+  severity String   @default("info")
+  at       DateTime @default(now())
+
+  child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
+
+  @@map("parental_activities")
 }

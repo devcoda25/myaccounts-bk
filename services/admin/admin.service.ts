@@ -1,0 +1,176 @@
+import { Injectable } from '@nestjs/common';
+import { AdminRepository } from '../../repos/admin/admin.repository';
+
+@Injectable()
+export class AdminService {
+    constructor(private repo: AdminRepository) { }
+
+    async getDashboardStats() {
+        const counts = await this.repo.getCounts();
+        const balance = await this.repo.getTotalWalletBalance();
+
+        return {
+            usersCount: counts.users,
+            orgsCount: counts.orgs,
+            sessionsCount: counts.sessions,
+            balance: Number(balance)
+        };
+    }
+
+    async getAuditLogs(query: { skip?: number; take?: number; query?: string; outcome?: string; risk?: string }) {
+        const { logs, total } = await this.repo.getAuditLogs(
+            Number(query.skip) || 0,
+            Number(query.take) || 20,
+            query.query,
+            query.outcome,
+            query.risk
+        );
+
+        const mapped = logs.map(l => {
+            const riskMap: any = { 'critical': 'High', 'warning': 'Medium', 'info': 'Low' };
+            const details = l.details as any;
+
+            return {
+                id: l.id,
+                at: l.createdAt.getTime(),
+                actor: l.actorName || l.user?.email || 'System',
+                role: l.user?.role || 'N/A',
+                action: l.action,
+                target: details?.target || 'N/A',
+                ip: l.ipAddress || '0.0.0.0',
+                outcome: (details?.outcome as any) || 'Success',
+                risk: riskMap[l.severity] || 'Low' as any,
+                requestId: details?.requestId || 'N/A',
+                meta: details || {}
+            };
+        });
+
+        return { logs: mapped, total };
+    }
+
+    async getOrgs(query: { skip?: number; take?: number; query?: string; status?: string }) {
+        console.log('AdminService.getOrgs called with:', query);
+        const { orgs, total } = await this.repo.getOrgs(
+            Number(query.skip) || 0,
+            Number(query.take) || 20,
+            query.query,
+            query.status
+        );
+        console.log(`Repo returned ${orgs.length} orgs, total: ${total}`);
+
+        const mapped = orgs.map(o => {
+            const ownerMember = o.members[0]; // Assuming first owner
+            const ownerName = ownerMember
+                ? `${ownerMember.user.firstName || ''} ${ownerMember.user.otherNames || ''}`.trim()
+                : 'Unknown';
+
+            return {
+                id: o.id,
+                name: o.name,
+                domain: o.domain || '',
+                owner: ownerName || ownerMember?.user.email || 'Unknown',
+                status: 'Active', // Mocked
+                plan: 'Free',     // Mocked
+                members: o._count.members,
+                createdAt: o.createdAt.getTime()
+            };
+        });
+
+        return { orgs: mapped, total };
+    }
+
+    async getOrg(id: string) {
+        const o = await this.repo.getOrgById(id);
+        if (!o) return null;
+
+        const ownerMember = o.members.find(m => m.role === 'Owner') || o.members[0];
+
+        return {
+            id: o.id,
+            name: o.name,
+            domain: o.domain || '',
+            owner: ownerMember?.user.firstName ? `${ownerMember.user.firstName} ${ownerMember.user.otherNames || ''}`.trim() : (ownerMember?.user.email || 'Unknown'),
+            ownerEmail: ownerMember?.user.email || '',
+            status: 'Active', // Mocked
+            plan: 'Enterprise', // Mocked based on type? o.type is 'enterprise'
+            members: o._count.members,
+            createdAt: o.createdAt.getTime(),
+            billingEmail: 'billing@' + (o.domain || 'example.com'), // Mocked for now
+            taxId: 'Pending', // Mocked
+            ssoEnabled: o.ssoEnabled,
+            ssoDomains: o.ssoDomains,
+            memberList: o.members.map(m => ({
+                id: m.userId,
+                name: m.user.firstName ? `${m.user.firstName} ${m.user.otherNames || ''}`.trim() : 'Unknown',
+                email: m.user.email,
+                role: m.role,
+                status: m.user.emailVerified ? 'Active' : 'Pending',
+                joinedAt: m.joinedAt.getTime(),
+                avatarUrl: m.user.avatarUrl
+            }))
+        };
+    }
+
+    async getWallets(query: { skip?: number; take?: number; query?: string; status?: string }) {
+        const { wallets, total } = await this.repo.getWallets(
+            Number(query.skip) || 0,
+            Number(query.take) || 20,
+            query.query,
+            query.status
+        );
+
+        const mapped = wallets.map(w => ({
+            id: w.id,
+            ownerName: w.user ? `${w.user.firstName || ''} ${w.user.otherNames || ''}`.trim() || 'Unknown' : 'System',
+            ownerEmail: w.user?.email || 'N/A',
+            balance: Number(w.balance),
+            currency: w.currency,
+            status: w.status === 'active' ? 'Active' : (w.status === 'frozen' ? 'Frozen' : 'Suspended'),
+            lastTx: w.transactions[0]?.createdAt.getTime() || w.updatedAt.getTime(),
+            riskScore: w.user?.kyc?.riskScore || 'Low'
+        }));
+
+        return { wallets: mapped, total };
+    }
+
+    async getWalletStats() {
+        return this.repo.getDetailedWalletStats();
+    }
+
+    async updateWalletStatus(id: string, action: 'FREEZE' | 'UNFREEZE') {
+        const nextStatus = action === 'FREEZE' ? 'frozen' : 'active';
+        return this.repo.updateWalletStatus(id, nextStatus);
+    }
+
+    async getTransactions(query: { skip?: number; take?: number; query?: string; type?: string; status?: string }) {
+        const { txs, total } = await this.repo.getTransactions(
+            Number(query.skip) || 0,
+            Number(query.take) || 20,
+            query.query,
+            query.type,
+            query.status
+        );
+
+        const mapped = txs.map(t => {
+            const ownerName = t.wallet.user
+                ? `${t.wallet.user.firstName || ''} ${t.wallet.user.otherNames || ''}`.trim() || 'Unknown'
+                : (t.wallet.organization?.name || 'System');
+
+            return {
+                id: t.id,
+                user: {
+                    name: ownerName,
+                    email: t.wallet.user?.email || 'N/A'
+                },
+                type: t.type.charAt(0).toUpperCase() + t.type.slice(1) as any,
+                amount: Number(t.amount),
+                currency: t.currency as any,
+                status: t.status === 'completed' ? 'Success' : (t.status === 'failed' ? 'Failed' : 'Pending'),
+                date: t.createdAt.getTime(),
+                description: t.description || ''
+            };
+        });
+
+        return { txs: mapped, total };
+    }
+}

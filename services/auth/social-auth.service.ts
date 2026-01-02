@@ -1,8 +1,13 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Inject, forwardRef } from '@nestjs/common';
 import { OAuth2Client } from 'google-auth-library';
 import { UserFindRepository } from '../../repos/users/user-find.repository';
 import { UserCreateRepository } from '../../repos/users/user-create.repository';
+import { UserCredentialRepository } from '../../repos/users/user-credential.repository';
+import { LoginService } from './login.service';
 import * as jose from 'jose';
+import { KeyManager } from '../../utils/keys';
+
+import appleSignin from 'apple-signin-auth';
 
 @Injectable()
 export class SocialAuthService {
@@ -10,7 +15,9 @@ export class SocialAuthService {
 
     constructor(
         private userFindRepo: UserFindRepository,
-        private userCreateRepo: UserCreateRepository
+        private userCreateRepo: UserCreateRepository,
+        private userCredentialRepo: UserCredentialRepository,
+        @Inject(forwardRef(() => LoginService)) private loginService: LoginService
     ) {
         // CLIENT_ID should be in env, but using a placeholder or env if available
         this.googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -41,15 +48,29 @@ export class SocialAuthService {
         }
     }
 
-    async socialLogin(provider: 'google' | 'apple', token: string) {
+    async socialLogin(provider: 'google' | 'apple', token: string, deviceInfo: any = {}) {
         let profile;
 
         if (provider === 'google') {
             profile = await this.verifyGoogleToken(token);
         } else if (provider === 'apple') {
-            // Validating Apple Sign In (Mock for now or needs apple-signin-auth)
-            // JWT decoding logic usually
-            profile = { email: 'apple_user@example.com', sub: 'apple_123', firstName: 'Apple', lastName: 'User' };
+            try {
+                // Verify Apple ID Token
+                // clientId is usually the Bundle ID for iOS or Service ID for Web
+                const appleIdTokenClaims = await appleSignin.verifyIdToken(token, {
+                    audience: process.env.APPLE_CLIENT_ID, // client id - must accept array if multiple apps
+                    ignoreExpiration: false, // default is false
+                });
+
+                profile = {
+                    email: appleIdTokenClaims.email,
+                    sub: appleIdTokenClaims.sub,
+                    firstName: '', // Apple only returns name on first sign in via scope, but often not in token claims directly in same way
+                    lastName: ''
+                };
+            } catch (err) {
+                throw new UnauthorizedException('Apple Token Verification Failed: ' + err.message);
+            }
         }
 
         if (!profile || !profile.email) throw new UnauthorizedException('No email found in token');
@@ -67,22 +88,31 @@ export class SocialAuthService {
             });
         }
 
-        // Issue Session Tokens (Similar to LoginService)
-        const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'secret');
-        const accessToken = await new jose.SignJWT({ sub: user.id, email: user.email })
-            .setProtectedHeader({ alg: 'HS256' })
-            .setIssuedAt()
-            .setExpirationTime('1h')
-            .sign(secret);
+        // Link/Update Social Credential
+        await this.userCredentialRepo.upsert(provider, profile.sub, user.id, {
+            email: profile.email,
+            firstName: profile.firstName,
+            lastName: profile.lastName,
+            picture: profile.picture
+        });
+
+        // Issue Session Tokens (Unified via LoginService)
+        // Pass deviceInfo to create persistent session with metadata
+        const tokens = await this.loginService.generateSessionToken({
+            id: user.id,
+            email: user.email,
+            role: (user as any).role // Type assertion until Prisma types update
+        }, deviceInfo);
 
         return {
-            access_token: accessToken,
+            access_token: tokens.access_token,
             user: {
                 id: user.id,
                 email: user.email,
                 firstName: user.firstName,
                 otherNames: user.otherNames,
-                avatarUrl: user.avatarUrl
+                avatarUrl: user.avatarUrl,
+                role: (user as any).role
             }
         };
     }

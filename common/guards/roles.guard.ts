@@ -17,9 +17,7 @@ export class RolesGuard implements CanActivate {
         const { user } = context.switchToHttp().getRequest();
         if (!user) return false;
 
-        // Assuming user structure has 'roles' or 'memberships'
-        // For MVP/OIDC, mapped from UserOrganization or claim
-        // Simple check:
-        return requiredRoles.some((role) => user.roles?.includes(role));
+        // Check singular 'role' from JWT payload
+        return requiredRoles.includes(user.role);
     }
 }

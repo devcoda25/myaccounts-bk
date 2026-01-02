@@ -13,6 +13,7 @@ export class UserFindRepository {
     }
 
     async findOneByIdentifier(identifier: string): Promise<User | null> {
+        if (!identifier) return null;
         if (identifier.includes('@')) {
             return this.prisma.user.findUnique({ where: { email: identifier } });
         }
@@ -26,9 +27,57 @@ export class UserFindRepository {
         });
     }
 
-    async findOneById(id: string): Promise<User | null> {
+    async findOneById(id: string, options: { includeKyc?: boolean; includeContacts?: boolean; includeCredentials?: boolean } = {}): Promise<User | null> {
         return this.prisma.user.findUnique({
             where: { id },
+            include: {
+                kyc: options.includeKyc,
+                contacts: options.includeContacts,
+                credentials: options.includeCredentials
+            }
         });
+    }
+
+    async findAll(params: {
+        skip?: number;
+        take?: number;
+        query?: string;
+        role?: string;
+        status?: string; // 'Active' or 'Disabled' mapped to emailVerified
+    }): Promise<{ users: User[]; total: number }> {
+        const { skip, take, query, role, status } = params;
+
+        const where: any = {};
+
+        if (query) {
+            where.OR = [
+                { email: { contains: query, mode: 'insensitive' } },
+                { firstName: { contains: query, mode: 'insensitive' } },
+                { otherNames: { contains: query, mode: 'insensitive' } },
+                { phoneNumber: { contains: query, mode: 'insensitive' } },
+            ];
+        }
+
+        if (role && role !== 'All') {
+            where.role = role;
+        }
+
+        if (status && status !== 'All') {
+            if (status === 'Active') where.emailVerified = true;
+            if (status === 'Disabled') where.emailVerified = false;
+            // 'Locked' is handled by frontend as disabled or specific flag, but backend only sees emailVerified for now
+        }
+
+        const [users, total] = await Promise.all([
+            this.prisma.user.findMany({
+                where,
+                skip,
+                take,
+                orderBy: { createdAt: 'desc' },
+            }),
+            this.prisma.user.count({ where }),
+        ]);
+
+        return { users, total };
     }
 }

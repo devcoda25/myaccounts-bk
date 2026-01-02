@@ -26,4 +26,11 @@ export class UserUpdateRepository {
             data: { emailVerified: true }
         });
     }
+
+    async markPhoneVerified(userId: string) {
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: { phoneVerified: true }
+        });
+    }
 }

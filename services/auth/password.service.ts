@@ -4,12 +4,15 @@ import { UserFindRepository } from '../../repos/users/user-find.repository';
 import { VerificationService } from './verification.service';
 import * as argon2 from 'argon2';
 
+import { SessionRepository } from '../../repos/auth/session.repository';
+
 @Injectable()
 export class PasswordService {
     constructor(
         private userUpdateRepo: UserUpdateRepository,
         private userFindRepo: UserFindRepository,
-        private verificationService: VerificationService
+        private verificationService: VerificationService,
+        private sessionRepo: SessionRepository
     ) { }
 
     async resetPassword(identifier: string, code: string, newPass: string) {
@@ -26,7 +29,7 @@ export class PasswordService {
         return { success: true };
     }
 
-    async changePassword(userId: string, oldPass: string, newPass: string) {
+    async changePassword(userId: string, oldPass: string, newPass: string, logoutOthers: boolean = false, currentSessionId?: string) {
         const user = await this.userFindRepo.findOneById(userId);
         if (!user || !user.passwordHash) throw new UnauthorizedException('User not found');
 
@@ -35,6 +38,15 @@ export class PasswordService {
 
         const hash = await argon2.hash(newPass);
         await this.userUpdateRepo.updatePassword(userId, hash);
+
+        if (logoutOthers && currentSessionId) {
+            const sessions = await this.sessionRepo.findActiveSessionsByUser(userId);
+            for (const s of sessions) {
+                if (s.id !== currentSessionId) {
+                    await this.sessionRepo.deleteSession(s.id);
+                }
+            }
+        }
 
         return { success: true };
     }

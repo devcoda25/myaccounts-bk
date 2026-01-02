@@ -8,6 +8,6 @@ export class ForgotPasswordController {
 
     @Post('forgot-password')
     async forgotPassword(@Body() body: ForgotPasswordDto) {
-        return this.verificationService.requestVerification(body.identifier, 'PASSWORD_RESET');
+        return this.verificationService.requestVerification(body.identifier, 'PASSWORD_RESET', body.deliveryMethod);
     }
 }

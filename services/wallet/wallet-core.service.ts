@@ -1,12 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { WalletFindRepository } from '../../repos/wallet/wallet-find.repository';
 import { WalletCreateRepository } from '../../repos/wallet/wallet-create.repository';
+import { TransactionFindRepository } from '../../repos/wallet/transaction-find.repository';
 
 @Injectable()
 export class WalletCoreService {
     constructor(
         private walletFindRepo: WalletFindRepository,
-        private walletCreateRepo: WalletCreateRepository
+        private walletCreateRepo: WalletCreateRepository,
+        private txFindRepo: TransactionFindRepository
     ) { }
 
     async getWallet(userId: string) {
@@ -24,5 +26,16 @@ export class WalletCoreService {
     async getStats(userId: string) {
         const wallet = await this.getWallet(userId);
         return this.walletFindRepo.getStats(wallet.id);
+    }
+
+    async getTransactions(userId: string, query: any) {
+        const wallet = await this.getWallet(userId);
+        return this.txFindRepo.findTransactions(wallet.id, {
+            take: query.take ? Number(query.take) : 5,
+            skip: query.skip ? Number(query.skip) : 0,
+            type: query.type,
+            status: query.status,
+            search: query.search
+        });
     }
 }
