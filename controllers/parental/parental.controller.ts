@@ -3,6 +3,8 @@ import { ParentalService } from '../../services/parental/parental.service';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { AuthRequest } from '../../common/interfaces/auth-request.interface';
+import { LinkChildDto, UpdateHouseholdModeDto, DecideApprovalDto, CreateChildDto, UpdateChildDto } from '../../common/dto/parental/parental.dto';
 
 @Controller('parental')
 @UseGuards(AuthGuard, RolesGuard)
@@ -11,40 +13,40 @@ export class ParentalController {
 
     // --- Children ---
     @Get('children')
-    async getChildren(@CurrentUser() user: any) {
-        return this.parentalService.getChildren(user.sub || user.id);
+    async getChildren(@CurrentUser() user: AuthRequest['user']) {
+        return this.parentalService.getChildren(user.sub || (user as any).id);
     }
 
     @Post('children/create')
-    async createChild(@CurrentUser() user: any, @Body() body: any) {
-        return this.parentalService.createChild(user.sub || user.id, body);
+    async createChild(@CurrentUser() user: AuthRequest['user'], @Body() body: CreateChildDto) {
+        return this.parentalService.createChild(user.sub || (user as any).id, body);
     }
 
     @Post('children/link')
-    async linkChild(@CurrentUser() user: any, @Body('code') code: string) {
-        return this.parentalService.linkChild(user.sub || user.id, code);
+    async linkChild(@CurrentUser() user: AuthRequest['user'], @Body() body: LinkChildDto) {
+        return this.parentalService.linkChild(user.sub || (user as any).id, body.code);
     }
 
     @Patch('children/:id')
-    async updateChild(@Param('id') id: string, @Body() body: any) {
+    async updateChild(@Param('id') id: string, @Body() body: UpdateChildDto) {
         const { patch, audit } = body;
         return this.parentalService.updateChild(id, patch, audit);
     }
 
     // --- Household ---
     @Get('household')
-    async getHousehold(@CurrentUser() user: any) {
-        return this.parentalService.getHousehold(user.sub || user.id);
+    async getHousehold(@CurrentUser() user: AuthRequest['user']) {
+        return this.parentalService.getHousehold(user.sub || (user as any).id);
     }
 
     @Patch('household/mode')
-    async updateHouseholdMode(@CurrentUser() user: any, @Body('mode') mode: string) {
-        return this.parentalService.updateHouseholdMode(user.sub || user.id, mode);
+    async updateHouseholdMode(@CurrentUser() user: AuthRequest['user'], @Body() body: UpdateHouseholdModeDto) {
+        return this.parentalService.updateHouseholdMode(user.sub || (user as any).id, body.mode);
     }
 
     @Post('household/members')
-    async inviteMember(@CurrentUser() user: any, @Body() body: any) {
-        return this.parentalService.inviteMember(user.sub || user.id, body);
+    async inviteMember(@CurrentUser() user: AuthRequest['user'], @Body() body: any) {
+        return this.parentalService.inviteMember(user.sub || (user as any).id, body);
     }
 
     @Delete('household/members/:id')
@@ -54,18 +56,18 @@ export class ParentalController {
 
     // --- Approvals ---
     @Get('approvals')
-    async getApprovals(@CurrentUser() user: any) {
-        return this.parentalService.getApprovals(user.sub || user.id);
+    async getApprovals(@CurrentUser() user: AuthRequest['user']) {
+        return this.parentalService.getApprovals(user.sub || (user as any).id);
     }
 
     @Post('approvals/:id/decide')
-    async decideApproval(@Param('id') id: string, @Body('approve') approve: boolean) {
-        return this.parentalService.decideApproval(id, approve);
+    async decideApproval(@Param('id') id: string, @Body() body: DecideApprovalDto) {
+        return this.parentalService.decideApproval(id, body.approve);
     }
 
     // --- Activity ---
     @Get('activity')
-    async getActivity(@CurrentUser() user: any) {
-        return this.parentalService.getActivity(user.sub || user.id);
+    async getActivity(@CurrentUser() user: AuthRequest['user']) {
+        return this.parentalService.getActivity(user.sub || (user as any).id);
     }
 }

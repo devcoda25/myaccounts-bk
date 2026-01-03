@@ -5,6 +5,8 @@ import { TransactionCreateRepository } from '../../repos/wallet/transaction-crea
 import { WalletUpdateRepository } from '../../repos/wallet/wallet-update.repository';
 import { WalletCoreService } from './wallet-core.service';
 
+import { CreateTransactionDto, TransactionQueryDto } from '../../common/dto/wallet/transaction.dto';
+
 @Injectable()
 export class WalletTransactionService {
     constructor(
@@ -14,7 +16,7 @@ export class WalletTransactionService {
         private walletCore: WalletCoreService
     ) { }
 
-    async getHistory(userId: string, query: any) {
+    async getHistory(userId: string, query: TransactionQueryDto) {
         const wallet = await this.walletCore.getWallet(userId);
 
         return this.txFindRepo.findTransactions(wallet.id, {
@@ -28,7 +30,7 @@ export class WalletTransactionService {
         });
     }
 
-    async createTransaction(userId: string, data: any) {
+    async createTransaction(userId: string, data: CreateTransactionDto) {
         const wallet = await this.walletCore.getWallet(userId);
 
         return this.txCreateRepo.createTransaction({

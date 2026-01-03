@@ -3,6 +3,8 @@ import { WalletFindRepository } from '../../repos/wallet/wallet-find.repository'
 import { WalletCreateRepository } from '../../repos/wallet/wallet-create.repository';
 import { TransactionFindRepository } from '../../repos/wallet/transaction-find.repository';
 
+import { TransactionQueryDto } from '../../common/dto/wallet/transaction.dto';
+
 @Injectable()
 export class WalletCoreService {
     constructor(
@@ -28,7 +30,7 @@ export class WalletCoreService {
         return this.walletFindRepo.getStats(wallet.id);
     }
 
-    async getTransactions(userId: string, query: any) {
+    async getTransactions(userId: string, query: TransactionQueryDto) {
         const wallet = await this.getWallet(userId);
         return this.txFindRepo.findTransactions(wallet.id, {
             take: query.take ? Number(query.take) : 5,

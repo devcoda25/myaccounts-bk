@@ -56,4 +56,14 @@ export class SessionRepository {
             data: { passkeyChallenge: challenge }
         });
     }
+
+    async updateRefreshToken(id: string, hash: string) {
+        return this.prisma.session.update({
+            where: { id },
+            data: {
+                refreshTokenHash: hash,
+                lastUsedAt: new Date()
+            }
+        });
+    }
 }

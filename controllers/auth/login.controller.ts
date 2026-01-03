@@ -1,14 +1,16 @@
-import { Controller, Post, Body, UnauthorizedException, Res, Req } from '@nestjs/common';
+import { Controller, Post, Body, UnauthorizedException, Res, Req, UseGuards } from '@nestjs/common';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { LoginService } from '../../services/auth/login.service';
-import { LoginDto } from '../../common/dto/login.dto';
+import { LoginDto } from '../../common/dto/auth/login.dto';
+import { AuthGuard } from '../../common/guards/auth.guard';
+import { AuthRequest } from '../../common/interfaces/auth-request.interface';
 
 @Controller('auth')
 export class LoginController {
     constructor(private loginService: LoginService) { }
 
     @Post('login')
-    async login(@Body() body: LoginDto, @Res({ passthrough: true }) res: FastifyReply, @Req() req: FastifyRequest) {
+    async login(@Body() body: LoginDto, @Res({ passthrough: true }) res: FastifyReply, @Req() req: AuthRequest) {
         const user = await this.loginService.validateUser(body.identifier, body.password);
         if (!user) {
             throw new UnauthorizedException('Invalid credentials');
@@ -23,15 +25,61 @@ export class LoginController {
 
         const tokens = await this.loginService.generateSessionToken(user, deviceInfo);
 
-        // Set HttpOnly Cookie
+        // 1. Access Token Cookie (Short-Lived, Lax)
         res.setCookie('access_token', tokens.access_token, {
             path: '/',
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax', // or 'strict' if feasible
-            maxAge: 24 * 60 * 60, // 24h
+            sameSite: 'lax',
+            maxAge: 15 * 60, // 15m
         });
 
-        return tokens;
+        // 2. Refresh Token Cookie (Long-Lived, Strict, Scoped)
+        res.setCookie('refresh_token', tokens.refresh_token, {
+            path: '/api/v1/auth/refresh', // Strict Scope
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60, // 7d
+        });
+
+        return { access_token: tokens.access_token, expires_in: tokens.expires_in };
+    }
+
+    @Post('refresh')
+    async refresh(@Req() req: FastifyRequest, @Res({ passthrough: true }) res: FastifyReply) {
+        const refreshToken = req.cookies['refresh_token'];
+        if (!refreshToken) throw new UnauthorizedException('No refresh token provided');
+
+        const tokens = await this.loginService.refreshSession(refreshToken);
+
+        // Rotate Cookies
+        res.setCookie('access_token', tokens.access_token, {
+            path: '/',
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 15 * 60,
+        });
+
+        res.setCookie('refresh_token', tokens.refresh_token, {
+            path: '/api/v1/auth/refresh',
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 7 * 24 * 60 * 60,
+        });
+
+        return { access_token: tokens.access_token, expires_in: tokens.expires_in };
+    }
+
+    @Post('verify-password')
+    @UseGuards(AuthGuard)
+    async verifyPassword(@Req() req: AuthRequest, @Body() body: { password: string }) {
+        const valid = await this.loginService.validatePassword(req.user.sub, body.password);
+        if (!valid) {
+            throw new UnauthorizedException('Invalid password');
+        }
+        return { success: true };
     }
 }

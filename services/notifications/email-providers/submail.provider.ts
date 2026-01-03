@@ -11,8 +11,8 @@ export class SubmailProvider implements EmailProvider {
     private apiUrl = 'https://api.mysubmail.com/mail/send';
 
     constructor() {
-        this.appId = process.env.SUBMAIL_EMAIL_APP_ID;
-        this.appKey = process.env.SUBMAIL_EMAIL_APP_KEY;
+        this.appId = process.env.SUBMAIL_EMAIL_APP_ID || '';
+        this.appKey = process.env.SUBMAIL_EMAIL_APP_KEY || '';
 
         if (!this.appId || !this.appKey) {
             this.logger.warn('Submail Email credentials missing.');

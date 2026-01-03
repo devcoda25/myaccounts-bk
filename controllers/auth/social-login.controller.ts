@@ -1,13 +1,14 @@
 import { Controller, Post, Body, BadRequestException, Res, Req } from '@nestjs/common';
 import { SocialAuthService } from '../../services/auth/social-auth.service';
 import { FastifyReply, FastifyRequest } from 'fastify';
+import { SocialLoginDto } from '../../common/dto/auth/social-login.dto';
 
 @Controller('auth')
 export class SocialLoginController {
     constructor(private socialAuthService: SocialAuthService) { }
 
     @Post('google')
-    async googleLogin(@Body() body: { token: string }, @Res({ passthrough: true }) res: FastifyReply, @Req() req: FastifyRequest) {
+    async googleLogin(@Body() body: SocialLoginDto, @Res({ passthrough: true }) res: FastifyReply, @Req() req: FastifyRequest) {
         if (!body.token) throw new BadRequestException('Token is required');
 
         const deviceInfo = {
@@ -23,7 +24,7 @@ export class SocialLoginController {
     }
 
     @Post('apple')
-    async appleLogin(@Body() body: { token: string }, @Res({ passthrough: true }) res: FastifyReply, @Req() req: FastifyRequest) {
+    async appleLogin(@Body() body: SocialLoginDto, @Res({ passthrough: true }) res: FastifyReply, @Req() req: FastifyRequest) {
         if (!body.token) throw new BadRequestException('Token is required');
 
         const deviceInfo = {

@@ -71,7 +71,7 @@ export class OidcController {
             const publicJwk = await KeyManager.getPublicJWK();
             const publicKey = await importJWK(publicJwk, 'ES256');
             const { payload } = await jwtVerify(token, publicKey, { algorithms: ['ES256'] });
-            sessionUserId = payload.sub;
+            sessionUserId = payload.sub || '';
         } catch (e) {
             return res.status(401).send({ error: 'login_required', message: 'Invalid session' });
         }

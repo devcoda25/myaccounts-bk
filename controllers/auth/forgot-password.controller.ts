@@ -1,6 +1,6 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { VerificationService } from '../../services/auth/verification.service';
-import { ForgotPasswordDto } from '../../common/dto/forgot-password.dto';
+import { ForgotPasswordDto } from '../../common/dto/auth/forgot-password.dto';
 
 @Controller('auth')
 export class ForgotPasswordController {

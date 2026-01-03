@@ -41,6 +41,7 @@ model User {
   sessions       Session[]
   wallet         Wallet?
   auditLogs      AuditLog[]
+  notifications  Notification[]
   paymentMethods PaymentMethod[]
   kyc            Kycrecord?
   consents       OAuthConsent[]
@@ -547,4 +548,23 @@ model ParentalActivity {
   child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
 
   @@map("parental_activities")
+}
+
+// -----------------------------------------------------------------------------
+// Notifications
+// -----------------------------------------------------------------------------
+
+model Notification {
+  id          String   @id @default(uuid())
+  userId      String
+  title       String
+  description String
+  type        String // SECURITY, INFO, SUCCESS, WARNING
+  read        Boolean  @default(false)
+  data        Json?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
 }

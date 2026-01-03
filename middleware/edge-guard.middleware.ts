@@ -1,14 +1,16 @@
-import { Injectable, NestMiddleware, ForbiddenException, Logger } from '@nestjs/common';
-import { FastifyRequest, FastifyReply } from 'fastify';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException, Logger } from '@nestjs/common';
+import { FastifyRequest } from 'fastify';
 
 @Injectable()
-export class EdgeGuardMiddleware implements NestMiddleware {
-    private logger = new Logger(EdgeGuardMiddleware.name);
+export class EdgeGuard implements CanActivate {
+    private logger = new Logger(EdgeGuard.name);
 
-    use(req: FastifyRequest['raw'], res: FastifyReply['raw'], next: () => void) {
+    canActivate(context: ExecutionContext): boolean {
+        const req = context.switchToHttp().getRequest<FastifyRequest>();
+
         // Skip if not an API request
         if (!req.url?.startsWith('/api')) {
-            return next();
+            return true;
         }
 
         // 1. IP Allowlist Guard
@@ -33,15 +35,18 @@ export class EdgeGuardMiddleware implements NestMiddleware {
             }
         }
 
-        next();
+        return true;
     }
 
-    private getClientIp(req: any): string {
+    private getClientIp(req: FastifyRequest): string {
         // Handle x-forwarded-for (standard proxy header)
         const forwarded = req.headers['x-forwarded-for'];
         if (forwarded) {
+            if (Array.isArray(forwarded)) {
+                return forwarded[0].trim();
+            }
             return forwarded.split(',')[0].trim();
         }
-        return req.socket.remoteAddress;
+        return req.socket.remoteAddress || '';
     }
 }

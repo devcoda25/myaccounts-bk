@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Query, UseGuards, Param, NotFoundException, Body, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Query, UseGuards, Param, NotFoundException, Body } from '@nestjs/common';
 import { AdminService } from '../../services/admin/admin.service';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { AdminQueryDto, UpdateWalletStatusDto } from '../../common/dto/admin/admin.dto';
 
 @Controller('admin')
 @UseGuards(AuthGuard, RolesGuard)
@@ -16,12 +17,12 @@ export class AdminController {
     }
 
     @Get('audit-logs')
-    async getAuditLogs(@Query() query: any) {
+    async getAuditLogs(@Query() query: AdminQueryDto) {
         return this.adminService.getAuditLogs(query);
     }
 
     @Get('orgs')
-    async getOrgs(@Query() query: { skip?: number; take?: number; query?: string; status?: string }) {
+    async getOrgs(@Query() query: AdminQueryDto) {
         return this.adminService.getOrgs(query);
     }
 
@@ -33,7 +34,7 @@ export class AdminController {
     }
 
     @Get('wallets')
-    async getWallets(@Query() query: any) {
+    async getWallets(@Query() query: AdminQueryDto) {
         return this.adminService.getWallets(query);
     }
 
@@ -43,12 +44,12 @@ export class AdminController {
     }
 
     @Post('wallets/:id/status')
-    async updateWalletStatus(@Param('id') id: string, @Body() body: { action: 'FREEZE' | 'UNFREEZE' }) {
+    async updateWalletStatus(@Param('id') id: string, @Body() body: UpdateWalletStatusDto) {
         return this.adminService.updateWalletStatus(id, body.action);
     }
 
     @Get('transactions')
-    async getTransactions(@Query() query: any) {
+    async getTransactions(@Query() query: AdminQueryDto) {
         return this.adminService.getTransactions(query);
     }
 }

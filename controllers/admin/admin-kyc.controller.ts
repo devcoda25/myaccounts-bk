@@ -3,6 +3,7 @@ import { AuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { KycService } from '../../services/kyc/kyc.service';
+import { AdminQueryDto, ReviewKycDto } from '../../common/dto/admin/admin.dto';
 
 @Controller('admin/kyc')
 @UseGuards(AuthGuard, RolesGuard)
@@ -11,7 +12,7 @@ export class AdminKycController {
     constructor(private kycService: KycService) { }
 
     @Get()
-    async getRequests(@Query() query: any) {
+    async getRequests(@Query() query: AdminQueryDto) {
         return this.kycService.getAllRequests({
             skip: query.skip ? Number(query.skip) : 0,
             take: query.take ? Number(query.take) : 10,
@@ -21,7 +22,7 @@ export class AdminKycController {
     }
 
     @Post(':id/review')
-    async reviewRequest(@Param('id') id: string, @Body() body: { action: 'APPROVE' | 'REJECT', reason?: string }) {
+    async reviewRequest(@Param('id') id: string, @Body() body: ReviewKycDto) {
         return this.kycService.reviewRequest(id, body.action, body.reason);
     }
 }

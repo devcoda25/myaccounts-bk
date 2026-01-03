@@ -10,6 +10,7 @@ import { OrganizationModule } from '../modules/organizations/organization.module
 import { AdminModule } from '../modules/admin/admin.module';
 import { KycModule } from '../modules/kyc/kyc.module';
 import { ParentalModule } from '../modules/parental/parental.module';
+import { AppsModule } from '../modules/apps/apps.module';
 
 const routes: Routes = [
     {
@@ -23,7 +24,8 @@ const routes: Routes = [
     { path: 'admin', module: AdminModule },
     { path: 'kyc', module: KycModule }, // Expose /kyc
     { path: 'debug', module: DebugModule },
-    { path: 'parental', module: ParentalModule }
+    { path: 'parental', module: ParentalModule },
+    { path: 'apps', module: AppsModule }
 ];
 
 @Module({

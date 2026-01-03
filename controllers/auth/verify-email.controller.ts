@@ -2,7 +2,7 @@ import { Controller, Post, Body, Res, Req } from '@nestjs/common';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { VerificationService } from '../../services/auth/verification.service';
 import { LoginService } from '../../services/auth/login.service';
-import { VerifyEmailDto } from '../../common/dto/verify-email.dto';
+import { VerifyEmailDto } from '../../common/dto/auth/verify-email.dto';
 
 @Controller('auth')
 export class VerifyEmailController {

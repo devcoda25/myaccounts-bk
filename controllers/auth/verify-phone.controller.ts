@@ -2,8 +2,8 @@ import { Controller, Post, Body, Res, Req, InternalServerErrorException } from '
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { VerificationService } from '../../services/auth/verification.service';
 import { LoginService } from '../../services/auth/login.service';
-import { VerifyPhoneDto } from '../../common/dto/verify-phone.dto';
-import { RequestPhoneVerificationDto } from '../../common/dto/request-phone-verification.dto';
+import { VerifyPhoneDto } from '../../common/dto/auth/verify-phone.dto';
+import { RequestPhoneVerificationDto } from '../../common/dto/auth/request-phone-verification.dto';
 
 @Controller('auth')
 export class VerifyPhoneController {

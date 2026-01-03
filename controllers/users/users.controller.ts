@@ -10,6 +10,9 @@ import { extname, join } from 'path';
 import { createWriteStream, promises as fs } from 'fs';
 import { pipeline } from 'stream';
 import { promisify } from 'util';
+import { AuthRequest } from '../../common/interfaces/auth-request.interface';
+import { CreateUserDto } from '../../common/dto/auth/create-user.dto';
+import { UpdateUserDto } from '../../common/dto/auth/update-user.dto';
 
 const pump = promisify(pipeline);
 
@@ -22,32 +25,29 @@ export class UsersController {
     ) { }
 
     @Get('me')
-    async getProfile(@CurrentUser() user: any) {
-        return this.userQueryService.findById(user.sub || user.id, { fullProfile: true });
+    async getProfile(@CurrentUser() user: AuthRequest['user']) {
+        return this.userQueryService.findById(user.sub || (user as any).id, { fullProfile: true });
     }
 
     @Patch('me')
-    async updateProfile(@CurrentUser() user: any, @Body() body: any) {
-        // Filter allowed fields? UserManagementService.updateProfile handles general updates.
-        // We should restrict what user can update on themselves (e.g. not role).
-        const { role, password, emailVerified, phoneVerified, ...allowed } = body;
-        return this.userManagementService.updateProfile(user.sub || user.id, allowed);
+    async updateProfile(@CurrentUser() user: AuthRequest['user'], @Body() body: UpdateUserDto) {
+        return this.userManagementService.updateProfile(user.sub || (user as any).id, body);
     }
 
     @Patch('me/settings')
-    async updateSettings(@CurrentUser() user: any, @Body() body: any) {
-        return this.userManagementService.updatePreferences(user.sub || user.id, body);
+    async updateSettings(@CurrentUser() user: AuthRequest['user'], @Body() body: Record<string, any>) {
+        return this.userManagementService.updatePreferences(user.sub || (user as any).id, body);
     }
 
     @Post('me/avatar')
-    async uploadAvatar(@CurrentUser() user: any, @Req() req: FastifyRequest) {
+    async uploadAvatar(@CurrentUser() user: AuthRequest['user'], @Req() req: FastifyRequest) {
         const parts = req.files();
         let avatarUrl = '';
 
         for await (const part of parts) {
             const fileExtName = extname(part.filename);
             const randomName = Array(4).fill(null).map(() => Math.round(Math.random() * 16).toString(16)).join('');
-            const filename = `avatar-${user.sub || user.id}-${randomName}${fileExtName}`;
+            const filename = `avatar-${user.sub || (user as any).id}-${randomName}${fileExtName}`;
             const savePath = join(process.cwd(), 'uploads', 'avatars', filename);
 
             await fs.mkdir(join(process.cwd(), 'uploads', 'avatars'), { recursive: true });
@@ -57,49 +57,37 @@ export class UsersController {
         }
 
         if (avatarUrl) {
-            await this.userManagementService.uploadAvatar(user.sub || user.id, avatarUrl);
+            await this.userManagementService.uploadAvatar(user.sub || (user as any).id, avatarUrl);
         }
 
         return { url: avatarUrl };
     }
 
     @Post('me/contacts')
-    async addContact(@CurrentUser() user: any, @Body() body: any) {
-        return this.userManagementService.addContact(user.sub || user.id, body);
+    async addContact(@CurrentUser() user: AuthRequest['user'], @Body() body: { type: 'EMAIL' | 'PHONE' | 'WHATSAPP'; value: string; isPrimary?: boolean }) {
+        return this.userManagementService.addContact(user.sub || (user as any).id, body);
     }
 
     @Delete('me/contacts/:contactId')
-    async removeContact(@CurrentUser() user: any, @Param('contactId') contactId: string) {
-        return this.userManagementService.removeContact(user.sub || user.id, contactId);
+    async removeContact(@CurrentUser() user: AuthRequest['user'], @Param('contactId') contactId: string) {
+        return this.userManagementService.removeContact(user.sub || (user as any).id, contactId);
     }
 
     @Post('me/contacts/:contactId/verify')
-    async verifyContact(@CurrentUser() user: any, @Param('contactId') contactId: string, @Body() body: any) {
+    async verifyContact(@CurrentUser() user: AuthRequest['user'], @Param('contactId') contactId: string, @Body() body: { type: 'email' | 'phone' }) {
         // body could contain otp
-        return this.userManagementService.verifyContact(user.sub || user.id, contactId, body.type || 'email');
+        return this.userManagementService.verifyContact(user.sub || (user as any).id, contactId, body.type || 'email');
     }
 
 
     @Post('create')
     @Roles('SUPER_ADMIN')
-    async create(@Body() body: any) {
-        // Enforce role if not present or validate it? 
-        // For now, accept what's passed, relying on RolesGuard to restrict access to this endpoint to SUPER_ADMIN
+    async create(@Body() body: CreateUserDto) {
         return this.userManagementService.create({
             ...body,
-            acceptTerms: true, // Auto-accept terms for admin-created users
-            emailVerified: true // Auto-verify email for admin-created users? Maybe not, checking logic.
-            // UserCreateInput usually has emailVerified default false. 
-            // If we want auto-verify, we can pass it if schema allows.
-            // Let's assume we want them active immediately or let them verify. 
-            // Often admin creation implies trust. Let's auto-verify email.
-        });
-        // We might need to update schema/service if emailVerified isn't in UserCreateInput directly or handled.
-        // UserCreateRepository takes Prisma.UserCreateInput.
-        // Checking schema... I didn't verify if emailVerified is in UserCreateInput but it usually is. 
-        // Let's stick to basic create and maybe mark verified separately if needed, 
-        // but UserManagementService.create only extracts specific fields. 
-        // If I pass emailVerified, it goes to ...restUrl.
+            acceptTerms: true,
+            emailVerified: true // Auto-verify email for admin-created users
+        } as any); // Cast because create expects DTO but we are adding fields, might need adjusted DTO or service method
     }
 
     @Get()
@@ -133,15 +121,13 @@ export class UsersController {
     }
 
     @Patch(':id')
-    @Roles('ADMIN', 'SUPER_ADMIN') // Or standard user for self? For now strict admin for this endpoint
-    async update(@Param('id') id: string, @Body() body: any) {
-        // Prevent role update via this generic endpoint
-        const { role, password, ...allowedUpdates } = body;
-        return this.userManagementService.updateProfile(id, allowedUpdates);
+    @Roles('ADMIN', 'SUPER_ADMIN')
+    async update(@Param('id') id: string, @Body() body: UpdateUserDto) {
+        return this.userManagementService.updateProfile(id, body);
     }
 
     @Delete(':id')
-    @Roles('SUPER_ADMIN') // Only super admin should delete for now
+    @Roles('SUPER_ADMIN')
     async remove(@Param('id') id: string) {
         return this.userManagementService.deleteUser(id);
     }

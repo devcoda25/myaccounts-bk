@@ -1,4 +1,7 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { PrismaModule } from './prisma-lib/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { OidcBaseModule } from './modules/auth/oidc-base.module';
@@ -12,9 +15,17 @@ import { ParentalModule } from './modules/parental/parental.module';
 import { HealthModule } from './modules/health/health.module';
 import { DeveloperModule } from './modules/developer/developer.module';
 import { SecurityModule } from './modules/security/security.module';
+import { AppsModule } from './modules/apps/apps.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { EdgeGuard } from './middleware/edge-guard.middleware';
 
 @Module({
     imports: [
+        ThrottlerModule.forRoot([{
+            ttl: 60000,
+            limit: 100,
+        }]),
+        PrometheusModule.register(),
         AuthModule,
         OidcBaseModule,
         UsersModule,
@@ -27,9 +38,21 @@ import { SecurityModule } from './modules/security/security.module';
         ParentalModule,
         HealthModule,
         DeveloperModule,
-        SecurityModule
+        SecurityModule,
+        AppsModule,
+        NotificationsModule
     ],
     controllers: [],
-    providers: [],
+    providers: [
+        {
+            provide: APP_GUARD,
+            useClass: EdgeGuard,
+        },
+        {
+            provide: APP_GUARD,
+            useClass: ThrottlerGuard,
+        },
+    ],
 })
 export class AppModule { }
+// Force rebuild 2

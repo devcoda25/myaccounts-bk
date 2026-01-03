@@ -1,6 +1,6 @@
 import { Controller, Post, Body } from '@nestjs/common';
 import { PasswordService } from '../../services/auth/password.service';
-import { ResetPasswordDto } from '../../common/dto/reset-password.dto';
+import { ResetPasswordDto } from '../../common/dto/auth/reset-password.dto';
 
 @Controller('auth')
 export class ResetPasswordController {

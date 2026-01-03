@@ -1,6 +1,6 @@
 import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
 import { PasswordService } from '../../services/auth/password.service';
-import { ChangePasswordDto } from '../../common/dto/change-password.dto';
+import { ChangePasswordDto } from '../../common/dto/auth/change-password.dto';
 import { AuthGuard } from '../../common/guards/auth.guard';
 
 @Controller('auth')

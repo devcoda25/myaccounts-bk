@@ -1,7 +1,7 @@
 import { Controller, Post, Body, Inject, forwardRef } from '@nestjs/common';
 import { UserManagementService } from '../../services/users/user-management.service';
 import { VerificationService } from '../../services/auth/verification.service';
-import { CreateUserDto } from '../../common/dto/create-user.dto';
+import { CreateUserDto } from '../../common/dto/auth/create-user.dto';
 
 @Controller('users')
 export class UserRegistrationController {

@@ -13,7 +13,7 @@ export class SmsService {
 
     constructor() {
         // Africa's Talking
-        this.atApiKey = process.env.AFRICASTALKING_API_KEY;
+        this.atApiKey = process.env.AFRICASTALKING_API_KEY || '';
         const atUsername = process.env.AFRICASTALKING_USERNAME || 'sandbox';
 
         if (this.atApiKey) {
@@ -22,7 +22,7 @@ export class SmsService {
         }
 
         // Twilio
-        this.twilioSid = process.env.TWILIO_ACCOUNT_SID;
+        this.twilioSid = process.env.TWILIO_ACCOUNT_SID || '';
         const twilioToken = process.env.TWILIO_AUTH_TOKEN;
         if (this.twilioSid && twilioToken) {
             this.twilioClient = Twilio(this.twilioSid, twilioToken);

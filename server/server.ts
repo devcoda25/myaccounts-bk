@@ -9,18 +9,27 @@ import { join } from 'path';
 import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import cookie from '@fastify/cookie';
+import helmet from '@fastify/helmet';
 
 import { corsOptions } from '../middleware/cors';
 import { KeyManager } from '../utils/keys';
-import { EdgeGuardMiddleware } from '../middleware/edge-guard.middleware';
 
 export async function bootstrap() {
     await KeyManager.init();
+
+    // [Security] Secret Management Check
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (isProduction && !process.env.COOKIE_SECRET) {
+        throw new Error('FATAL: COOKIE_SECRET must be defined in production environment.');
+    }
 
     const app = await NestFactory.create<NestFastifyApplication>(
         AppModule,
         new FastifyAdapter()
     );
+
+    // [Security] Helmet for Security Headers
+    await app.register(helmet as any);
 
     await app.register(cookie, {
         secret: process.env.COOKIE_SECRET || 'my-secret-cookie-key', // for signing cookies
@@ -33,24 +42,29 @@ export async function bootstrap() {
         },
     });
 
-    // Register Static
-    await app.register(fastifyStatic as any, {
-        root: join(process.cwd(), 'uploads'),
-        prefix: '/uploads/',
-        decorateReply: false,
-    });
+    // [Scalability] Conditional Static Files
+    // In production, files should be served via CDN/Object Storage
+    if (!isProduction) {
+        await app.register(fastifyStatic as any, {
+            root: join(process.cwd(), 'uploads'),
+            prefix: '/uploads/',
+            decorateReply: false,
+        });
+    }
 
     // Enable CORS
     app.enableCors(corsOptions);
 
+    // [Security] Validation Strictness
     app.useGlobalPipes(new ValidationPipe({
         whitelist: true,
         transform: true,
+        forbidNonWhitelisted: true, // Prevent Mass Assignment
     }));
 
     // Global Prefix for API
     app.setGlobalPrefix('api/v1', {
-        exclude: ['jwks', '.well-known/openid-configuration'],
+        exclude: ['jwks', '.well-known/openid-configuration', 'metrics'],
     });
 
     // Filter Edge Guards (IP/API Key) manually to avoid regex routing issues
@@ -61,9 +75,10 @@ export async function bootstrap() {
     // Mask password
     const maskedUrl = dbUrl.replace(/:([^:@]+)@/, ':***@');
     logger.log(`Using Database: ${maskedUrl}`);
-    const edgeGuard = new EdgeGuardMiddleware();
-    app.use((req, res, next) => edgeGuard.use(req, res, next));
 
-    await app.listen(3000, '0.0.0.0');
-    console.log(`Application is running on: ${await app.getUrl()}`);
+    // Middleware is now registered in AppModule
+
+    const port = process.env.PORT || 3000;
+    await app.listen(port, '0.0.0.0');
+    logger.log(`Application is running on: ${await app.getUrl()}`);
 }

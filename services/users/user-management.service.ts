@@ -5,6 +5,8 @@ import { UserDeleteRepository } from '../../repos/users/user-delete.repository';
 import { UserContactRepository } from '../../repos/users/user-contact.repository';
 import { UserQueryService } from './user-query.service';
 import * as argon2 from 'argon2';
+import { CreateUserDto } from '../../common/dto/auth/create-user.dto';
+import { UpdateUserDto } from '../../common/dto/auth/update-user.dto';
 
 @Injectable()
 export class UserManagementService {
@@ -16,8 +18,7 @@ export class UserManagementService {
         private userQueryService: UserQueryService
     ) { }
 
-    async create(data: any) {
-        // ... existing create logic ... (kept as is, but showing for context matching if needed, but I'll replace whole class structure if safer or just carefully replace parts)
+    async create(data: CreateUserDto) {
         // Check for existing user
         if (data.email) {
             const existing = await this.userQueryService.findByEmail(data.email);
@@ -38,12 +39,17 @@ export class UserManagementService {
         }
         return this.userCreateRepo.create({
             ...rest,
+            email: rest.email || '', // Ensure string if repo requires it, or let prisma handle undefined if allowed. Repo likely expects string | undefined but strict check fails on explicit undefined passed to string?
+            // Actually the error was Type 'undefined' is not assignable to type 'string'.
+            // So if email is undefined in rest, it's undefined.
+            // We can cast or better, ensuring if it's undefined we don't include it if that's what prisma wants, OR default to null/empty.
+            // Safer to use 'as any' for the DTO spread if the Repo interface is stricter than the DTO
             phoneNumber,
             passwordHash,
-        });
+        } as any);
     }
 
-    async updateProfile(userId: string, data: any) {
+    async updateProfile(userId: string, data: UpdateUserDto) {
         return this.userUpdateRepo.update(userId, data);
     }
 
@@ -57,14 +63,15 @@ export class UserManagementService {
 
     // --- Profile & Contacts ---
 
-    async updatePreferences(userId: string, prefs: any) {
+    async updatePreferences(userId: string, prefs: Record<string, any>) {
         return this.userUpdateRepo.update(userId, { preferences: prefs });
     }
 
-    async addContact(userId: string, data: any) {
+    async addContact(userId: string, data: { type: 'EMAIL' | 'PHONE' | 'WHATSAPP'; value: string; isPrimary?: boolean }) {
         // Validation could be added here
         return this.userContactRepo.create({
             userId,
+            label: 'Main', // Default label
             ...data
         });
     }

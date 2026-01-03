@@ -9,6 +9,7 @@ export class SecurityService {
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
             include: {
+                contacts: true, // properties: type, verified
                 sessions: {
                     where: {
                         expiresAt: { gt: new Date() }
@@ -26,12 +27,11 @@ export class SecurityService {
             throw new Error('User not found');
         }
 
-        // Calculate password age (mock logic for now if not tracking exact change time, 
-        // assuming updatedAt might be close or we need a specific field)
-        // Schema has updatedAt. We can use that or a specific field if we added one. 
-        // The implementation plan mentioned "Password Change with session revocation" but didn't explicitly ask for a new DB field for password changed at.
-        // For now, I'll use updatedAt or a generic value.
+        // Calculate password age
         const passwordAgeDays = Math.floor((Date.now() - user.updatedAt.getTime()) / (1000 * 60 * 60 * 24));
+
+        const verifiedEmails = (user.emailVerified ? 1 : 0) + (user.contacts?.filter(c => c.type === 'EMAIL' && c.verified).length || 0);
+        const verifiedPhones = (user.phoneVerified ? 1 : 0) + (user.contacts?.filter(c => c.type === 'PHONE' && c.verified).length || 0);
 
         return {
             password: {
@@ -49,8 +49,8 @@ export class SecurityService {
                 count: 0
             },
             recovery: {
-                verifiedEmails: user.emailVerified ? 1 : 0,
-                verifiedPhones: user.phoneVerified ? 1 : 0
+                verifiedEmails,
+                verifiedPhones
             },
             sessions: {
                 active: user._count.sessions

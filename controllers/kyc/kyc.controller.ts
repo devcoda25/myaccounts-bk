@@ -7,6 +7,8 @@ import { extname, join } from 'path';
 import { createWriteStream, promises as fs } from 'fs';
 import { pipeline } from 'stream';
 import { promisify } from 'util';
+import { AuthRequest } from '../../common/interfaces/auth-request.interface';
+import { SubmitKycDto } from '../../common/dto/kyc/kyc.dto';
 
 const pump = promisify(pipeline);
 
@@ -18,9 +20,8 @@ export class KycController {
     constructor(private kycService: KycService) { }
 
     @Get('status')
-    async getStatus(@CurrentUser() user: any) {
-        // user.id is assumed from auth guard
-        return this.kycService.getStatus(user.sub || user.id);
+    async getStatus(@CurrentUser() user: AuthRequest['user']) {
+        return this.kycService.getStatus(user.sub || (user as any).id);
     }
 
     // Since our details form sends "docType" and the upload form sends files separately or we do everything in one go?
@@ -54,8 +55,7 @@ export class KycController {
     }
 
     @Post('submit')
-    async submit(@CurrentUser() user: any, @Body() body: any) {
-        // body should contain { files: [{slot: 'idFront', url: '...'}], docType: '...', level: 1|2 }
-        return this.kycService.submitKyc(user.sub || user.id, body.files, body.docType || 'ID_CARD', body.level || 1);
+    async submit(@CurrentUser() user: AuthRequest['user'], @Body() body: SubmitKycDto) {
+        return this.kycService.submitKyc(user.sub || (user as any).id, body.files, body.docType, body.level);
     }
 }

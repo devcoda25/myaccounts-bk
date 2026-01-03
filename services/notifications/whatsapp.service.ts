@@ -9,8 +9,8 @@ export class WhatsappService {
     private phoneNumberId: string;
 
     constructor() {
-        this.accessToken = process.env.WABA_ACCESS_TOKEN;
-        this.phoneNumberId = process.env.WABA_PHONE_NUMBER_ID;
+        this.accessToken = process.env.WABA_ACCESS_TOKEN || '';
+        this.phoneNumberId = process.env.WABA_PHONE_NUMBER_ID || '';
         // API Version v17.0 or v18.0
         this.apiUrl = `https://graph.facebook.com/v17.0/${this.phoneNumberId}/messages`;
 
