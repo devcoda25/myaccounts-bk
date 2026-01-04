@@ -26,7 +26,7 @@ export class LoginController {
         const tokens = await this.loginService.generateSessionToken(user, deviceInfo);
 
         // 1. Access Token Cookie (Short-Lived, Lax)
-        res.setCookie('access_token', tokens.access_token, {
+        res.setCookie('evzone_token', tokens.access_token, {
             path: '/',
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
@@ -54,7 +54,7 @@ export class LoginController {
         const tokens = await this.loginService.refreshSession(refreshToken);
 
         // Rotate Cookies
-        res.setCookie('access_token', tokens.access_token, {
+        res.setCookie('evzone_token', tokens.access_token, {
             path: '/',
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
@@ -80,6 +80,19 @@ export class LoginController {
         if (!valid) {
             throw new UnauthorizedException('Invalid password');
         }
+        return { success: true };
+    }
+    @Post('logout')
+    @UseGuards(AuthGuard)
+    async logout(@Req() req: AuthRequest, @Res({ passthrough: true }) res: FastifyReply) {
+        if (req.user && req.user.jti) {
+            await this.loginService.logout(req.user.jti).catch(() => { });
+        }
+
+        // Clear Cookies
+        res.clearCookie('evzone_token', { path: '/' });
+        res.clearCookie('refresh_token', { path: '/api/v1/auth/refresh' });
+
         return { success: true };
     }
 }

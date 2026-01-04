@@ -17,6 +17,7 @@ import { DeveloperModule } from './modules/developer/developer.module';
 import { SecurityModule } from './modules/security/security.module';
 import { AppsModule } from './modules/apps/apps.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { PaymentModule } from './modules/payment/payment.module';
 import { EdgeGuard } from './middleware/edge-guard.middleware';
 
 @Module({
@@ -40,7 +41,8 @@ import { EdgeGuard } from './middleware/edge-guard.middleware';
         DeveloperModule,
         SecurityModule,
         AppsModule,
-        NotificationsModule
+        NotificationsModule,
+        PaymentModule
     ],
     controllers: [],
     providers: [

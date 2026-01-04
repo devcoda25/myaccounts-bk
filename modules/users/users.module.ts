@@ -11,6 +11,7 @@ import { UserDeleteRepository } from '../../repos/users/user-delete.repository';
 import { AuthCodeRepository } from '../../repos/users/auth-code.repository';
 import { UserContactRepository } from '../../repos/users/user-contact.repository';
 import { VerificationRepository } from '../../repos/users/verification.repository';
+import { UserCredentialRepository } from '../../repos/users/user-credential.repository';
 import { UserRegistrationController } from '../../controllers/users/user-registration.controller';
 // import { UserProfileController } from '../../controllers/users/user-profile.controller';
 // import { AvatarController } from '../../controllers/users/avatar.controller';
@@ -28,7 +29,8 @@ import { UsersController } from '../../controllers/users/users.controller';
         UserDeleteRepository,
         UserContactRepository,
         AuthCodeRepository,
-        VerificationRepository
+        VerificationRepository,
+        UserCredentialRepository
     ],
     controllers: [
         UserRegistrationController,
@@ -45,7 +47,8 @@ import { UsersController } from '../../controllers/users/users.controller';
         UserDeleteRepository,
         UserContactRepository,
         AuthCodeRepository,
-        VerificationRepository
+        VerificationRepository,
+        UserCredentialRepository
     ],
 })
 export class UsersModule { }

@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, UnauthorizedException, Inject, forwardRef, BadRequestException, ConflictException } from '@nestjs/common';
 import { OAuth2Client } from 'google-auth-library';
 import { UserFindRepository } from '../../repos/users/user-find.repository';
 import { UserCreateRepository } from '../../repos/users/user-create.repository';
@@ -23,28 +23,62 @@ export class SocialAuthService {
         this.googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
     }
 
-    async verifyGoogleToken(token: string) {
-        try {
-            const ticket = await this.googleClient.verifyIdToken({
-                idToken: token,
-                audience: process.env.GOOGLE_CLIENT_ID,
-            });
-            const payload = ticket.getPayload();
-            if (!payload) throw new UnauthorizedException('Invalid Google Token');
 
-            return {
-                email: payload.email,
-                firstName: payload.given_name,
-                lastName: payload.family_name,
-                picture: payload.picture,
-                sub: payload.sub
-            };
-        } catch (error) {
-            // For MVP development (if no real Client ID), we might want a bypass or strict fail.
-            // Following "OAuth latest version", we strictly fail usually.
-            // But if user is just testing UI, they can't generate real tokens easily without setup.
-            // We will assume real setup or valid failure.
-            throw new UnauthorizedException('Google Token Verification Failed: ' + error.message);
+
+
+    async verifyGoogleToken(token: string) {
+        // Detect if it is an ID Token (JWT) or Access Token (Opaque)
+        const isJwt = token.split('.').length === 3;
+
+        if (isJwt) {
+            // ID TOKEN FLOW (Standard Button)
+            try {
+                const ticket = await this.googleClient.verifyIdToken({
+                    idToken: token,
+                    audience: process.env.GOOGLE_CLIENT_ID,
+                });
+                const payload = ticket.getPayload();
+                if (!payload) throw new UnauthorizedException('Invalid Google Token');
+
+                return {
+                    email: payload.email,
+                    firstName: payload.given_name,
+                    lastName: payload.family_name,
+                    picture: payload.picture,
+                    sub: payload.sub
+                };
+            } catch (error) {
+                throw new UnauthorizedException('Google ID Token Verification Failed: ' + error.message);
+            }
+        } else {
+            // ACCESS TOKEN FLOW (Custom Button / Implicit)
+            try {
+                // 1. Verify Audience (tokeninfo) - MUST match our Client ID
+                const tokenInfoRes = await fetch(`https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${token}`);
+                if (!tokenInfoRes.ok) throw new Error('Failed to verify token info');
+                const tokenInfo = await tokenInfoRes.json();
+
+                if (tokenInfo.aud !== process.env.GOOGLE_CLIENT_ID) {
+                    throw new UnauthorizedException('Token audience mismatch');
+                }
+
+                // 2. Get User Profile (userinfo)
+                const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                if (!userInfoRes.ok) throw new Error('Failed to fetch user info');
+                const userInfo = await userInfoRes.json();
+
+                return {
+                    email: userInfo.email,
+                    firstName: userInfo.given_name,
+                    lastName: userInfo.family_name,
+                    picture: userInfo.picture,
+                    sub: userInfo.sub
+                };
+            } catch (error) {
+                throw new UnauthorizedException('Google Access Token Verification Failed: ' + error.message);
+            }
         }
     }
 
@@ -115,5 +149,44 @@ export class SocialAuthService {
                 role: (user as any).role
             }
         };
+    }
+    async linkAccount(userId: string, provider: 'google' | 'apple', token: string) {
+        let profile;
+        if (provider === 'google') {
+            profile = await this.verifyGoogleToken(token);
+        } else {
+            try {
+                const appleIdTokenClaims = await appleSignin.verifyIdToken(token, {
+                    audience: process.env.APPLE_CLIENT_ID,
+                    ignoreExpiration: false,
+                });
+                profile = {
+                    email: appleIdTokenClaims.email,
+                    sub: appleIdTokenClaims.sub,
+                    firstName: '',
+                    lastName: ''
+                };
+            } catch (err) {
+                throw new UnauthorizedException('Apple Token Verification Failed');
+            }
+        }
+
+        if (!profile || !profile.sub) throw new BadRequestException('Invalid token');
+
+        // Check if already linked to ANOTHER user
+        const existing = await this.userCredentialRepo.findByProvider(provider, profile.sub);
+        if (existing && existing.userId !== userId) {
+            throw new ConflictException('This social account is already linked to another user.');
+        }
+
+        // Upsert credential for THIS user
+        await this.userCredentialRepo.upsert(provider, profile.sub, userId, {
+            email: profile.email,
+            firstName: profile.firstName,
+            lastName: profile.lastName,
+            picture: profile.picture
+        });
+
+        return { success: true };
     }
 }

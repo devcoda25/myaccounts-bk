@@ -73,6 +73,11 @@ export class UsersController {
         return this.userManagementService.removeContact(user.sub || (user as any).id, contactId);
     }
 
+    @Delete('me/credentials/:provider')
+    async removeCredential(@CurrentUser() user: AuthRequest['user'], @Param('provider') provider: 'google' | 'apple') {
+        return this.userManagementService.removeCredential(user.sub || (user as any).id, provider);
+    }
+
     @Post('me/contacts/:contactId/verify')
     async verifyContact(@CurrentUser() user: AuthRequest['user'], @Param('contactId') contactId: string, @Body() body: { type: 'email' | 'phone' }) {
         // body could contain otp

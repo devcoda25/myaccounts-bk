@@ -1,6 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { PrismaModule } from '../../prisma-lib/prisma.module';
 import { AuthModule } from '../auth/auth.module';
+import { PaymentModule } from '../payment/payment.module';
 import { WalletFindRepository } from '../../repos/wallet/wallet-find.repository';
 import { WalletCreateRepository } from '../../repos/wallet/wallet-create.repository';
 import { WalletUpdateRepository } from '../../repos/wallet/wallet-update.repository';
@@ -12,7 +13,7 @@ import { WalletController } from '../../controllers/wallet/wallet.controller';
 // import { WalletTransactionController } from '../../controllers/wallet/wallet-transaction.controller';
 
 @Module({
-    imports: [PrismaModule, forwardRef(() => AuthModule)],
+    imports: [PrismaModule, forwardRef(() => AuthModule), PaymentModule],
     providers: [
         WalletFindRepository,
         WalletCreateRepository,

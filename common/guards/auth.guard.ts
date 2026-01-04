@@ -31,6 +31,6 @@ export class AuthGuard implements CanActivate {
         if (authHeader?.startsWith('Bearer ')) {
             return authHeader.split(' ')[1];
         }
-        return request.cookies?.access_token;
+        return request.cookies?.evzone_token;
     }
 }

@@ -1,12 +1,15 @@
 import { IsOptional, IsString, IsNumber, IsDateString, IsEnum, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class TransactionQueryDto {
     @IsOptional()
     @IsNumber()
+    @Type(() => Number)
     take?: number;
 
     @IsOptional()
     @IsNumber()
+    @Type(() => Number)
     skip?: number;
 
     @IsOptional()
@@ -66,4 +69,19 @@ export class FundWalletDto {
     @IsNumber()
     @Min(1)
     amount: number;
+
+    @IsOptional()
+    @IsString()
+    currency?: string = 'UGX';
+
+    @IsString()
+    method: string; // "mobile_money", "card"
+
+    @IsOptional()
+    @IsString()
+    provider?: string;
+
+    @IsOptional()
+    @IsString()
+    accountNumber?: string;
 }

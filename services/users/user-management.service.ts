@@ -3,6 +3,7 @@ import { UserCreateRepository } from '../../repos/users/user-create.repository';
 import { UserUpdateRepository } from '../../repos/users/user-update.repository';
 import { UserDeleteRepository } from '../../repos/users/user-delete.repository';
 import { UserContactRepository } from '../../repos/users/user-contact.repository';
+import { UserCredentialRepository } from '../../repos/users/user-credential.repository';
 import { UserQueryService } from './user-query.service';
 import * as argon2 from 'argon2';
 import { CreateUserDto } from '../../common/dto/auth/create-user.dto';
@@ -15,6 +16,7 @@ export class UserManagementService {
         private userUpdateRepo: UserUpdateRepository,
         private userDeleteRepo: UserDeleteRepository,
         private userContactRepo: UserContactRepository,
+        private userCredentialRepo: UserCredentialRepository,
         private userQueryService: UserQueryService
     ) { }
 
@@ -90,5 +92,8 @@ export class UserManagementService {
 
     async uploadAvatar(userId: string, fileUrl: string) {
         return this.userUpdateRepo.update(userId, { avatarUrl: fileUrl });
+    }
+    async removeCredential(userId: string, provider: 'google' | 'apple') {
+        return this.userCredentialRepo.deleteByUserAndProvider(userId, provider);
     }
 }

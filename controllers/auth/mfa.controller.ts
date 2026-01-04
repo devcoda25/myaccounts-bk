@@ -19,9 +19,15 @@ export class MfaController {
         return this.mfaService.generateSecret(req.user.sub);
     }
 
+    @Post('setup/sms/send')
+    async sendSmsCode(@Req() req: AuthRequest, @Body() body: { phone: string }) {
+        if (!body.phone) throw new BadRequestException('Phone number required');
+        return this.mfaService.sendSmsCode(req.user.sub, body.phone);
+    }
+
     @Post('setup/verify')
-    async verifySetup(@Req() req: AuthRequest, @Body() body: MfaVerificationDto) {
-        return this.mfaService.verifyAndEnable(req.user.sub, body.token, body.secret);
+    async verifySetup(@Req() req: AuthRequest, @Body() body: MfaVerificationDto & { phone?: string; method?: 'authenticator' | 'sms' | 'whatsapp' }) {
+        return this.mfaService.verifyAndEnable(req.user.sub, body.token, body.secret, body.method || 'authenticator', body.phone);
     }
 
     @Post('disable')

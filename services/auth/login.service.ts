@@ -134,4 +134,7 @@ export class LoginService {
             expires_in: 900
         };
     }
+    async logout(sessionId: string) {
+        return this.sessionRepo.deleteSession(sessionId);
+    }
 }

@@ -4,7 +4,7 @@ import { NotificationsService } from './notifications.service';
 // Assuming AuthGuard is available globally or imported from shared module. 
 // However, standard practice in this repo seems to rely on global guards or specific ones.
 // I'll assume standardAuthenticatedUser is available via @Request() user.
-import { AuthenticatedUser } from '../../types/auth.types';
+import { AuthenticatedUser } from '../../common/interfaces/auth-request.interface';
 
 // We need to check how Auth is handled. Assuming request.user is populated by OIDC/Auth guard.
 

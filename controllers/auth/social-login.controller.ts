@@ -1,4 +1,6 @@
-import { Controller, Post, Body, BadRequestException, Res, Req } from '@nestjs/common';
+import { Controller, Post, Body, BadRequestException, Res, Req, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '../../common/guards/auth.guard';
+import { AuthRequest } from '../../common/interfaces/auth-request.interface';
 import { SocialAuthService } from '../../services/auth/social-auth.service';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { SocialLoginDto } from '../../common/dto/auth/social-login.dto';
@@ -40,12 +42,24 @@ export class SocialLoginController {
     }
 
     private setCookie(res: FastifyReply, token: string) {
-        res.setCookie('access_token', token, {
+        res.setCookie('evzone_token', token, {
             path: '/',
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
             maxAge: 24 * 60 * 60, // 24h
         });
+    }
+
+    @Post('link/google')
+    @UseGuards(AuthGuard)
+    async linkGoogle(@Req() req: AuthRequest, @Body() body: SocialLoginDto) {
+        return this.socialAuthService.linkAccount(req.user.sub, 'google', body.token);
+    }
+
+    @Post('link/apple')
+    @UseGuards(AuthGuard)
+    async linkApple(@Req() req: AuthRequest, @Body() body: SocialLoginDto) {
+        return this.socialAuthService.linkAccount(req.user.sub, 'apple', body.token);
     }
 }

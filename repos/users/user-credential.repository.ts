@@ -40,4 +40,12 @@ export class UserCredentialRepository {
             }
         });
     }
+    async deleteByUserAndProvider(userId: string, providerType: string) {
+        return this.prisma.userCredential.deleteMany({
+            where: {
+                userId,
+                providerType
+            }
+        });
+    }
 }

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { SecurityController } from '../../controllers/security/security.controller';
 import { SecurityService } from '../../services/security/security.service';
 import { MfaController } from '../../controllers/auth/mfa.controller';
@@ -7,9 +7,10 @@ import { PasskeysController } from '../../controllers/auth/passkeys.controller';
 import { PasskeysService } from '../../services/auth/passkeys.service';
 import { PrismaModule } from '../../prisma-lib/prisma.module';
 import { SessionRepository } from '../../repos/auth/session.repository';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
-    imports: [PrismaModule],
+    imports: [PrismaModule, forwardRef(() => AuthModule)],
     controllers: [SecurityController, MfaController, PasskeysController],
     providers: [SecurityService, MfaService, PasskeysService, SessionRepository],
     exports: [SecurityService, MfaService, PasskeysService]

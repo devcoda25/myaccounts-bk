@@ -1,5 +1,6 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, BadRequestException, UnauthorizedException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../prisma-lib/prisma.service';
+import { VerificationService } from './verification.service';
 import { authenticator } from 'otplib';
 import * as QRCode from 'qrcode';
 import * as argon2 from 'argon2';
@@ -11,7 +12,10 @@ export class MfaService {
     private encryptionKey = process.env.ENCRYPTION_KEY || '12345678901234567890123456789012';
     private ivLength = 16;
 
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private verificationService: VerificationService
+    ) { }
 
     async getStatus(userId: string) {
         const user = await this.prisma.user.findUnique({ where: { id: userId } });
@@ -34,21 +38,52 @@ export class MfaService {
         return { secret, qrCodeUrl };
     }
 
-    async verifyAndEnable(userId: string, token: string, secret: string) {
-        const isValid = authenticator.verify({ token, secret });
-        if (!isValid) {
-            throw new BadRequestException('Invalid OTP code');
+    async sendSmsCode(userId: string, phone: string) {
+        // Use VerificationService to send code
+        return this.verificationService.requestVerification(phone, 'PHONE_VERIFY', 'sms_code');
+    }
+
+    async verifyAndEnable(userId: string, token: string, secret?: string, method: 'authenticator' | 'sms' | 'whatsapp' = 'authenticator', phone?: string) {
+        if (method === 'authenticator') {
+            if (!secret) throw new BadRequestException('Secret required for Authenticator');
+            const isValid = authenticator.verify({ token, secret });
+            if (!isValid) throw new BadRequestException('Invalid OTP code');
+        } else if (method === 'sms') {
+            if (!phone) throw new BadRequestException('Phone number required for SMS');
+            // Verify via VerificationService
+            const record = await this.verificationService.verifyCode(phone, token, 'PHONE_VERIFY');
+            if (!record) throw new BadRequestException('Invalid or expired SMS code');
+            // Consume code
+            await this.verificationService.consumeCode(record.id);
         }
 
         const { codes, hashedCodes } = await this.generateAndHashRecoveryCodes();
 
+        // Update User
+        const updateData: any = {
+            twoFactorEnabled: true,
+            recoveryCodes: hashedCodes
+        };
+
+        if (method === 'authenticator' && secret) {
+            updateData.twoFactorSecret = this.encrypt(secret);
+        }
+
+        // If SMS, we might want to store the verified phone for 2FA use
+        // For now, assuming user's main phone or a specific 2FA phone field.
+        // Assuming current schema supports guardianChannels or similar, updating capabilities/channels:
+        /*
         await this.prisma.user.update({
             where: { id: userId },
             data: {
-                twoFactorEnabled: true,
-                twoFactorSecret: this.encrypt(secret),
-                recoveryCodes: hashedCodes
+                guardianChannels: { ...existing, SMS: true } // This would need existing data fetch
             }
+        });
+        */
+
+        await this.prisma.user.update({
+            where: { id: userId },
+            data: updateData
         });
 
         return { success: true, recoveryCodes: codes };

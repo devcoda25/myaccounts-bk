@@ -295,6 +295,7 @@ model Wallet {
   user         User?         @relation(fields: [userId], references: [id])
   organization Organization? @relation(fields: [orgId], references: [id])
   transactions Transaction[]
+  disputes     Dispute[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -318,6 +319,7 @@ model Transaction {
   providerRef  String?
   counterparty String?
   channel      String? @default("Wallet") // Wallet, Charging, Marketplace, etc.
+  disputes     Dispute[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt // Added updatedAt
@@ -339,6 +341,44 @@ model PaymentMethod {
   createdAt DateTime @default(now())
 
   @@map("payment_methods")
+}
+
+model Dispute {
+  id          String   @id @default(uuid())
+  walletId    String
+  txnId       String?  // Optional, linked to internal transaction
+  reference   String?  // Linked to external reference
+  amount      Decimal  @db.Decimal(15, 2)
+  currency    String
+  reason      String
+  description String
+  status      String   @default("OPEN") // OPEN, UNDER_REVIEW, WON, LOST, CLOSED
+  
+  // Relations
+  wallet      Wallet   @relation(fields: [walletId], references: [id])
+  transaction Transaction? @relation(fields: [txnId], references: [id])
+  evidence    DisputeEvidence[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("wallet_disputes")
+}
+
+model DisputeEvidence {
+  id        String   @id @default(uuid())
+  disputeId String
+  name      String
+  url       String
+  size      Int
+  mimeType  String
+  uploadedBy String? // "USER" or "ADMIN"
+
+  dispute   Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("wallet_dispute_evidence")
 }
 
 // -----------------------------------------------------------------------------

@@ -34,12 +34,12 @@ export class WalletController {
     @Post('me/add-funds')
     @UseGuards(AuthGuard)
     async addFunds(@CurrentUser() user: AuthRequest['user'], @Body() body: FundWalletDto) {
-        return this.walletTx.deposit(user.sub || (user as any).id, body.amount);
+        return this.walletTx.deposit(user.sub || (user as any).id, body);
     }
 
     @Post('me/withdraw')
     @UseGuards(AuthGuard)
     async withdraw(@CurrentUser() user: AuthRequest['user'], @Body() body: FundWalletDto) {
-        return this.walletTx.withdraw(user.sub || (user as any).id, body.amount);
+        return this.walletTx.withdraw(user.sub || (user as any).id, body);
     }
 }

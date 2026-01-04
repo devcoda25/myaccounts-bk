@@ -40,4 +40,9 @@ export class VerifyEmailController {
 
         return { success: true };
     }
+
+    @Post('request-email-verification')
+    async requestEmailVerification(@Body() body: { email: string }) {
+        return this.verificationService.requestVerification(body.email, 'EMAIL_VERIFY', 'email_link');
+    }
 }
