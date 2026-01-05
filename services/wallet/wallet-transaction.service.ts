@@ -4,6 +4,7 @@ import { TransactionFindRepository } from '../../repos/wallet/transaction-find.r
 import { TransactionCreateRepository } from '../../repos/wallet/transaction-create.repository';
 import { WalletUpdateRepository } from '../../repos/wallet/wallet-update.repository';
 import { WalletCoreService } from './wallet-core.service';
+import { WalletLedgerService } from './wallet-ledger.service';
 import { ApwgApiService } from '../../modules/payment/apwgapi.service';
 
 import { CreateTransactionDto, TransactionQueryDto, FundWalletDto } from '../../common/dto/wallet/transaction.dto';
@@ -15,6 +16,7 @@ export class WalletTransactionService {
         private txCreateRepo: TransactionCreateRepository,
         private walletUpdateRepo: WalletUpdateRepository,
         private walletCore: WalletCoreService,
+        private walletLedger: WalletLedgerService,
         private apwgService: ApwgApiService
     ) { }
 
@@ -98,22 +100,21 @@ export class WalletTransactionService {
             throw new BadRequestException('Insufficient funds');
         }
 
-        // 1. Lock Funds (Update Balance immediately for withdrawal)
-        // In some systems, you hold 'reserved' balance. Here we just deduct.
-        await this.walletUpdateRepo.updateBalance(wallet.id, new Decimal(-dto.amount));
-
-        // 2. Create Pending Transaction
+        // Atomic balance check, deduction and ledger creation
         const ref = `WTH-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
-        const tx = await this.txCreateRepo.createTransaction({
-            wallet: { connect: { id: wallet.id } },
-            amount: -dto.amount,
-            currency: dto.currency || wallet.currency,
-            type: 'Withdrawal',
-            status: 'pending',
-            referenceId: ref,
-            channel: dto.method,
-            description: `Withdrawal to ${dto.method} (${dto.accountNumber})`
-        });
+        const tx = await this.walletLedger.executeAtomicTransfer(
+            wallet.id,
+            new Decimal(-dto.amount),
+            {
+                amount: -dto.amount,
+                currency: dto.currency || wallet.currency,
+                type: 'Withdrawal',
+                status: 'pending',
+                referenceId: ref,
+                channel: dto.method,
+                description: `Withdrawal to ${dto.method} (${dto.accountNumber})`
+            }
+        );
 
         // 3. Initiate Payout
         try {

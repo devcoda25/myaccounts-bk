@@ -13,11 +13,13 @@ export class UserQueryService {
         return this.userFindRepo.findOneByIdentifier(identifier);
     }
 
-    async findById(id: string, options?: { kycRecord?: boolean; fullProfile?: boolean }) {
+    async findById(id: string, options?: { kycRecord?: boolean; fullProfile?: boolean; includeSessions?: boolean; includeAuditLogs?: boolean }) {
         const user = await this.userFindRepo.findOneById(id, {
             includeKyc: options?.kycRecord || options?.fullProfile,
             includeContacts: options?.fullProfile,
-            includeCredentials: options?.fullProfile
+            includeCredentials: options?.fullProfile,
+            includeSessions: options?.includeSessions || options?.fullProfile,
+            includeAuditLogs: options?.includeAuditLogs || options?.fullProfile
         });
         if (!user) return null;
         return this.privateSanitize(user);

@@ -1,10 +1,9 @@
 import { Controller, Get, Post, Delete, Patch, Body, Param, UseGuards, Req } from '@nestjs/common';
 import { PaymentService } from './payment.service';
-// Assuming Authentication guard is available, using a placeholder import or similar if needed.
-// For now, I'll assume standard request with user object attached
-// You might need to adjust imports based on your Auth implementation (e.g. JwtAuthGuard)
+import { AuthGuard } from '../../common/guards/auth.guard';
 
 @Controller('wallets/me/methods')
+@UseGuards(AuthGuard)
 export class PaymentController {
     constructor(private paymentService: PaymentService) { }
 

@@ -59,6 +59,12 @@ export class AdminDisputesRepository {
         });
     }
 
+    async create(data: Prisma.DisputeCreateInput) {
+        return this.prisma.dispute.create({
+            data
+        });
+    }
+
     // For adding evidence from admin side
     async addEvidence(disputeId: string, data: { name: string, url: string, size: number, mimeType: string, uploadedBy: string }) {
         return this.prisma.disputeEvidence.create({

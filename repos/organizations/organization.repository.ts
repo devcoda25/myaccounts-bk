@@ -107,6 +107,29 @@ export class OrganizationRepository {
         });
     }
 
+    async createWallet(orgId: string, currency: string = 'USD') {
+        return this.prisma.wallet.create({
+            data: {
+                orgId,
+                currency,
+                balance: 0,
+                status: 'active'
+            }
+        });
+    }
+
+    async updateMemberStatus(orgId: string, userId: string, status: string) {
+        return this.prisma.userOrganization.update({
+            where: {
+                userId_orgId: {
+                    userId,
+                    orgId
+                }
+            },
+            data: { status }
+        });
+    }
+
     async getMembersByRole(orgId: string) {
         const result = await this.prisma.userOrganization.groupBy({
             by: ['role'],

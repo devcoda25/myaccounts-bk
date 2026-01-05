@@ -273,6 +273,7 @@ model VerificationRequest {
   token      String // OTP or hash
   type       String // "EMAIL_VERIFY", "PASSWORD_RESET"
   expiresAt  DateTime
+  attempts   Int      @default(0)
   createdAt  DateTime @default(now())
 
   @@unique([identifier, type, token])

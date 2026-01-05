@@ -1,5 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { AdminRepository } from '../../repos/admin/admin.repository';
+import * as argon2 from 'argon2';
+import * as crypto from 'crypto';
+import { AdminCreateOAuthClientDto, AdminUpdateOAuthClientDto } from '../../common/dto/admin/admin-apps.dto';
 
 @Injectable()
 export class AdminService {
@@ -172,5 +175,62 @@ export class AdminService {
         });
 
         return { txs: mapped, total };
+    }
+
+    async getApps(query: { skip?: number; take?: number; query?: string }) {
+        const { apps, total } = await this.repo.getOAuthClients(
+            Number(query.skip) || 0,
+            Number(query.take) || 20,
+            query.query
+        );
+        return { apps, total };
+    }
+
+    async getApp(id: string) {
+        const app = await this.repo.getOAuthClientById(id);
+        if (!app) throw new NotFoundException('App not found');
+        return app;
+    }
+
+    async createApp(dto: AdminCreateOAuthClientDto) {
+        const clientId = dto.clientId || `evz_${crypto.randomBytes(6).toString('hex')}`;
+        let clientSecret: string | null = null;
+        let clientSecretHash: string | null = null;
+
+        if (dto.type === 'confidential') {
+            clientSecret = `sk_${crypto.randomBytes(16).toString('hex')}`;
+            clientSecretHash = await argon2.hash(clientSecret);
+        }
+
+        const app = await this.repo.createOAuthClient({
+            clientId,
+            name: dto.name,
+            clientSecretHash,
+            redirectUris: dto.redirectUris,
+            isFirstParty: dto.isFirstParty || false,
+            isPublic: dto.type === 'public'
+        });
+
+        return {
+            ...app,
+            clientSecret // Only returned once
+        };
+    }
+
+    async updateApp(id: string, dto: AdminUpdateOAuthClientDto) {
+        const app = await this.repo.getOAuthClientById(id);
+        if (!app) throw new NotFoundException('App not found');
+
+        return this.repo.updateOAuthClient(id, {
+            name: dto.name,
+            redirectUris: dto.redirectUris,
+            isFirstParty: dto.isFirstParty
+        });
+    }
+
+    async deleteApp(id: string) {
+        const app = await this.repo.getOAuthClientById(id);
+        if (!app) throw new NotFoundException('App not found');
+        return this.repo.deleteOAuthClient(id);
     }
 }

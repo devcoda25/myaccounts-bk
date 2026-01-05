@@ -1,18 +1,13 @@
-import { Module, forwardRef } from '@nestjs/common';
-import { SecurityController } from '../../controllers/security/security.controller';
-import { SecurityService } from '../../services/security/security.service';
-import { MfaController } from '../../controllers/auth/mfa.controller';
-import { MfaService } from '../../services/auth/mfa.service';
-import { PasskeysController } from '../../controllers/auth/passkeys.controller';
-import { PasskeysService } from '../../services/auth/passkeys.service';
+import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../prisma-lib/prisma.module';
-import { SessionRepository } from '../../repos/auth/session.repository';
-import { AuthModule } from '../auth/auth.module';
+import { SecurityService } from '../../services/security/security.service';
+import { SecurityController } from '../../controllers/security/security.controller';
+import { AuthModule } from '../auth/auth.module'; // For AuthGuard dependencies if needed, usually AuthModule exports JwtModule etc.
 
 @Module({
-    imports: [PrismaModule, forwardRef(() => AuthModule)],
-    controllers: [SecurityController, MfaController, PasskeysController],
-    providers: [SecurityService, MfaService, PasskeysService, SessionRepository],
-    exports: [SecurityService, MfaService, PasskeysService]
+    imports: [PrismaModule],
+    providers: [SecurityService],
+    controllers: [SecurityController],
+    exports: [SecurityService]
 })
 export class SecurityModule { }

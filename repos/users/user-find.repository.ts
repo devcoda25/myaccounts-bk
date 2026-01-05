@@ -27,13 +27,15 @@ export class UserFindRepository {
         });
     }
 
-    async findOneById(id: string, options: { includeKyc?: boolean; includeContacts?: boolean; includeCredentials?: boolean } = {}): Promise<User | null> {
+    async findOneById(id: string, options: { includeKyc?: boolean; includeContacts?: boolean; includeCredentials?: boolean; includeSessions?: boolean; includeAuditLogs?: boolean } = {}): Promise<User | null> {
         return this.prisma.user.findUnique({
             where: { id },
             include: {
                 kyc: options.includeKyc,
                 contacts: options.includeContacts,
-                credentials: options.includeCredentials
+                credentials: options.includeCredentials,
+                sessions: options.includeSessions ? { orderBy: { createdAt: 'desc' }, take: 20 } : false,
+                auditLogs: options.includeAuditLogs ? { orderBy: { createdAt: 'desc' }, take: 50 } : false
             }
         });
     }

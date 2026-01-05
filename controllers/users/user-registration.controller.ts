@@ -16,6 +16,6 @@ export class UserRegistrationController {
         const user = await this.userManagementService.create(createUserDto);
         // Trigger verification (using VerificationService directly)
         const verification = await this.verificationService.requestVerification(user.email, 'EMAIL_VERIFY');
-        return { ...user, debug_verification_code: verification.debug_code };
+        return { ...user };
     }
 }

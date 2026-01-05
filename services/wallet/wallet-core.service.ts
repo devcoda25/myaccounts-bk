@@ -4,14 +4,36 @@ import { WalletCreateRepository } from '../../repos/wallet/wallet-create.reposit
 import { TransactionFindRepository } from '../../repos/wallet/transaction-find.repository';
 
 import { TransactionQueryDto } from '../../common/dto/wallet/transaction.dto';
+import { KycService } from '../kyc/kyc.service';
 
 @Injectable()
 export class WalletCoreService {
     constructor(
         private walletFindRepo: WalletFindRepository,
         private walletCreateRepo: WalletCreateRepository,
-        private txFindRepo: TransactionFindRepository
+        private txFindRepo: TransactionFindRepository,
+        private kycService: KycService
     ) { }
+
+    async getLimits(userId: string) {
+        const kyc = await this.kycService.getStatus(userId);
+        const tier = kyc.tier;
+
+        const tiers: Record<string, { daily: number, monthly: number }> = {
+            'Unverified': { daily: 1000000, monthly: 10000000 },
+            'Basic': { daily: 5000000, monthly: 50000000 },
+            'Full': { daily: 20000000, monthly: 200000000 }
+        };
+
+        const limits = tiers[tier] || tiers['Unverified'];
+
+        return {
+            tier,
+            dailyLimit: limits.daily,
+            monthlyLimit: limits.monthly,
+            currency: 'UGX'
+        };
+    }
 
     async getWallet(userId: string) {
         let wallet = await this.walletFindRepo.findByUserId(userId);

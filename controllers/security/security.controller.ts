@@ -1,22 +1,21 @@
-import { Controller, Get, UseGuards, Request, Req } from '@nestjs/common';
-import { AuthGuard } from '../../common/guards/auth.guard';
+import { Controller, Post, Body, UseGuards, Ip, Req } from '@nestjs/common';
 import { SecurityService } from '../../services/security/security.service';
+import { AuthGuard } from '../../common/guards/auth.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthRequest } from '../../common/interfaces/auth-request.interface';
 
 @Controller('security')
 @UseGuards(AuthGuard)
 export class SecurityController {
-    constructor(private securityService: SecurityService) { }
+    constructor(private service: SecurityService) { }
 
-    @Get('overview')
-    async getOverview(@Req() req: AuthRequest) {
-        const userId = req.user.sub;
-        return this.securityService.getOverview(userId);
+    @Post('reports')
+    async report(@CurrentUser() user: AuthRequest['user'], @Body() body: { type: string, reason: string, details: string }, @Ip() ip: string) {
+        return this.service.reportIncident(user.sub || (user as any).id, { ...body, ip });
     }
 
-    @Get('activity')
-    async getActivity(@Req() req: AuthRequest) {
-        const userId = req.user.sub;
-        return this.securityService.getActivity(userId);
+    @Post('lock')
+    async lock(@CurrentUser() user: AuthRequest['user'], @Ip() ip: string) {
+        return this.service.lockAccount(user.sub || (user as any).id, ip);
     }
 }

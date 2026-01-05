@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, UseGuards, Query, Req } from '@nestjs/common';
 import { WalletCoreService } from '../../services/wallet/wallet-core.service';
 import { WalletTransactionService } from '../../services/wallet/wallet-transaction.service';
+import { FeeService } from '../../services/wallet/fee.service';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthRequest } from '../../common/interfaces/auth-request.interface';
@@ -10,13 +11,30 @@ import { FundWalletDto, TransactionQueryDto } from '../../common/dto/wallet/tran
 export class WalletController {
     constructor(
         private walletCore: WalletCoreService,
-        private walletTx: WalletTransactionService
+        private walletTx: WalletTransactionService,
+        private feeService: FeeService
     ) { }
+
+    @Get('fees')
+    @UseGuards(AuthGuard)
+    getFees(@Query('amount') amount: number, @Query('type') type: 'deposit' | 'withdrawal', @Query('method') method: string) {
+        return {
+            amount: Number(amount),
+            fee: this.feeService.calculateFee(Number(amount), type, method),
+            currency: 'UGX'
+        };
+    }
 
     @Get('me')
     @UseGuards(AuthGuard)
     async getMyWallet(@CurrentUser() user: AuthRequest['user']) {
         return this.walletCore.getWallet(user.sub || (user as any).id);
+    }
+
+    @Get('me/limits')
+    @UseGuards(AuthGuard)
+    async getLimits(@CurrentUser() user: AuthRequest['user']) {
+        return this.walletCore.getLimits(user.sub || (user as any).id);
     }
 
     @Get('me/stats')

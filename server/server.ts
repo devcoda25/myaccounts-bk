@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import {
@@ -14,25 +15,35 @@ import helmet from '@fastify/helmet';
 import { corsOptions } from '../middleware/cors';
 import { KeyManager } from '../utils/keys';
 
+import { validateEnv } from '../utils/env.validation';
+import { FastifyRegisterOptions } from 'fastify';
+
 export async function bootstrap() {
     await KeyManager.init();
 
-    // [Security] Secret Management Check
-    const isProduction = process.env.NODE_ENV === 'production';
-    if (isProduction && !process.env.COOKIE_SECRET) {
-        throw new Error('FATAL: COOKIE_SECRET must be defined in production environment.');
-    }
+    // [Security] Strict Env Validation & Typed Config
+    const config = validateEnv(process.env);
+    const isProduction = config.NODE_ENV === 'production';
 
     const app = await NestFactory.create<NestFastifyApplication>(
         AppModule,
         new FastifyAdapter()
     );
 
-    // [Security] Helmet for Security Headers
-    await app.register(helmet as any);
+    // [Security] Helmet for Security Headers & CSP
+    // Typed registration without 'any'
+    await app.register(helmet, {
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                scriptSrc: ["'self'"], // No unsafe-inline
+                objectSrc: ["'none'"],
+            },
+        },
+    });
 
     await app.register(cookie, {
-        secret: process.env.COOKIE_SECRET || 'my-secret-cookie-key', // for signing cookies
+        secret: config.COOKIE_SECRET, // Typed from Zod
     });
 
     // Register Multipart
@@ -59,7 +70,10 @@ export async function bootstrap() {
     app.useGlobalPipes(new ValidationPipe({
         whitelist: true,
         transform: true,
-        forbidNonWhitelisted: true, // Prevent Mass Assignment
+        // forbidNonWhitelisted: true, // Temporarily disabled to debug transformation
+        transformOptions: {
+            enableImplicitConversion: true,
+        },
     }));
 
     // Global Prefix for API

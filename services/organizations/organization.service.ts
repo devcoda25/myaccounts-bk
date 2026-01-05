@@ -109,12 +109,55 @@ export class OrganizationService {
         }));
     }
 
-    async updateMemberRole(orgId: string, userId: string, role: string) {
-        return this.repo.updateMemberRole(orgId, userId, role);
+    async updateMember(orgId: string, userId: string, data: { role?: string; status?: string }) {
+        const updateData: any = {};
+        if (data.role) await this.repo.updateMemberRole(orgId, userId, data.role);
+        if (data.status) await this.repo.updateMemberStatus(orgId, userId, data.status);
+        return { success: true };
     }
 
     async removeMember(orgId: string, userId: string) {
         return this.repo.removeMember(orgId, userId);
+    }
+
+    async createOrgWallet(orgId: string, currency: string = 'USD') {
+        const org = await this.repo.findById(orgId);
+        if (!org) throw new NotFoundException('Organization not found');
+
+        // Enable wallet flag on org
+        await this.repo.update(orgId, { walletEnabled: true });
+
+        // Create the actual wallet
+        return this.repo.createWallet(orgId, currency);
+    }
+
+    async getPermissions(orgId: string) {
+        const org = await this.repo.findById(orgId);
+        if (!org) throw new NotFoundException('Organization not found');
+
+        const metadata = (org.metadata as any) || {};
+        return {
+            grants: metadata.grants || {},
+            policy: metadata.policy || {
+                defaultInviteRole: 'Member',
+                requireAdminApproval: false,
+                requireMfaForAdmins: false
+            }
+        };
+    }
+
+    async updatePermissions(orgId: string, data: { grants?: any; policy?: any }) {
+        const org = await this.repo.findById(orgId);
+        if (!org) throw new NotFoundException('Organization not found');
+
+        const currentMetadata = (org.metadata as any) || {};
+        const newMetadata = {
+            ...currentMetadata,
+            grants: data.grants || currentMetadata.grants,
+            policy: data.policy || currentMetadata.policy
+        };
+
+        return this.repo.update(orgId, { metadata: newMetadata });
     }
 
     async joinOrg(userId: string, orgId: string) {

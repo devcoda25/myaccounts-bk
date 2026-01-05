@@ -18,7 +18,10 @@ export class AuthGuard implements CanActivate {
                 algorithms: ['ES256'],
             });
 
-            request['user'] = payload;
+            request['user'] = {
+                ...payload,
+                id: payload.sub
+            };
         } catch (err) {
             console.error('Token verification failed:', err);
             throw new UnauthorizedException();

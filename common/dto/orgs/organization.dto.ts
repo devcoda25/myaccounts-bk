@@ -9,9 +9,20 @@ export class CreateOrgDto {
     country?: string;
 }
 
-export class UpdateMemberRoleDto {
+export class UpdateMemberDto {
+    @IsOptional()
     @IsString()
-    role: string;
+    role?: string;
+
+    @IsOptional()
+    @IsString()
+    status?: string;
+}
+
+export class CreateWalletDto {
+    @IsOptional()
+    @IsString()
+    currency?: string;
 }
 
 export class CreateInviteDto {

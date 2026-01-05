@@ -116,7 +116,7 @@ export class UsersController {
     @Get(':id')
     @Roles('ADMIN', 'SUPER_ADMIN')
     async findOne(@Param('id') id: string) {
-        return this.userQueryService.findById(id, { kycRecord: true });
+        return this.userQueryService.findById(id, { fullProfile: true });
     }
 
     @Patch(':id/role')

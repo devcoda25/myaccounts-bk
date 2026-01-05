@@ -8,11 +8,12 @@ import { KycModule } from '../kyc/kyc.module';
 import { AdminDisputesRepository } from '../../repos/admin/admin-disputes.repository';
 import { AdminDisputesService } from '../../services/admin/admin-disputes.service';
 import { AdminDisputesController } from '../../controllers/admin/admin-disputes.controller';
+import { AdminAppsController } from '../../controllers/admin/admin-apps.controller';
 
 @Module({
     imports: [PrismaModule, KycModule],
     providers: [AdminRepository, AdminService, AdminDisputesRepository, AdminDisputesService],
-    controllers: [AdminController, AdminKycController, AdminDisputesController],
-    exports: [AdminService]
+    controllers: [AdminController, AdminKycController, AdminDisputesController, AdminAppsController],
+    exports: [AdminService, AdminDisputesRepository]
 })
 export class AdminModule { }

@@ -3,7 +3,7 @@ import { OrganizationService } from '../../services/organizations/organization.s
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthRequest } from '../../common/interfaces/auth-request.interface';
-import { CreateOrgDto, UpdateMemberRoleDto, CreateInviteDto, AddDomainDto, UpdateOrgSettingsDto, UpdateDomainDto, UpdateSSODto } from '../../common/dto/orgs/organization.dto';
+import { CreateOrgDto, UpdateMemberDto, CreateWalletDto, CreateInviteDto, AddDomainDto, UpdateOrgSettingsDto, UpdateDomainDto, UpdateSSODto } from '../../common/dto/orgs/organization.dto';
 
 @Controller('orgs')
 export class OrganizationController {
@@ -40,7 +40,44 @@ export class OrganizationController {
         return this.service.updateSettings(id, body);
     }
 
-    // ... members ...
+    // --- Members ---
+    @Get(':id/members')
+    @UseGuards(AuthGuard)
+    async listMembers(@Param('id') id: string) {
+        return this.service.getMembers(id);
+    }
+
+    @Patch(':id/members/:userId')
+    @UseGuards(AuthGuard)
+    async updateMember(@Param('id') id: string, @Param('userId') userId: string, @Body() body: UpdateMemberDto) {
+        return this.service.updateMember(id, userId, body);
+    }
+
+    @Delete(':id/members/:userId')
+    @UseGuards(AuthGuard)
+    async removeMember(@Param('id') id: string, @Param('userId') userId: string) {
+        return this.service.removeMember(id, userId);
+    }
+
+    // --- Wallet ---
+    @Post(':id/wallet')
+    @UseGuards(AuthGuard)
+    async createWallet(@Param('id') id: string, @Body() body: CreateWalletDto) {
+        return this.service.createOrgWallet(id, body.currency);
+    }
+
+    // --- Permissions ---
+    @Get(':id/permissions')
+    @UseGuards(AuthGuard)
+    async getPermissions(@Param('id') id: string) {
+        return this.service.getPermissions(id);
+    }
+
+    @Patch(':id/permissions')
+    @UseGuards(AuthGuard)
+    async updatePermissions(@Param('id') id: string, @Body() body: any) {
+        return this.service.updatePermissions(id, body);
+    }
 
     // --- Domains ---
     // ...

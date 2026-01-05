@@ -30,23 +30,23 @@ export class UserManagementService {
         }
 
         // Exclude acceptTerms from persistence
-        const { countryCode, phone, password, acceptTerms, ...rest } = data;
-        let phoneNumber = phone;
+        const { countryCode, phone, phoneNumber: fullPhoneNumber, country, password, acceptTerms, ...rest } = data;
+
+        let phoneNumber = fullPhoneNumber || phone;
         if (countryCode && phone && !phone.startsWith('+')) {
             phoneNumber = `${countryCode}${phone}`;
         }
+
         let passwordHash = undefined;
         if (password) {
             passwordHash = await argon2.hash(password);
         }
+
         return this.userCreateRepo.create({
             ...rest,
-            email: rest.email || '', // Ensure string if repo requires it, or let prisma handle undefined if allowed. Repo likely expects string | undefined but strict check fails on explicit undefined passed to string?
-            // Actually the error was Type 'undefined' is not assignable to type 'string'.
-            // So if email is undefined in rest, it's undefined.
-            // We can cast or better, ensuring if it's undefined we don't include it if that's what prisma wants, OR default to null/empty.
-            // Safer to use 'as any' for the DTO spread if the Repo interface is stricter than the DTO
+            email: rest.email || '',
             phoneNumber,
+            country,
             passwordHash,
         } as any);
     }

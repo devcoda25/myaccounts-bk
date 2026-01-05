@@ -245,4 +245,48 @@ export class AdminRepository {
 
         return { txs, total };
     }
+
+    async getOAuthClients(skip = 0, take = 50, query?: string) {
+        const where: any = {};
+        if (query) {
+            where.OR = [
+                { clientId: { contains: query, mode: 'insensitive' } },
+                { name: { contains: query, mode: 'insensitive' } }
+            ];
+        }
+
+        const [apps, total] = await Promise.all([
+            this.prisma.oAuthClient.findMany({
+                where,
+                skip,
+                take,
+                orderBy: { createdAt: 'desc' }
+            }),
+            this.prisma.oAuthClient.count({ where })
+        ]);
+        return { apps, total };
+    }
+
+    async getOAuthClientById(id: string) {
+        return this.prisma.oAuthClient.findUnique({
+            where: { clientId: id }
+        });
+    }
+
+    async createOAuthClient(data: any) {
+        return this.prisma.oAuthClient.create({ data });
+    }
+
+    async updateOAuthClient(id: string, data: any) {
+        return this.prisma.oAuthClient.update({
+            where: { clientId: id },
+            data
+        });
+    }
+
+    async deleteOAuthClient(id: string) {
+        return this.prisma.oAuthClient.delete({
+            where: { clientId: id }
+        });
+    }
 }

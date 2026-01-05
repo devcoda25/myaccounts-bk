@@ -5,76 +5,51 @@ import { PrismaService } from '../../prisma-lib/prisma.service';
 export class SecurityService {
     constructor(private prisma: PrismaService) { }
 
-    async getOverview(userId: string) {
-        const user = await this.prisma.user.findUnique({
-            where: { id: userId },
-            include: {
-                contacts: true, // properties: type, verified
-                sessions: {
-                    where: {
-                        expiresAt: { gt: new Date() }
-                    }
+    async reportIncident(userId: string, data: { type: string, reason: string, details: string, ip?: string }) {
+        return this.prisma.auditLog.create({
+            data: {
+                userId,
+                action: data.type === 'suspicious_login' ? 'REPORT_SUSPICIOUS_LOGIN' : 'REPORT_COMPROMISE',
+                severity: 'critical',
+                ipAddress: data.ip,
+                details: {
+                    reason: data.reason,
+                    description: data.details,
+                    reportedAt: new Date().toISOString()
                 },
-                _count: {
-                    select: {
-                        sessions: true
-                    }
-                }
+                actorName: 'User'
             }
         });
-
-        if (!user) {
-            throw new Error('User not found');
-        }
-
-        // Calculate password age
-        const passwordAgeDays = Math.floor((Date.now() - user.updatedAt.getTime()) / (1000 * 60 * 60 * 24));
-
-        const verifiedEmails = (user.emailVerified ? 1 : 0) + (user.contacts?.filter(c => c.type === 'EMAIL' && c.verified).length || 0);
-        const verifiedPhones = (user.phoneVerified ? 1 : 0) + (user.contacts?.filter(c => c.type === 'PHONE' && c.verified).length || 0);
-
-        return {
-            password: {
-                lastChangedDays: passwordAgeDays,
-                strength: 4, // Todo: calculate or store
-                compromised: false,
-            },
-            mfa: {
-                enabled: user.twoFactorEnabled,
-                methods: user.twoFactorEnabled ? ['Authenticator'] : [], // Todo: support multiple
-                recoveryCodesRemaining: 0, // Todo: store and count
-            },
-            passkeys: {
-                enabled: false,
-                count: 0
-            },
-            recovery: {
-                verifiedEmails,
-                verifiedPhones
-            },
-            sessions: {
-                active: user._count.sessions
-            }
-        };
     }
 
-    async getActivity(userId: string) {
-        // Fetch audit logs
-        const logs = await this.prisma.auditLog.findMany({
-            where: { userId },
-            orderBy: { createdAt: 'desc' },
-            take: 20
+    async lockAccount(userId: string, ip?: string) {
+        // 1. Log the action
+        await this.prisma.auditLog.create({
+            data: {
+                userId,
+                action: 'ACCOUNT_LOCK_USER_INITIATED',
+                severity: 'critical',
+                ipAddress: ip,
+                details: {
+                    reason: 'User initiated emergency lock',
+                },
+                actorName: 'User'
+            }
         });
 
-        // Map to frontend expected format if needed, or return raw structure 
-        // Frontend expects: { id, action, details, ipAddress, severity, createdAt }
-        return logs.map(log => ({
-            id: log.id,
-            action: log.action,
-            details: log.details,
-            ip: log.ipAddress,
-            severity: log.severity,
-            createdAt: log.createdAt
-        }));
+        // 2. Freeze Wallet
+        await this.prisma.wallet.updateMany({
+            where: { userId },
+            data: { status: 'frozen' }
+        });
+
+        // 3. Revoke all sessions
+        await this.prisma.session.deleteMany({
+            where: { userId }
+        });
+
+        // 4. (Optional) Could update User model if it had a status field
+
+        return { success: true, message: 'Account locked and sessions revoked.' };
     }
 }
