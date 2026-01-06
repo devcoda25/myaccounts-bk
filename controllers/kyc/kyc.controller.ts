@@ -1,23 +1,25 @@
-import { Controller, Get, Post, Body, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Req, UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { KycService } from '../../services/kyc/kyc.service';
 import { FastifyRequest } from 'fastify';
 import { extname, join } from 'path';
-import { createWriteStream, promises as fs } from 'fs';
-import { pipeline } from 'stream';
-import { promisify } from 'util';
+import { randomBytes } from 'crypto';
 import { AuthRequest } from '../../common/interfaces/auth-request.interface';
 import { SubmitKycDto } from '../../common/dto/kyc/kyc.dto';
+import { StorageService } from '../../modules/storage/storage.service';
 
-const pump = promisify(pipeline);
+
 
 
 
 @Controller('kyc')
 @UseGuards(AuthGuard)
 export class KycController {
-    constructor(private kycService: KycService) { }
+    constructor(
+        private kycService: KycService,
+        private storageService: StorageService
+    ) { }
 
     @Get('status')
     async getStatus(@CurrentUser() user: AuthRequest['user']) {
@@ -34,21 +36,40 @@ export class KycController {
         const parts = req.files();
         const response = [];
 
+        // [Security] Rule B: Magic Byte Validation
+        const { fileTypeFromBuffer } = await eval('import("file-type")');
+        const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+
         for await (const part of parts) {
-            const fileExtName = extname(part.filename);
-            const randomName = Array(4).fill(null).map(() => Math.round(Math.random() * 16).toString(16)).join('');
-            const filename = `${part.filename.split('.')[0]}-${randomName}${fileExtName}`;
-            const savePath = join(process.cwd(), 'uploads', 'kyc', filename);
+            const fileBuffer = await part.toBuffer();
+            const type = await fileTypeFromBuffer(fileBuffer);
 
-            // Ensure dir exists
-            await fs.mkdir(join(process.cwd(), 'uploads', 'kyc'), { recursive: true });
+            if (!type || !allowedMimes.includes(type.mime)) {
+                // Skip or throw? For multi-upload, throwing aborts all. Let's throw to be strict.
+                throw new UnauthorizedException(`Invalid file type for ${part.filename}. Only Images and PDF allowed.`);
+            }
 
-            await pump(part.file, createWriteStream(savePath));
+            const fileExtName = `.${type.ext}`;
+            // [Security] Rule B: Secure Random Method
+            const randomName = randomBytes(16).toString('hex');
+            // Use original name sanitized or just random? simpler to be random-ish but keep prefix
+            const safePrefix = part.filename.split('.')[0].replace(/[^a-zA-Z0-9-]/g, '');
+            const finalPrefix = safePrefix || 'file'; // Fallback if name is all special chars
+            const filename = `${finalPrefix}-${randomName}${fileExtName}`;
+            // 1M Users: Partition by Date or UserId to avoid massive flat directories
+            // UserId is best for KYC.
+            const userSub = (req as any).user?.sub || (req as any).user?.id || 'anonymous';
+            const key = `kyc/${userSub}/${filename}`;
+
+            await this.storageService.upload(key, fileBuffer, type.mime);
+
+            // Generate Signed URL for immediate viewing/confirmation by frontend
+            const signedUrl = await this.storageService.getSignedUrl(key, 3600);
 
             response.push({
                 originalName: part.filename,
-                filename: filename,
-                url: `/uploads/kyc/${filename}`,
+                filename: key,
+                url: signedUrl,
             });
         }
         return response;

@@ -31,6 +31,13 @@ export class AppsService implements OnModuleInit {
             { id: 'creator', name: 'Creator Studio', secret: 'creator-secret-123' },
         ];
 
+        // Check if we need to seed by checking one key app
+        const existing = await this.oauthClientRepo.findById('charging');
+        if (existing) {
+            this.logger.log('Apps already seeded (Found "charging" app). Skipping.');
+            return;
+        }
+
         for (const app of coreApps) {
             const secretHash = await argon2.hash(app.secret);
             // In production, Redirect URI should be configurable per environment.

@@ -1,7 +1,7 @@
 import { Controller, Post, Body, Headers, BadRequestException, Logger } from '@nestjs/common';
 import { ApwgApiService } from './apwgapi.service';
-import { WalletLedgerService } from '../../services/wallet/wallet-ledger.service';
-import { PrismaService } from '../../prisma-lib/prisma.service';
+import { KafkaService } from '../../modules/kafka/kafka.service';
+import { EventPattern } from '../../common/interfaces/events.interface';
 
 @Controller('webhooks/payment')
 export class PaymentWebhookController {
@@ -9,8 +9,7 @@ export class PaymentWebhookController {
 
     constructor(
         private apwgApiService: ApwgApiService,
-        private prisma: PrismaService,
-        private walletLedger: WalletLedgerService,
+        private kafkaService: KafkaService,
     ) { }
 
     @Post()
@@ -32,16 +31,14 @@ export class PaymentWebhookController {
 
         // Fulfillment logic for successful deposits
         if (payload.event === 'payment_success' || payload.event === 'deposit_success') {
-            try {
-                await this.walletLedger.fulfillAtomicDeposit(
-                    payload.referenceId,
-                    payload.providerReference
-                );
-                this.logger.log(`Successfully fulfilled deposit: ${payload.referenceId}`);
-            } catch (err: any) {
-                this.logger.error(`Fulfillment failed for ref ${payload.referenceId}: ${err.message}`);
-                throw new BadRequestException(err.message);
-            }
+            await this.kafkaService.emit(EventPattern.PAYMENT_RECEIVED, {
+                referenceId: payload.referenceId,
+                providerReference: payload.providerReference,
+                amount: payload.amount,
+                currency: payload.currency,
+                raw: payload
+            });
+            this.logger.log(`Emitted payment.received for ${payload.referenceId}`);
         }
 
         return { status: 'processed' };

@@ -1,14 +1,10 @@
-
 import { Controller, Get, Patch, Delete, Param, UseGuards, Request, NotFoundException } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
-// Assuming AuthGuard is available globally or imported from shared module. 
-// However, standard practice in this repo seems to rely on global guards or specific ones.
-// I'll assume standardAuthenticatedUser is available via @Request() user.
+import { AuthGuard } from '../../common/guards/auth.guard';
 import { AuthenticatedUser } from '../../common/interfaces/auth-request.interface';
 
-// We need to check how Auth is handled. Assuming request.user is populated by OIDC/Auth guard.
-
 @Controller('notifications')
+@UseGuards(AuthGuard)
 export class NotificationsController {
     constructor(private readonly notificationsService: NotificationsService) { }
 

@@ -7,21 +7,20 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { FastifyRequest } from 'fastify';
 import { extname, join } from 'path';
-import { createWriteStream, promises as fs } from 'fs';
-import { pipeline } from 'stream';
-import { promisify } from 'util';
 import { AuthRequest } from '../../common/interfaces/auth-request.interface';
 import { CreateUserDto } from '../../common/dto/auth/create-user.dto';
 import { UpdateUserDto } from '../../common/dto/auth/update-user.dto';
-
-const pump = promisify(pipeline);
+import { SubmitKycDto } from '../../common/dto/kyc/kyc.dto';
+import { StorageService } from '../../modules/storage/storage.service';
+import { randomBytes } from 'crypto';
 
 @Controller('users')
 @UseGuards(AuthGuard, RolesGuard)
 export class UsersController {
     constructor(
         private readonly userManagementService: UserManagementService,
-        private readonly userQueryService: UserQueryService
+        private readonly userQueryService: UserQueryService,
+        private readonly storageService: StorageService
     ) { }
 
     @Get('me')
@@ -44,16 +43,33 @@ export class UsersController {
         const parts = req.files();
         let avatarUrl = '';
 
+        // [Security] Rule B: Magic Byte Validation
+        // Dynamic import for ESM module
+        const { fileTypeFromBuffer } = await eval('import("file-type")');
+
         for await (const part of parts) {
-            const fileExtName = extname(part.filename);
-            const randomName = Array(4).fill(null).map(() => Math.round(Math.random() * 16).toString(16)).join('');
+            // Buffer the stream to validate content
+            // Note: server.ts limits to 5MB, so memory buffering is acceptable
+            const fileBuffer = await part.toBuffer();
+
+            const type = await fileTypeFromBuffer(fileBuffer);
+
+            // Allowlist
+            const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+            if (!type || !allowedMimes.includes(type.mime)) {
+                throw new UnauthorizedException('Invalid file type. Only JPEG, PNG, and WebP are allowed.');
+            }
+
+            const fileExtName = `.${type.ext}`;
+            const randomName = randomBytes(8).toString('hex');
             const filename = `avatar-${user.sub || (user as any).id}-${randomName}${fileExtName}`;
-            const savePath = join(process.cwd(), 'uploads', 'avatars', filename);
+            const key = `avatars/${user.sub || (user as any).id}/${filename}`;
 
-            await fs.mkdir(join(process.cwd(), 'uploads', 'avatars'), { recursive: true });
-            await pump(part.file, createWriteStream(savePath));
+            // Upload to S3/Spaces
+            await this.storageService.upload(key, fileBuffer, type.mime, true); // Public read for avatars
 
-            avatarUrl = `/uploads/avatars/${filename}`;
+            // Use Public CDN URL
+            avatarUrl = this.storageService.getPublicUrl(key);
         }
 
         if (avatarUrl) {

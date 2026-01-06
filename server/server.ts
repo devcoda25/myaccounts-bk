@@ -7,6 +7,7 @@ import {
 } from '@nestjs/platform-fastify';
 import { AppModule } from '../app.module';
 import { join } from 'path';
+import { ServerResponse } from 'http';
 import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import cookie from '@fastify/cookie';
@@ -27,7 +28,7 @@ export async function bootstrap() {
 
     const app = await NestFactory.create<NestFastifyApplication>(
         AppModule,
-        new FastifyAdapter()
+        new FastifyAdapter({ trustProxy: true }) // [Security] Rule F: Trust Proxy (e.g. AWS/Nginx)
     );
 
     // [Security] Helmet for Security Headers & CSP
@@ -60,6 +61,11 @@ export async function bootstrap() {
             root: join(process.cwd(), 'uploads'),
             prefix: '/uploads/',
             decorateReply: false,
+            setHeaders: (res: ServerResponse) => {
+                // [Security] Rule B: Prevent Stored XSS via Uploads
+                res.setHeader('X-Content-Type-Options', 'nosniff');
+                res.setHeader('Content-Disposition', 'attachment');
+            }
         });
     }
 
@@ -70,7 +76,7 @@ export async function bootstrap() {
     app.useGlobalPipes(new ValidationPipe({
         whitelist: true,
         transform: true,
-        // forbidNonWhitelisted: true, // Temporarily disabled to debug transformation
+        forbidNonWhitelisted: true, // [Security] Rule C: Prevent Mass Assignment
         transformOptions: {
             enableImplicitConversion: true,
         },

@@ -11,6 +11,33 @@ export const envSchema = z.object({
     // CORS
     ALLOWED_ORIGINS: z.string().min(1, "ALLOWED_ORIGINS must be defined"),
 
+    // Infrastructure
+    REDIS_URL: z.string().url().describe('Redis Connection URL (redis://...)'),
+
+    // Kafka
+    KAFKA_BROKERS: z.string().describe('Comma separated brokers (e.g. localhost:9092)'),
+    KAFKA_CLIENT_ID: z.string().default('myaccounts-service'),
+    KAFKA_GROUP_ID: z.string().default('myaccounts-consumer-group'),
+    KAFKA_USERNAME: z.string().optional(),
+    KAFKA_PASSWORD: z.string().optional(),
+    KAFKA_SSL: z.coerce.boolean().default(true),
+
+    // Kafka Topics
+    KAFKA_TOPIC_PAYMENT_RECEIVED: z.string().default('payment.received'),
+    KAFKA_TOPIC_PAYMENT_PROCESSED: z.string().default('payment.processed'),
+    KAFKA_TOPIC_KYC_UPLOADED: z.string().default('kyc.uploaded'),
+    KAFKA_TOPIC_KYC_VERIFIED: z.string().default('kyc.verified'),
+    KAFKA_TOPIC_MAIL_SEND: z.string().default('mail.send'),
+    KAFKA_TOPIC_USER_LOGGED_IN: z.string().default('auth.user.login'),
+    KAFKA_TOPIC_USER_LOCKED: z.string().default('auth.user.locked'),
+
+    // Object Storage (DO Spaces / S3)
+    S3_ENDPOINT: z.string().url(),
+    S3_REGION: z.string().default('us-east-1'),
+    S3_BUCKET: z.string().min(1),
+    S3_ACCESS_KEY_ID: z.string().min(1),
+    S3_SECRET_ACCESS_KEY: z.string().min(1),
+
     // API Keys (Optional but strictly validated if present)
     APWGAPI_API_KEY: z.string().optional(),
 });

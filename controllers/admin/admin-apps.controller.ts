@@ -32,6 +32,11 @@ export class AdminAppsController {
         return this.adminService.updateApp(id, body);
     }
 
+    @Post(':id/rotate-secret')
+    async rotateSecret(@Param('id') id: string) {
+        return this.adminService.rotateAppSecret(id);
+    }
+
     @Delete(':id')
     async deleteApp(@Param('id') id: string) {
         return this.adminService.deleteApp(id);

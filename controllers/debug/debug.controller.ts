@@ -1,14 +1,24 @@
-import { Controller, Get, Post, Res } from '@nestjs/common';
+import { Controller, Get, Post, Res, ForbiddenException, UseGuards } from '@nestjs/common';
 import { PrismaService } from '../../prisma-lib/prisma.service';
 import { FastifyReply } from 'fastify';
 import * as argon2 from 'argon2';
+import { AuthGuard } from '../../common/guards/auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 
 @Controller('debug')
 export class DebugController {
     constructor(private prisma: PrismaService) { }
 
+    private checkEnv() {
+        if (process.env.NODE_ENV === 'production') {
+            throw new ForbiddenException('Debug endpoints are disabled in production');
+        }
+    }
+
     @Get()
     async getDebugPanel(@Res() res: FastifyReply) {
+        this.checkEnv();
         const html = `
         <!DOCTYPE html>
         <html>
@@ -77,7 +87,10 @@ export class DebugController {
     }
 
     @Post('seed')
+    @UseGuards(AuthGuard, RolesGuard)
+    @Roles('SUPER_ADMIN')
     async seedData() {
+        this.checkEnv();
         // 1. Create Test OIDC Client
         const client = await this.prisma.oAuthClient.upsert({
             where: { clientId: 'test-app' },

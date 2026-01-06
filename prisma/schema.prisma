@@ -45,6 +45,7 @@ model User {
   paymentMethods PaymentMethod[]
   kyc            Kycrecord?
   consents       OAuthConsent[]
+  appMemberships AppMembership[] // Relation to App Perms
 
   // Parental Control Relations
   ownedHousehold       Household?        @relation("HouseholdOwner")
@@ -198,6 +199,7 @@ model OAuthClient {
   clientId         String   @unique
   clientSecretHash String? // for confidential clients
   name             String
+  website          String? // App Homepage/Domain
   redirectUris     String[]
   grantTypes       String[] // "authorization_code", "refresh_token"
   isPublic         Boolean  @default(false)
@@ -212,7 +214,37 @@ model OAuthClient {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  team      AppMembership[] // Relation to App Team
+
   @@map("oauth_clients")
+}
+
+// -----------------------------------------------------------------------------
+// App RBAC (5-Tier Support)
+// -----------------------------------------------------------------------------
+
+enum AppRole {
+  SUPER_APP_ADMIN
+  REGIONAL_ADMIN
+  STAFF
+}
+
+model AppMembership {
+  id        String   @id @default(uuid())
+  userId    String
+  clientId  String
+  role      AppRole
+  region    String?  // For REGIONAL_ADMIN (e.g., "East Africa")
+  permissions Json?  // Optional fine-grained overrides
+
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client    OAuthClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, clientId])
+  @@map("app_memberships")
 }
 
 model ApiKey {

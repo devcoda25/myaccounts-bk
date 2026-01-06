@@ -4,6 +4,11 @@ export class AdminCreateOAuthClientDto {
     @IsString()
     name: string;
 
+    @IsString()
+    @IsOptional()
+    @IsUrl()
+    website?: string;
+
     @IsEnum(['confidential', 'public'])
     type: 'confidential' | 'public';
 
@@ -24,6 +29,11 @@ export class AdminUpdateOAuthClientDto {
     @IsString()
     @IsOptional()
     name?: string;
+
+    @IsString()
+    @IsOptional()
+    @IsUrl()
+    website?: string;
 
     @IsArray()
     @IsString({ each: true })

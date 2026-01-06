@@ -20,12 +20,27 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { PaymentModule } from './modules/payment/payment.module';
 import { EdgeGuard } from './middleware/edge-guard.middleware';
 
+// Redis Storage
+import { ThrottlerStorageRedisService } from 'nestjs-throttler-storage-redis';
+import { validateEnv } from './utils/env.validation';
+import { RedisModule } from './modules/redis/redis.module';
+import { KafkaModule } from './modules/kafka/kafka.module';
+import { StorageModule } from './modules/storage/storage.module';
+
+const env = validateEnv(process.env);
+
 @Module({
     imports: [
-        ThrottlerModule.forRoot([{
-            ttl: 60000,
-            limit: 100,
-        }]),
+        ThrottlerModule.forRoot({
+            throttlers: [{
+                ttl: 60000,
+                limit: 100,
+            }],
+            storage: new ThrottlerStorageRedisService(env.REDIS_URL),
+        }),
+        RedisModule,
+        KafkaModule,
+        StorageModule,
         PrometheusModule.register(),
         AuthModule,
         OidcBaseModule,
@@ -57,4 +72,3 @@ import { EdgeGuard } from './middleware/edge-guard.middleware';
     ],
 })
 export class AppModule { }
-// Force rebuild 2

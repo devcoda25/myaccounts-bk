@@ -205,6 +205,7 @@ export class AdminService {
         const app = await this.repo.createOAuthClient({
             clientId,
             name: dto.name,
+            website: dto.website,
             clientSecretHash,
             redirectUris: dto.redirectUris,
             isFirstParty: dto.isFirstParty || false,
@@ -223,9 +224,23 @@ export class AdminService {
 
         return this.repo.updateOAuthClient(id, {
             name: dto.name,
+            website: dto.website,
             redirectUris: dto.redirectUris,
             isFirstParty: dto.isFirstParty
         });
+    }
+
+    async rotateAppSecret(id: string) {
+        const app = await this.repo.getOAuthClientById(id);
+        if (!app) throw new NotFoundException('App not found');
+        if (app.isPublic) throw new Error('Public apps do not have secrets');
+
+        const clientSecret = `sk_${crypto.randomBytes(16).toString('hex')}`;
+        const clientSecretHash = await argon2.hash(clientSecret);
+
+        await this.repo.updateOAuthClient(id, { clientSecretHash });
+
+        return { clientSecret };
     }
 
     async deleteApp(id: string) {

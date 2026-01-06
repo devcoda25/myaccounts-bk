@@ -1,9 +1,12 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { jwtVerify, importJWK } from 'jose';
 import { KeyManager } from '../../utils/keys';
+import { PrismaService } from '../../prisma-lib/prisma.service';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
+    constructor(private prisma: PrismaService) { }
+
     async canActivate(context: ExecutionContext): Promise<boolean> {
         const request = context.switchToHttp().getRequest();
         const token = this.extractToken(request);
@@ -17,6 +20,21 @@ export class AuthGuard implements CanActivate {
             const { payload } = await jwtVerify(token, publicKey, {
                 algorithms: ['ES256'],
             });
+
+            // [Security] Rule E: Session Revocation Check
+            if (payload.jti) {
+                const session = await this.prisma.session.findUnique({
+                    where: { id: payload.jti as string }
+                });
+                if (!session) {
+                    throw new UnauthorizedException('Session revoked');
+                }
+                // Check expiry logic if needed, but jwtVerify handles exp check.
+            } else {
+                // If no jti, fallback to user check
+                const user = await this.prisma.user.findUnique({ where: { id: payload.sub as string } });
+                if (!user) throw new UnauthorizedException('User not found');
+            }
 
             request['user'] = {
                 ...payload,
