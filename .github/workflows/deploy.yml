@@ -42,5 +42,5 @@ jobs:
             export NODE_OPTIONS="--max-old-space-size=4096"
             npm run build
             
-            # Restart PM2
-            pm2 restart api
+            # Restart PM2 (or start if not running)
+            pm2 restart api || pm2 start dist/main.js --name api --update-env
