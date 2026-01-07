@@ -39,6 +39,7 @@ jobs:
             
             # Build not required if just running ts-node, but we are using built dist
             # Rebuild the application
+            export NODE_OPTIONS="--max-old-space-size=4096"
             npm run build
             
             # Restart PM2
