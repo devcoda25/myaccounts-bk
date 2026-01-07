@@ -28,7 +28,8 @@ export async function bootstrap() {
 
     const app = await NestFactory.create<NestFastifyApplication>(
         AppModule,
-        new FastifyAdapter({ trustProxy: true }) // [Security] Rule F: Trust Proxy (e.g. AWS/Nginx)
+        new FastifyAdapter({ trustProxy: true }), // [Security] Rule F: Trust Proxy (e.g. AWS/Nginx)
+        { logger: ['error', 'warn'] } // [Cleanup] Reduce log noise
     );
 
     // [Security] Helmet for Security Headers & CSP

@@ -1,64 +1,16 @@
-import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { OAuthClientRepository } from '../../repos/users/oauth-client.repository';
 import * as crypto from 'crypto';
 import * as argon2 from 'argon2';
 
 @Injectable()
-export class AppsService implements OnModuleInit {
+export class AppsService {
     private readonly logger = new Logger(AppsService.name);
 
     constructor(private oauthClientRepo: OAuthClientRepository) { }
 
-    async onModuleInit() {
-        try {
-            await this.seedApps();
-        } catch (e) {
-            this.logger.error('Failed to seed apps', e);
-        }
-    }
+    // Seeding logic removed as per user request
 
-    private async seedApps() {
-        this.logger.log('Seeding OAuth Clients for Apps...');
-
-        const coreApps = [
-            { id: 'charging', name: 'EVzone Charging', secret: 'charging-secret-123' },
-            { id: 'marketplace', name: 'EVzone Marketplace', secret: 'marketplace-secret-123' },
-            { id: 'pay', name: 'EVzone Pay', secret: 'pay-secret-123' },
-            { id: 'school', name: 'EVzone School', secret: 'school-secret-123' },
-            { id: 'agenthub', name: 'AgentHub', secret: 'agenthub-secret-123' },
-            { id: 'mylivedealz', name: 'MyLiveDealz', secret: 'mylivedealz-secret-123' },
-            { id: 'logistics', name: 'EVzone Logistics', secret: 'logistics-secret-123' },
-            { id: 'creator', name: 'Creator Studio', secret: 'creator-secret-123' },
-        ];
-
-        // Check if we need to seed by checking one key app
-        const existing = await this.oauthClientRepo.findById('charging');
-        if (existing) {
-            this.logger.log('Apps already seeded (Found "charging" app). Skipping.');
-            return;
-        }
-
-        for (const app of coreApps) {
-            const secretHash = await argon2.hash(app.secret);
-            // In production, Redirect URI should be configurable per environment.
-            // For now, we point to localhost:3000/callback as dummy, or the real frontend if known.
-            const redirectUri = process.env.APP_REDIRECT_URI_BASE
-                ? `${process.env.APP_REDIRECT_URI_BASE}/${app.id}/callback`
-                : `http://localhost:3000/callback/${app.id}`;
-
-            await this.oauthClientRepo.upsertClient({
-                clientId: app.id,
-                name: app.name,
-                clientSecretHash: secretHash,
-                redirectUris: [redirectUri],
-                isFirstParty: true,
-                isPublic: false // Confidential clients
-            });
-            this.logger.log(`Seeded app: ${app.name} (ID: ${app.id})`);
-            // Security Note: We only log the PLAIN secret here for dev purposes if needed, 
-            // but effectively we just hardcoded them above for this "demo" phase.
-        }
-    }
 
     async getApps(userId: string) {
         const { firstParty, consents } = await this.oauthClientRepo.getAppsForUser(userId);
