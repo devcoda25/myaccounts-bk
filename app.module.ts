@@ -26,11 +26,16 @@ import { validateEnv } from './utils/env.validation';
 import { RedisModule } from './modules/redis/redis.module';
 import { KafkaModule } from './modules/kafka/kafka.module';
 import { StorageModule } from './modules/storage/storage.module';
+import { ConfigModule } from '@nestjs/config';
 
 const env = validateEnv(process.env);
 
 @Module({
     imports: [
+        ConfigModule.forRoot({
+            isGlobal: true,
+            validate: validateEnv,
+        }),
         ThrottlerModule.forRoot({
             throttlers: [{
                 ttl: 60000,
