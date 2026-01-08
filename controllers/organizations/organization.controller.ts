@@ -97,6 +97,24 @@ export class OrganizationController {
     }
 
     // --- Invites ---
+    @Get('public/invites/:token')
+    async getInvite(@Param('token') token: string) {
+        // Public endpoint, no auth guard needed for viewing context
+        return this.service.getInviteByToken(token);
+    }
+
+    @Post('invites/accept')
+    @UseGuards(AuthGuard)
+    async acceptInvite(@Body() body: { token: string }, @CurrentUser() user: AuthRequest['user']) {
+        return this.service.acceptInvite(body.token, user.sub);
+    }
+
+    @Post('invites/decline')
+    @UseGuards(AuthGuard)
+    async declineInvite(@Body() body: { token: string }) {
+        return this.service.declineInvite(body.token);
+    }
+
     @Post(':id/invites')
     @UseGuards(AuthGuard)
     async createInvite(@Param('id') id: string, @Body() body: CreateInviteDto, @CurrentUser() user: AuthRequest['user']) {

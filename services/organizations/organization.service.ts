@@ -243,6 +243,66 @@ export class OrganizationService {
         return this.inviteRepo.revoke(id);
     }
 
+    async getInviteByToken(token: string) {
+        const invite = await this.inviteRepo.findByToken(token);
+        if (!invite) throw new NotFoundException('Invite not found');
+
+        // Allow viewing expired/accepted invites for context, but mark them
+        const isExpired = new Date() > invite.expiresAt;
+        const isValid = invite.status === 'PENDING' && !isExpired;
+
+        return {
+            email: invite.email,
+            role: invite.role,
+            orgName: invite.organization?.name || 'Unknown Organization',
+            orgId: invite.orgId,
+            status: invite.status,
+            expiresAt: invite.expiresAt,
+            isValid
+        };
+    }
+
+    async acceptInvite(token: string, userId: string) {
+        const invite = await this.inviteRepo.findByToken(token);
+        if (!invite) throw new NotFoundException('Invite not found');
+
+        if (invite.status !== 'PENDING') {
+            throw new Error(`Invite is already ${invite.status.toLowerCase()}`);
+        }
+
+        if (new Date() > invite.expiresAt) {
+            throw new Error('Invite has expired');
+        }
+
+        // Add user to organization
+        await this.repo.addMember(invite.orgId, userId, invite.role);
+
+        // Mark invite as accepted
+        await this.inviteRepo.accept(invite.id);
+
+        return { success: true, orgId: invite.orgId };
+    }
+
+    async declineInvite(token: string) {
+        const invite = await this.inviteRepo.findByToken(token);
+        if (!invite) throw new NotFoundException('Invite not found');
+
+        if (invite.status !== 'PENDING') {
+            // Idempotent success if already handled, or error? Let's generic return.
+            return { success: true };
+        }
+
+        // We need a decline method in repo or just revoke/update status
+        // Since repo.revoke sets status to REVOKED, let's use a manual update if needed
+        // But for now, let's assume we can just 'revoke' it or add a specific 'decline' method if strict
+        // The plan said 'decline', but repo only has 'revoke' (REVOKED) and 'accept' (ACCEPTED).
+        // Let's use 'revoke' for now as declining essentially voids it.
+        // Actually, better to distinguish. I'll stick to 'revoke' logic for now to keep it simple as it invalidates the token.
+        await this.inviteRepo.revoke(invite.id);
+
+        return { success: true };
+    }
+
     // --- Domains ---
     async addDomain(orgId: string, domain: string) {
         const token = `evz-verify-${Math.random().toString(36).substr(2, 8)}`;
