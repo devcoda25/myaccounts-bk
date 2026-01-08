@@ -36,6 +36,10 @@ jobs:
             
             # Install dependencies
             npm install --legacy-peer-deps
+
+             # Generate Prisma Client
+             npx prisma generate
+            
             
             # Build not required if just running ts-node, but we are using built dist
             # Rebuild the application
