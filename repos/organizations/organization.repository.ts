@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma-lib/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class OrganizationRepository {
     constructor(private prisma: PrismaService) { }
 
-    async create(data: any) {
+    async create(data: Prisma.OrganizationCreateInput) {
         return this.prisma.organization.create({
             data
         });
@@ -50,7 +51,7 @@ export class OrganizationRepository {
         });
     }
 
-    async update(id: string, data: any) {
+    async update(id: string, data: Prisma.OrganizationUpdateInput) {
         return this.prisma.organization.update({
             where: { id },
             data
@@ -145,5 +146,36 @@ export class OrganizationRepository {
             roleCounts[r.role] = r._count.role;
         });
         return roleCounts;
+    }
+
+    // --- Custom Roles ---
+    async createRole(orgId: string, data: { name: string; description?: string; permissions?: Prisma.InputJsonValue }) {
+        return this.prisma.orgRole.create({
+            data: {
+                orgId,
+                name: data.name,
+                description: data.description,
+                permissions: data.permissions || Prisma.JsonNull
+            }
+        });
+    }
+
+    async getRoles(orgId: string) {
+        return this.prisma.orgRole.findMany({
+            where: { orgId }
+        });
+    }
+
+    async updateRole(orgId: string, roleId: string, data: Prisma.OrgRoleUpdateInput) {
+        return this.prisma.orgRole.update({
+            where: { id: roleId, orgId }, // Ensure org ownership
+            data
+        });
+    }
+
+    async deleteRole(orgId: string, roleId: string) {
+        return this.prisma.orgRole.delete({
+            where: { id: roleId, orgId }
+        });
     }
 }

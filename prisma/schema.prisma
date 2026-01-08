@@ -119,8 +119,27 @@ model Organization {
   invites   OrgInvite[]
   domains   OrgDomain[]
   ssoConfig OrgSSO?
+  roles     OrgRole[]
 
   @@map("organizations")
+}
+
+// Organization Custom Roles
+model OrgRole {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  permissions Json?    // { "canInvite": true, "canManageWallet": false }
+  orgId       String
+  isSystem    Boolean  @default(false) // e.g. Owner, Admin (cannot be deleted)
+
+  organization Organization @relation(fields: [orgId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([orgId, name])
+  @@map("org_roles")
 }
 
 // Organization Invites

@@ -3,6 +3,7 @@ import { OrganizationRepository } from '../../repos/organizations/organization.r
 import { OrgInviteRepository } from '../../repos/organizations/invite.repository';
 import { OrgDomainRepository } from '../../repos/organizations/domain.repository';
 import { OrgSSORepository } from '../../repos/organizations/sso.repository';
+import { IOrganizationWithRelations } from '../../common/interfaces/organization.interface';
 
 @Injectable()
 export class OrganizationService {
@@ -39,31 +40,32 @@ export class OrganizationService {
 
     async getOrg(orgId: string, userId?: string) {
         // 1. Fetch Org with Members (to find my role)
-        const org = await this.repo.findById(orgId);
-        if (!org) throw new NotFoundException('Organization not found');
+        const orgData = await this.repo.findById(orgId);
+        if (!orgData) throw new NotFoundException('Organization not found');
+        const org = orgData as unknown as IOrganizationWithRelations;
 
         // 2. Fetch Stats
         const membersByRole = await this.repo.getMembersByRole(orgId);
 
         // 3. Determine my role
         let myRole = 'Viewer';
-        if (userId) {
-            const membership = (org as any).members?.find((m: any) => m.userId === userId);
+        if (userId && org.members) {
+            const membership = org.members.find((m) => m.userId === userId);
             if (membership) myRole = membership.role;
         }
 
         // 4. Parse Metadata
-        const meta = (org.metadata as any) || {};
+        const meta = org.metadata || {};
 
         // 5. Parse Wallet
-        const wallet = (org as any).wallets?.[0]; // Relation loaded by repo
+        const wallet = org.wallets?.[0]; // Relation loaded by repo
         const walletBalance = wallet ? Number(wallet.balance) : 0;
         const walletCurrency = wallet ? wallet.currency : (meta.currency || 'USD');
 
         // 6. Parse Audit Logs
-        const auditHighlights = ((org as any).auditLogs || []).map((log: any) => ({
+        const auditHighlights = (org.auditLogs || []).map((log) => ({
             id: log.id,
-            when: log.createdAt.getTime(),
+            when: new Date(log.createdAt).getTime(),
             actor: log.actorName || (log.user?.firstName || 'System'), // Fallback if no actorName
             action: log.action,
             severity: log.severity || 'info'
@@ -71,23 +73,23 @@ export class OrganizationService {
 
         // 7. Dynamic Counts
         const pendingInvitesCount = (await this.inviteRepo.findPending(orgId)).length;
-        // Also include members with status 'PENDING' if mixed strategy used, but for now mostly invites
 
         return {
             id: org.id,
             name: org.name,
             role: myRole,
-            country: (org as any).country || meta.country || 'Unknown',
-            createdAt: org.createdAt.getTime(),
-            membersCount: (org as any).members?.length || 0,
+            country: org.country || meta.country || 'Unknown',
+            createdAt: new Date(org.createdAt).getTime(),
+            membersCount: org.members?.length || 0,
             membersByRole: membersByRole,
             pendingInvites: pendingInvitesCount,
-            ssoEnabled: (org as any).ssoEnabled,
-            ssoDomains: (org as any).ssoDomains || [],
-            walletEnabled: (org as any).walletEnabled, // Explicit flag
+            ssoEnabled: org.ssoEnabled,
+            ssoDomains: org.ssoDomains || [],
+            walletEnabled: org.walletEnabled, // Explicit flag
             currency: walletCurrency,
+            currencySymbol: walletCurrency === 'USD' ? '$' : walletCurrency, // Simple fallback
             walletBalance: walletBalance,
-            walletMonthlyLimit: wallet ? Number((wallet as any).monthlyLimit || 0) : 0,
+            walletMonthlyLimit: wallet ? Number(wallet.monthlyLimit || 0) : 0,
             auditHighlights: auditHighlights,
             // Expose metadata for settings
             logoDataUrl: meta.logoDataUrl,
@@ -110,7 +112,6 @@ export class OrganizationService {
     }
 
     async updateMember(orgId: string, userId: string, data: { role?: string; status?: string }) {
-        const updateData: any = {};
         if (data.role) await this.repo.updateMemberRole(orgId, userId, data.role);
         if (data.status) await this.repo.updateMemberStatus(orgId, userId, data.status);
         return { success: true };
@@ -132,10 +133,11 @@ export class OrganizationService {
     }
 
     async getPermissions(orgId: string) {
-        const org = await this.repo.findById(orgId);
-        if (!org) throw new NotFoundException('Organization not found');
+        const orgData = await this.repo.findById(orgId);
+        if (!orgData) throw new NotFoundException('Organization not found');
+        const org = orgData as unknown as IOrganizationWithRelations;
 
-        const metadata = (org.metadata as any) || {};
+        const metadata = org.metadata || {};
         return {
             grants: metadata.grants || {},
             policy: metadata.policy || {
@@ -147,10 +149,11 @@ export class OrganizationService {
     }
 
     async updatePermissions(orgId: string, data: { grants?: any; policy?: any }) {
-        const org = await this.repo.findById(orgId);
-        if (!org) throw new NotFoundException('Organization not found');
+        const orgData = await this.repo.findById(orgId);
+        if (!orgData) throw new NotFoundException('Organization not found');
+        const org = orgData as unknown as IOrganizationWithRelations;
 
-        const currentMetadata = (org.metadata as any) || {};
+        const currentMetadata = org.metadata || {};
         const newMetadata = {
             ...currentMetadata,
             grants: data.grants || currentMetadata.grants,
@@ -176,8 +179,9 @@ export class OrganizationService {
 
         // Merge metadata
         if (data.address || data.logoDataUrl || data.defaultRolePolicy) {
-            const current = await this.repo.findById(orgId);
-            const currentMeta = (current?.metadata as any) || {};
+            const currentData = await this.repo.findById(orgId);
+            const current = currentData as unknown as IOrganizationWithRelations;
+            const currentMeta = current?.metadata || {};
             updateData.metadata = {
                 ...currentMeta,
                 ...(data.address ? { address: data.address } : {}),
@@ -256,7 +260,34 @@ export class OrganizationService {
         return this.ssoRepo.findByOrgId(orgId);
     }
 
-    async updateSSO(orgId: string, data: { provider: string; isEnabled: boolean; config: any }) {
+    async updateSSO(orgId: string, data: { provider: string; isEnabled: boolean; config?: any }) {
         return this.ssoRepo.upsert(orgId, data);
+    }
+
+    // --- Custom Roles ---
+    async createRole(orgId: string, data: { name: string; description?: string; permissions?: any }) {
+        return this.repo.createRole(orgId, data);
+    }
+
+    async getRoles(orgId: string) {
+        // 1. Get system roles (hardcoded for now to match current logic)
+        const systemRoles = [
+            { id: 'role_owner', name: 'Owner', description: 'Full access to organization', isSystem: true, permissions: { all: true } },
+            { id: 'role_admin', name: 'Admin', description: 'Can manage members and settings', isSystem: true, permissions: { manage_members: true, manage_settings: true } },
+            { id: 'role_member', name: 'Member', description: 'Standard access', isSystem: true, permissions: { view_only: true } }
+        ];
+
+        // 2. Get custom roles from DB
+        const customRoles = await this.repo.getRoles(orgId);
+
+        return [...systemRoles, ...customRoles];
+    }
+
+    async updateRole(orgId: string, roleId: string, data: any) {
+        return this.repo.updateRole(orgId, roleId, data);
+    }
+
+    async deleteRole(orgId: string, roleId: string) {
+        return this.repo.deleteRole(orgId, roleId);
     }
 }

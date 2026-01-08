@@ -1,23 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma-lib/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class OrgSSORepository {
     constructor(private prisma: PrismaService) { }
 
-    async upsert(orgId: string, data: { provider: string; isEnabled: boolean; config: any }) {
+    async upsert(orgId: string, data: { provider: string; isEnabled: boolean; config?: Prisma.InputJsonValue }) {
         return this.prisma.orgSSO.upsert({
             where: { orgId },
             update: {
                 provider: data.provider,
                 isEnabled: data.isEnabled,
-                config: data.config
+                ...(data.config ? { config: data.config } : {})
             },
             create: {
                 orgId,
                 provider: data.provider,
                 isEnabled: data.isEnabled,
-                config: data.config
+                config: data.config || Prisma.JsonNull
             }
         });
     }

@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma-lib/prisma.service';
-import { OrgInvite } from '@prisma/client';
+import { OrgInvite, Prisma } from '@prisma/client';
 
 @Injectable()
 export class OrgInviteRepository {
     constructor(private prisma: PrismaService) { }
 
-    async create(data: { email: string; role: string; token: string; expiresAt: Date; orgId: string }) {
+    async create(data: Prisma.OrgInviteUncheckedCreateInput) {
         return this.prisma.orgInvite.create({ data });
     }
 

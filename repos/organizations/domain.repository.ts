@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma-lib/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class OrgDomainRepository {
     constructor(private prisma: PrismaService) { }
 
-    async create(data: { domain: string; verificationToken: string; orgId: string }) {
+    async create(data: Prisma.OrgDomainUncheckedCreateInput) {
         return this.prisma.orgDomain.create({ data });
     }
 
@@ -47,7 +48,8 @@ export class OrgDomainRepository {
             data: { status: 'PENDING' }
         });
     }
-    async update(id: string, data: any) {
+
+    async update(id: string, data: Prisma.OrgDomainUpdateInput) {
         return this.prisma.orgDomain.update({
             where: { id },
             data

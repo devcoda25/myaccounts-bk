@@ -56,9 +56,52 @@ export class UpdateDomainDto {
 
 export class UpdateSSODto {
     @IsBoolean()
-    enabled: boolean;
+    isEnabled: boolean;
+
+    @IsString()
+    provider: string;
 
     @IsOptional()
     @IsString()
     providerUrl?: string;
+
+    @IsOptional()
+    config?: any;
+}
+
+export class UpdateOrgPermissionsDto {
+    @IsOptional()
+    grants?: any; // To be strictly typed later if possible
+
+    @IsOptional()
+    policy?: {
+        defaultInviteRole?: string;
+        requireAdminApproval?: boolean;
+        requireMfaForAdmins?: boolean;
+    };
+}
+
+export class CreateRoleDto {
+    @IsString()
+    name: string;
+
+    @IsOptional()
+    @IsString()
+    description?: string;
+
+    @IsOptional()
+    permissions?: string; // JSON object for granular permissions
+}
+
+export class UpdateRoleDto {
+    @IsOptional()
+    @IsString()
+    name?: string;
+
+    @IsOptional()
+    @IsString()
+    description?: string;
+
+    @IsOptional()
+    permissions?: string;
 }
