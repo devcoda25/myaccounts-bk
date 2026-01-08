@@ -248,4 +248,30 @@ export class AdminService {
         if (!app) throw new NotFoundException('App not found');
         return this.repo.deleteOAuthClient(id);
     }
+
+    async getAdmins() {
+        const admins = await this.repo.getAdmins();
+        return admins.map(a => ({
+            id: a.id,
+            name: `${a.firstName || ''} ${a.otherNames || ''}`.trim() || 'Unknown',
+            email: a.email,
+            role: a.role,
+            lastActive: a.updatedAt.toISOString(), // Simplified
+            status: a.emailVerified ? 'Active' : 'Invited'
+        }));
+    }
+
+    async inviteAdmin(email: string, role: string) {
+        // For now, we only promote existing users.
+        const user = await this.repo.getAdminByEmail(email);
+        if (!user) {
+            throw new NotFoundException('User not found. Please ask them to sign up first.');
+        }
+        return this.repo.updateUserRole(user.id, role);
+    }
+
+    async removeAdmin(id: string) {
+        // Downgrade to USER
+        return this.repo.updateUserRole(id, 'USER');
+    }
 }

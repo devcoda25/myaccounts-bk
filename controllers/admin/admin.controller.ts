@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Query, UseGuards, Param, NotFoundException, Body } from '@nestjs/common';
+import { Controller, Get, Post, Query, UseGuards, Param, NotFoundException, Body, Delete } from '@nestjs/common';
 import { AdminService } from '../../services/admin/admin.service';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -51,5 +51,20 @@ export class AdminController {
     @Get('transactions')
     async getTransactions(@Query() query: AdminQueryDto) {
         return this.adminService.getTransactions(query);
+    }
+
+    @Get('members')
+    async getMembers() {
+        return this.adminService.getAdmins();
+    }
+
+    @Post('members')
+    async inviteMember(@Body() body: { email: string; role: string }) {
+        return this.adminService.inviteAdmin(body.email, body.role);
+    }
+
+    @Delete('members/:id')
+    async removeMember(@Param('id') id: string) {
+        return this.adminService.removeAdmin(id);
     }
 }

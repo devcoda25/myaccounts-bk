@@ -290,4 +290,37 @@ export class AdminRepository {
             where: { clientId: id }
         });
     }
+
+    async getAdmins() {
+        return this.prisma.user.findMany({
+            where: {
+                role: { in: ['SUPER_ADMIN', 'ADMIN'] }
+            },
+            select: {
+                id: true,
+                firstName: true,
+                otherNames: true,
+                email: true,
+                role: true,
+                lastLocation: true,
+                // We'll use lastLocation or updated_at for "last active" approximation if session not joined
+                updatedAt: true,
+                emailVerified: true
+            },
+            orderBy: { role: 'asc' } // Super Admin first
+        });
+    }
+
+    async getAdminByEmail(email: string) {
+        return this.prisma.user.findUnique({
+            where: { email }
+        });
+    }
+
+    async updateUserRole(userId: string, role: string) {
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: { role }
+        });
+    }
 }

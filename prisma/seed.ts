@@ -139,6 +139,26 @@ async function main() {
 
     console.log(`- Seeded Org and Audit Logs: ${org.name}`);
 
+    // 5. Create 10 Extra Dummy Users
+    for (let i = 1; i <= 10; i++) {
+        const dummyEmail = `user${i}@demo.com`;
+        const dummyName = `User ${i}`;
+        const dummyPassword = await argon2.hash('password123');
+        await prisma.user.upsert({
+            where: { email: dummyEmail },
+            create: {
+                email: dummyEmail,
+                firstName: 'Demo',
+                otherNames: dummyName,
+                emailVerified: true,
+                passwordHash: dummyPassword,
+                role: 'USER'
+            },
+            update: {}
+        });
+    }
+    console.log(`- Seeded 10 extra dummy users (user1@demo.com to user10@demo.com)`);
+
     console.log('--- Seeding Complete ---');
 }
 
