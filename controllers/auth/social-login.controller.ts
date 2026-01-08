@@ -5,22 +5,38 @@ import { SocialAuthService } from '../../services/auth/social-auth.service';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { SocialLoginDto } from '../../common/dto/auth/social-login.dto';
 
+import { LocationService } from '../../services/users/location.service';
+import { UserManagementService } from '../../services/users/user-management.service';
+
 @Controller('auth')
 export class SocialLoginController {
-    constructor(private socialAuthService: SocialAuthService) { }
+    constructor(
+        private socialAuthService: SocialAuthService,
+        private locationService: LocationService,
+        private userManagementService: UserManagementService
+    ) { }
 
     @Post('google')
     async googleLogin(@Body() body: SocialLoginDto, @Res({ passthrough: true }) res: FastifyReply, @Req() req: FastifyRequest) {
         if (!body.token) throw new BadRequestException('Token is required');
 
+        const ip = req.ip || (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '';
+        const location = this.locationService.getLocation(ip);
+
         const deviceInfo = {
-            ip: req.ip,
+            ip: ip,
             device: req.headers['user-agent'] || 'Unknown',
             os: 'Unknown',
             browser: 'Unknown',
+            location: location
         };
 
         const result = await this.socialAuthService.socialLogin('google', body.token, deviceInfo);
+
+        if (location && result.user) {
+            await this.userManagementService.updateProfile(result.user.id, { lastLocation: location } as any);
+        }
+
         this.setCookie(res, result.access_token);
         return result;
     }
@@ -29,14 +45,23 @@ export class SocialLoginController {
     async appleLogin(@Body() body: SocialLoginDto, @Res({ passthrough: true }) res: FastifyReply, @Req() req: FastifyRequest) {
         if (!body.token) throw new BadRequestException('Token is required');
 
+        const ip = req.ip || (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '';
+        const location = this.locationService.getLocation(ip);
+
         const deviceInfo = {
-            ip: req.ip,
+            ip: ip,
             device: req.headers['user-agent'] || 'Unknown',
             os: 'Unknown',
             browser: 'Unknown',
+            location: location
         };
 
         const result = await this.socialAuthService.socialLogin('apple', body.token, deviceInfo);
+
+        if (location && result.user) {
+            await this.userManagementService.updateProfile(result.user.id, { lastLocation: location } as any);
+        }
+
         this.setCookie(res, result.access_token);
         return result;
     }

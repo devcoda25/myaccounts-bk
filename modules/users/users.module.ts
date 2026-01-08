@@ -4,6 +4,7 @@ import { AuthModule } from '../auth/auth.module';
 import { UserManagementService } from '../../services/users/user-management.service';
 import { UserQueryService } from '../../services/users/user-query.service';
 import { MediaService } from '../../services/media/media.service';
+import { LocationService } from '../../services/users/location.service';
 import { UserFindRepository } from '../../repos/users/user-find.repository';
 import { UserCreateRepository } from '../../repos/users/user-create.repository';
 import { UserUpdateRepository } from '../../repos/users/user-update.repository';
@@ -22,6 +23,7 @@ import { UsersController } from '../../controllers/users/users.controller';
     providers: [
         UserManagementService,
         UserQueryService,
+        LocationService,
         MediaService,
         UserFindRepository,
         UserCreateRepository,
@@ -41,6 +43,7 @@ import { UsersController } from '../../controllers/users/users.controller';
     exports: [
         UserManagementService,
         UserQueryService,
+        LocationService,
         UserFindRepository,
         UserCreateRepository,
         UserUpdateRepository,

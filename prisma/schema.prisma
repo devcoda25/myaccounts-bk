@@ -23,6 +23,7 @@ model User {
   avatarUrl   String?
   role        String    @default("USER") // e.g., "SUPER_ADMIN", "ADMIN", "USER"
   preferences Json? // User settings (theme, notifications, etc.)
+  lastLocation Json? // Store last detected location (country, city, coords)
 
   emailVerified    Boolean @default(false)
   phoneVerified    Boolean @default(false)

@@ -5,9 +5,16 @@ import { LoginDto } from '../../common/dto/auth/login.dto';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { AuthRequest } from '../../common/interfaces/auth-request.interface';
 
+import { LocationService } from '../../services/users/location.service';
+import { UserManagementService } from '../../services/users/user-management.service';
+
 @Controller('auth')
 export class LoginController {
-    constructor(private loginService: LoginService) { }
+    constructor(
+        private loginService: LoginService,
+        private locationService: LocationService,
+        private userManagementService: UserManagementService
+    ) { }
 
     @Post('login')
     async login(@Body() body: LoginDto, @Res({ passthrough: true }) res: FastifyReply, @Req() req: AuthRequest) {
@@ -16,11 +23,22 @@ export class LoginController {
             throw new UnauthorizedException('Invalid credentials');
         }
 
+        const ip = req.ip || (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '';
+        const location = this.locationService.getLocation(ip);
+
+        // Update User Location
+        if (location) {
+            // we do not await this to not block login? or we await to ensure consistency?
+            // Await is safer for now.
+            await this.userManagementService.updateProfile(user.id, { lastLocation: location } as any);
+        }
+
         const deviceInfo = {
-            ip: req.ip,
+            ip: ip,
             device: req.headers['user-agent'] || 'Unknown',
             os: 'Unknown', // Could parse using library
             browser: 'Unknown', // Could parse using library
+            location: location // Add location to session device info too
         };
 
         const tokens = await this.loginService.generateSessionToken(user, deviceInfo);
