@@ -5,6 +5,7 @@ import { OrgDomainRepository } from '../../repos/organizations/domain.repository
 import { OrgSSORepository } from '../../repos/organizations/sso.repository';
 import { IOrganizationWithRelations } from '../../common/interfaces/organization.interface';
 import { Prisma } from '@prisma/client';
+import { EmailService } from '../notifications/email.service';
 
 @Injectable()
 export class OrganizationService {
@@ -12,7 +13,8 @@ export class OrganizationService {
         private repo: OrganizationRepository,
         private inviteRepo: OrgInviteRepository,
         private domainRepo: OrgDomainRepository,
-        private ssoRepo: OrgSSORepository
+        private ssoRepo: OrgSSORepository,
+        private emailService: EmailService
     ) { }
 
     async createOrg(userId: string, data: { name: string; country?: string }) {
@@ -208,13 +210,29 @@ export class OrganizationService {
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
 
-        return this.inviteRepo.create({
+        const invite = await this.inviteRepo.create({
             email,
             role,
             token,
             expiresAt,
             orgId
         });
+
+        // Send Email
+        const link = `${process.env.FRONTEND_URL || 'https://myaccounts.evzone.com'}/accept-invite?token=${token}`;
+        try {
+            await this.emailService.sendEmail(
+                email,
+                'You have been invited to join an organization',
+                `You have been invited to join an organization on EVzone as a ${role}. Click here to accept: ${link}`,
+                `<p>You have been invited to join an organization on EVzone.</p><p>Role: <strong>${role}</strong></p><p><a href="${link}">Click here to accept invite</a></p>`
+            );
+        } catch (e) {
+            // Log but don't fail the invite creation (soft fail)
+            console.error('Failed to send invite email', e);
+        }
+
+        return invite;
     }
 
     async getInvites(orgId: string) {
