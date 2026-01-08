@@ -6,9 +6,10 @@ import { OrganizationController } from '../../controllers/organizations/organiza
 import { OrgInviteRepository } from '../../repos/organizations/invite.repository';
 import { OrgDomainRepository } from '../../repos/organizations/domain.repository';
 import { OrgSSORepository } from '../../repos/organizations/sso.repository';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-    imports: [PrismaModule],
+    imports: [PrismaModule, NotificationsModule],
     providers: [
         OrganizationRepository,
         OrganizationService,
