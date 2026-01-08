@@ -219,7 +219,7 @@ export class OrganizationService {
         });
 
         // Send Email
-        const link = `${process.env.FRONTEND_URL || 'https://myaccounts.evzone.com'}/accept-invite?token=${token}`;
+        const link = `${process.env.FRONTEND_URL || 'https://accounts.evzone.app'}/org-invite/accept?token=${token}`;
         try {
             await this.emailService.sendEmail(
                 email,
