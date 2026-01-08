@@ -1,3 +1,4 @@
+/// <reference path="../../types/geoip-lite.d.ts" />
 import { LocationService } from './location.service';
 
 describe('LocationService', () => {
