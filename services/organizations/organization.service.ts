@@ -4,6 +4,7 @@ import { OrgInviteRepository } from '../../repos/organizations/invite.repository
 import { OrgDomainRepository } from '../../repos/organizations/domain.repository';
 import { OrgSSORepository } from '../../repos/organizations/sso.repository';
 import { IOrganizationWithRelations } from '../../common/interfaces/organization.interface';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class OrganizationService {
@@ -148,7 +149,7 @@ export class OrganizationService {
         };
     }
 
-    async updatePermissions(orgId: string, data: { grants?: any; policy?: any }) {
+    async updatePermissions(orgId: string, data: { grants?: Prisma.InputJsonValue; policy?: Prisma.InputJsonValue }) {
         const orgData = await this.repo.findById(orgId);
         if (!orgData) throw new NotFoundException('Organization not found');
         const org = orgData as unknown as IOrganizationWithRelations;
@@ -169,9 +170,17 @@ export class OrganizationService {
     }
 
     // --- Settings ---
-    async updateSettings(orgId: string, data: any) {
+    async updateSettings(orgId: string, data: {
+        name?: string;
+        country?: string;
+        walletEnabled?: boolean;
+        ssoEnabled?: boolean;
+        address?: string;
+        logoDataUrl?: string;
+        defaultRolePolicy?: string;
+    }) {
         // Data can include name, country, address, logo, defaultRolePolicy
-        const updateData: any = {};
+        const updateData: Prisma.OrganizationUpdateInput = {};
         if (data.name) updateData.name = data.name;
         if (data.country) updateData.country = data.country;
         if (data.walletEnabled !== undefined) updateData.walletEnabled = data.walletEnabled;
@@ -251,7 +260,7 @@ export class OrganizationService {
         return this.domainRepo.delete(id);
     }
 
-    async updateDomain(id: string, data: any) {
+    async updateDomain(id: string, data: Prisma.OrgDomainUpdateInput) {
         return this.domainRepo.update(id, data);
     }
 
@@ -260,12 +269,12 @@ export class OrganizationService {
         return this.ssoRepo.findByOrgId(orgId);
     }
 
-    async updateSSO(orgId: string, data: { provider: string; isEnabled: boolean; config?: any }) {
+    async updateSSO(orgId: string, data: { provider: string; isEnabled: boolean; config?: Prisma.InputJsonValue }) {
         return this.ssoRepo.upsert(orgId, data);
     }
 
     // --- Custom Roles ---
-    async createRole(orgId: string, data: { name: string; description?: string; permissions?: any }) {
+    async createRole(orgId: string, data: { name: string; description?: string; permissions?: Prisma.InputJsonValue }) {
         return this.repo.createRole(orgId, data);
     }
 
@@ -283,7 +292,7 @@ export class OrganizationService {
         return [...systemRoles, ...customRoles];
     }
 
-    async updateRole(orgId: string, roleId: string, data: any) {
+    async updateRole(orgId: string, roleId: string, data: Prisma.OrgRoleUpdateInput) {
         return this.repo.updateRole(orgId, roleId, data);
     }
 

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma-lib/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class HouseholdRepository {
@@ -32,7 +33,7 @@ export class HouseholdRepository {
         });
     }
 
-    async addMember(householdId: string, data: any) {
+    async addMember(householdId: string, data: Omit<Prisma.HouseholdMemberUncheckedCreateInput, 'householdId'>) {
         return this.prisma.householdMember.create({
             data: { ...data, householdId },
         });

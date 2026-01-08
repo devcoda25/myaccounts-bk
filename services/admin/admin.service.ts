@@ -30,8 +30,8 @@ export class AdminService {
         );
 
         const mapped = logs.map(l => {
-            const riskMap: any = { 'critical': 'High', 'warning': 'Medium', 'info': 'Low' };
-            const details = l.details as any;
+            const riskMap: Record<string, string> = { 'critical': 'High', 'warning': 'Medium', 'info': 'Low' };
+            const details = l.details as Record<string, any>;
 
             return {
                 id: l.id,

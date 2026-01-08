@@ -29,7 +29,7 @@ export class LoginService {
         return argon2.verify(user.passwordHash, pass);
     }
 
-    async generateSessionToken(user: { id: string; email: string; role: string }, deviceInfo: any = {}) {
+    async generateSessionToken(user: { id: string; email: string; role: string }, deviceInfo: Record<string, unknown> = {}) {
         // 1. Create Refresh Token (High Entropy)
         const refreshRandom = crypto.randomBytes(32).toString('hex');
         const refreshHash = await argon2.hash(refreshRandom);

@@ -30,7 +30,7 @@ export class ParentalController {
     @Patch('children/:id')
     async updateChild(@Param('id') id: string, @Body() body: UpdateChildDto) {
         const { patch, audit } = body;
-        return this.parentalService.updateChild(id, patch, audit);
+        return this.parentalService.updateChild(id, patch || {}, audit);
     }
 
     // --- Household ---

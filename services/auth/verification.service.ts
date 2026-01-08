@@ -51,7 +51,7 @@ export class VerificationService {
     }
 
     // Unified Secure Verification Logic
-    private async verifyGeneric(identifier: string, code: string, type: string, onSuccess: (user: any) => Promise<void>) {
+    private async verifyGeneric(identifier: string, code: string, type: string, onSuccess: (user: import("@prisma/client").User) => Promise<void>) {
         const record = await this.verificationRepo.findVerification(identifier, code, type);
 
         // 1. Check if record exists (matches ID, Token, Type, Expiry)
@@ -77,7 +77,7 @@ export class VerificationService {
         // If we found it via `findVerification`, it means token matched and not expired.
         // We still check attempts just in case
         // (Schema added attempts)
-        const active = record as any;
+        const active = record; // record is VerificationRequest
         if (active.attempts >= 3) {
             await this.verificationRepo.deleteVerification(record.id);
             throw new UnauthorizedException('Too many failed attempts');

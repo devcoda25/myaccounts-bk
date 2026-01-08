@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma-lib/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ChildProfileRepository {
     constructor(private prisma: PrismaService) { }
 
-    async create(data: any) {
+    async create(data: Prisma.ChildProfileUncheckedCreateInput) {
         return this.prisma.childProfile.create({ data });
     }
 
@@ -33,7 +34,7 @@ export class ChildProfileRepository {
         });
     }
 
-    async update(id: string, data: any) {
+    async update(id: string, data: Prisma.ChildProfileUpdateInput) {
         return this.prisma.childProfile.update({
             where: { id },
             data,

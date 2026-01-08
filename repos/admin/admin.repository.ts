@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma-lib/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AdminRepository {
@@ -21,7 +22,7 @@ export class AdminRepository {
     }
 
     async getAuditLogs(skip = 0, take = 50, query?: string, outcome?: string, risk?: string) {
-        const where: any = {};
+        const where: Prisma.AuditLogWhereInput = {};
         if (query) {
             where.OR = [
                 { action: { contains: query, mode: 'insensitive' } },
@@ -31,7 +32,7 @@ export class AdminRepository {
             ];
         }
         if (risk && risk !== 'All') {
-            const riskMap: any = { 'High': 'critical', 'Medium': 'warning', 'Low': 'info' };
+            const riskMap: Record<string, string> = { 'High': 'critical', 'Medium': 'warning', 'Low': 'info' };
             where.severity = riskMap[risk] || risk.toLowerCase();
         }
         if (outcome && outcome !== 'All') {
@@ -65,7 +66,7 @@ export class AdminRepository {
         return agg._sum.balance || 0;
     }
     async getOrgs(skip = 0, take = 50, query?: string, status?: string) {
-        const where: any = {};
+        const where: Prisma.OrganizationWhereInput = {};
         if (query) {
             where.OR = [
                 { name: { contains: query, mode: 'insensitive' } },
@@ -122,7 +123,7 @@ export class AdminRepository {
     }
 
     async getWallets(skip = 0, take = 50, query?: string, status?: string) {
-        const where: any = {};
+        const where: Prisma.WalletWhereInput = {};
         if (status && status !== 'All') {
             where.status = status.toLowerCase();
         }
@@ -195,10 +196,10 @@ export class AdminRepository {
     }
 
     async getTransactions(skip = 0, take = 50, query?: string, type?: string, status?: string) {
-        const where: any = {};
+        const where: Prisma.TransactionWhereInput = {};
         if (status && status !== 'All') {
             // Success -> completed, Failed -> failed, Pending -> pending
-            const statusMap: any = { 'Success': 'completed', 'Failed': 'failed', 'Pending': 'pending' };
+            const statusMap: Record<string, string> = { 'Success': 'completed', 'Failed': 'failed', 'Pending': 'pending' };
             where.status = statusMap[status] || status.toLowerCase();
         }
         if (type && type !== 'All') {
@@ -247,7 +248,7 @@ export class AdminRepository {
     }
 
     async getOAuthClients(skip = 0, take = 50, query?: string) {
-        const where: any = {};
+        const where: Prisma.OAuthClientWhereInput = {};
         if (query) {
             where.OR = [
                 { clientId: { contains: query, mode: 'insensitive' } },
@@ -273,11 +274,11 @@ export class AdminRepository {
         });
     }
 
-    async createOAuthClient(data: any) {
+    async createOAuthClient(data: Prisma.OAuthClientUncheckedCreateInput) {
         return this.prisma.oAuthClient.create({ data });
     }
 
-    async updateOAuthClient(id: string, data: any) {
+    async updateOAuthClient(id: string, data: Prisma.OAuthClientUpdateInput) {
         return this.prisma.oAuthClient.update({
             where: { clientId: id },
             data

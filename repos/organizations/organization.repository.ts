@@ -167,15 +167,28 @@ export class OrganizationRepository {
     }
 
     async updateRole(orgId: string, roleId: string, data: Prisma.OrgRoleUpdateInput) {
+        // proprietary check for safety
+        const role = await this.prisma.orgRole.findFirst({ where: { id: roleId, orgId } });
+        if (!role) {
+            // Throwing simple error or return null to let service handle it. 
+            // Service expects a promise that resolves. 
+            // If the service catches errors, throwing is fine.
+            throw new Error('Role not found or does not belong to organization');
+        }
+
         return this.prisma.orgRole.update({
-            where: { id: roleId, orgId }, // Ensure org ownership
+            where: { id: roleId },
             data
         });
     }
 
     async deleteRole(orgId: string, roleId: string) {
+        const role = await this.prisma.orgRole.findFirst({ where: { id: roleId, orgId } });
+        if (!role) {
+            throw new Error('Role not found or does not belong to organization');
+        }
         return this.prisma.orgRole.delete({
-            where: { id: roleId, orgId }
+            where: { id: roleId }
         });
     }
 }

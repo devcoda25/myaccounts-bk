@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma-lib/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ParentalActivityRepository {
     constructor(private prisma: PrismaService) { }
 
-    async create(data: any) {
+    async create(data: Prisma.ParentalActivityUncheckedCreateInput) {
         return this.prisma.parentalActivity.create({ data });
     }
 

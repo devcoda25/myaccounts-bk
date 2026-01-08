@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, UnauthorizedException, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../prisma-lib/prisma.service';
+import { Prisma } from '@prisma/client';
 import { VerificationService } from './verification.service';
 import { authenticator } from 'otplib';
 import * as QRCode from 'qrcode';
@@ -60,7 +61,7 @@ export class MfaService {
         const { codes, hashedCodes } = await this.generateAndHashRecoveryCodes();
 
         // Update User
-        const updateData: any = {
+        const updateData: Prisma.UserUpdateInput = {
             twoFactorEnabled: true,
             recoveryCodes: hashedCodes
         };

@@ -1,12 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { AdminDisputesRepository } from '../../repos/admin/admin-disputes.repository';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class AdminDisputesService {
     constructor(private repo: AdminDisputesRepository) { }
 
     async getDisputes(query: string, status: string, skip: number, take: number) {
-        const where: any = {};
+        const where: Prisma.DisputeWhereInput = {};
 
         if (status && status !== 'All') {
             where.status = status;
@@ -52,7 +53,7 @@ export class AdminDisputesService {
         });
     }
 
-    async addEvidence(id: string, fileData: any) {
+    async addEvidence(id: string, fileData: { originalname: string; path: string; size: number; mimetype: string }) {
         return this.repo.addEvidence(id, {
             name: fileData.originalname,
             url: fileData.path, // In real app, upload to S3/Cloudinary and get URL

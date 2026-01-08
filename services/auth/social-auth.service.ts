@@ -82,7 +82,7 @@ export class SocialAuthService {
         }
     }
 
-    async socialLogin(provider: 'google' | 'apple', token: string, deviceInfo: any = {}) {
+    async socialLogin(provider: 'google' | 'apple', token: string, deviceInfo: Record<string, any> = {}) {
         let profile;
 
         if (provider === 'google') {
@@ -135,7 +135,7 @@ export class SocialAuthService {
         const tokens = await this.loginService.generateSessionToken({
             id: user.id,
             email: user.email,
-            role: (user as any).role // Type assertion until Prisma types update
+            role: user.role // User model has role
         }, deviceInfo);
 
         return {
@@ -146,7 +146,7 @@ export class SocialAuthService {
                 firstName: user.firstName,
                 otherNames: user.otherNames,
                 avatarUrl: user.avatarUrl,
-                role: (user as any).role
+                role: user.role
             }
         };
     }

@@ -1,4 +1,5 @@
 import { IsString, IsOptional, IsEmail, IsBoolean } from 'class-validator';
+import { Prisma } from '@prisma/client';
 
 export class CreateOrgDto {
     @IsString()
@@ -41,17 +42,45 @@ export class AddDomainDto {
 export class UpdateOrgSettingsDto {
     @IsOptional()
     @IsString()
-    theme?: string;
+    name?: string;
+
+    @IsOptional()
+    @IsString()
+    country?: string;
 
     @IsOptional()
     @IsBoolean()
-    mfaRequired?: boolean;
+    walletEnabled?: boolean;
+
+    @IsOptional()
+    @IsBoolean()
+    ssoEnabled?: boolean;
+
+    @IsOptional()
+    @IsString()
+    address?: string;
+
+    @IsOptional()
+    @IsString()
+    logoDataUrl?: string;
+
+    @IsOptional()
+    @IsString()
+    defaultRolePolicy?: string;
 }
 
 export class UpdateDomainDto {
     @IsOptional()
     @IsBoolean()
-    primary?: boolean;
+    requireSso?: boolean;
+
+    @IsOptional()
+    @IsBoolean()
+    allowPasswordFallback?: boolean;
+
+    @IsOptional()
+    @IsString()
+    defaultRole?: string;
 }
 
 export class UpdateSSODto {
@@ -66,19 +95,16 @@ export class UpdateSSODto {
     providerUrl?: string;
 
     @IsOptional()
-    config?: any;
+    config?: Prisma.InputJsonValue;
 }
 
 export class UpdateOrgPermissionsDto {
     @IsOptional()
-    grants?: any; // To be strictly typed later if possible
+    grants?: Prisma.InputJsonValue;
+
 
     @IsOptional()
-    policy?: {
-        defaultInviteRole?: string;
-        requireAdminApproval?: boolean;
-        requireMfaForAdmins?: boolean;
-    };
+    policy?: Prisma.InputJsonValue;
 }
 
 export class CreateRoleDto {
@@ -90,7 +116,7 @@ export class CreateRoleDto {
     description?: string;
 
     @IsOptional()
-    permissions?: string; // JSON object for granular permissions
+    permissions?: Prisma.InputJsonValue;
 }
 
 export class UpdateRoleDto {
@@ -103,5 +129,5 @@ export class UpdateRoleDto {
     description?: string;
 
     @IsOptional()
-    permissions?: string;
+    permissions?: Prisma.InputJsonValue;
 }

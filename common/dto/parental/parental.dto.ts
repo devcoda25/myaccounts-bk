@@ -1,4 +1,5 @@
-import { IsString, IsNotEmpty, IsBoolean, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsBoolean, IsOptional, IsObject } from 'class-validator';
+import { Prisma } from '@prisma/client';
 
 export class LinkChildDto {
     @IsString()
@@ -27,10 +28,10 @@ export class CreateChildDto {
 
 export class UpdateChildDto {
     @IsOptional()
-    @IsString()
-    patch?: any; // Keeping as any or specific object if known, but better than implicit any in controller
+    @IsObject()
+    patch?: Prisma.ChildProfileUpdateInput;
 
     @IsOptional()
-    @IsString()
-    audit?: string;
+    @IsObject()
+    audit?: { kind: string; summary: string; severity?: string };
 }

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { AdminDisputesRepository } from '../../repos/admin/admin-disputes.repository';
 import { WalletCoreService } from '../wallet/wallet-core.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class UserDisputesService {
@@ -14,7 +15,7 @@ export class UserDisputesService {
 
         // In a real app, verify txnId belongs to this wallet
 
-        const disputeData: any = {
+        const disputeData: Prisma.DisputeCreateInput = {
             wallet: { connect: { id: wallet.id } },
             amount: data.amount,
             currency: data.currency,
@@ -39,7 +40,7 @@ export class UserDisputesService {
         });
     }
 
-    async addEvidence(userId: string, disputeId: string, fileData: any) {
+    async addEvidence(userId: string, disputeId: string, fileData: { originalname: string; path: string; size: number; mimetype: string }) {
         const wallet = await this.walletCore.getWallet(userId);
         const dispute = await this.repo.findOne(disputeId);
 

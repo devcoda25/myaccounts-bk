@@ -73,7 +73,7 @@ export class WhatsappService {
                 body: JSON.stringify(payload)
             });
 
-            const data: any = await response.json();
+            const data = await response.json() as { error?: { message: string };[key: string]: any };
 
             if (!response.ok) {
                 throw new Error(data?.error?.message || 'WhatsApp API Error');

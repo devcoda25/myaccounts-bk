@@ -3,6 +3,7 @@ import { ChildProfileRepository } from '../../repos/parental/child-profile.repos
 import { HouseholdRepository } from '../../repos/parental/household.repository';
 import { ParentalApprovalRepository } from '../../repos/parental/parental-approval.repository';
 import { ParentalActivityRepository } from '../../repos/parental/parental-activity.repository';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ParentalService {
@@ -18,7 +19,7 @@ export class ParentalService {
         return this.childRepo.findManyByParentId(parentId);
     }
 
-    async createChild(parentId: string, data: any) {
+    async createChild(parentId: string, data: Omit<Prisma.ChildProfileUncheckedCreateInput, 'parentId' | 'dob'> & { dob: string | Date }) {
         const child = await this.childRepo.create({
             ...data,
             parentId,
@@ -35,7 +36,7 @@ export class ParentalService {
         return child;
     }
 
-    async updateChild(id: string, data: any, audit?: any) {
+    async updateChild(id: string, data: Prisma.ChildProfileUpdateInput, audit?: { kind: string; summary: string; severity?: string }) {
         const child = await this.childRepo.update(id, data);
         if (audit) {
             await this.activityRepo.create({
@@ -79,7 +80,7 @@ export class ParentalService {
         return this.householdRepo.updateMode(ownerId, mode);
     }
 
-    async inviteMember(ownerId: string, data: any) {
+    async inviteMember(ownerId: string, data: Omit<Prisma.HouseholdMemberUncheckedCreateInput, 'householdId'>) {
         const household = await this.householdRepo.findOrCreateForUser(ownerId);
         return this.householdRepo.addMember(household.id, data);
     }

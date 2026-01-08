@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma-lib/prisma.service';
-import { User } from '@prisma/client';
+import { User, Prisma } from '@prisma/client';
 
 @Injectable()
 export class UserFindRepository {
@@ -49,7 +49,7 @@ export class UserFindRepository {
     }): Promise<{ users: User[]; total: number }> {
         const { skip, take, query, role, status } = params;
 
-        const where: any = {};
+        const where: Prisma.UserWhereInput = {};
 
         if (query) {
             where.OR = [

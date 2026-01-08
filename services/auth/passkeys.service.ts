@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../../prisma-lib/prisma.service';
+import { Prisma } from '@prisma/client';
 import {
     generateRegistrationOptions,
     verifyRegistrationResponse,
@@ -20,11 +21,11 @@ export class PasskeysService {
         const creds = await this.prisma.userCredential.findMany({
             where: { userId, providerType: 'passkey' }
         });
-        return creds.map(c => ({
+        return creds.map((c: import('@prisma/client').UserCredential) => ({
             id: c.id,
             credentialID: c.providerId,
             createdAt: '2025-01-01T00:00:00Z', // Todo: add createdAt to UserCredential or infer
-            ...((c.metadata as any) || {})
+            ...((c.metadata as unknown as Record<string, unknown>) || {})
         }));
     }
 
@@ -40,9 +41,9 @@ export class PasskeysService {
             userID: isoBase64URL.toBuffer(userId), // Uint8Array
             userName: userEmail,
             attestationType: 'none',
-            excludeCredentials: userPasskeys.map(passkey => ({
+            excludeCredentials: userPasskeys.map((passkey: import('@prisma/client').UserCredential) => ({
                 id: passkey.providerId, // base64url credential ID
-                transports: (passkey.metadata as any)?.transports,
+                transports: (passkey.metadata as unknown as Record<string, any>)?.transports,
             })),
             authenticatorSelection: {
                 residentKey: 'preferred',
@@ -84,7 +85,7 @@ export class PasskeysService {
                     providerType: 'passkey',
                     providerId: credential.id,
                     secretHash: isoBase64URL.fromBuffer(credential.publicKey),
-                    metadata: metadata as any
+                    metadata: metadata as Prisma.JsonObject
                 }
             });
 

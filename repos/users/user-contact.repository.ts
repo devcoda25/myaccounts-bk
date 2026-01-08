@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma-lib/prisma.service';
-import { UserContact } from '@prisma/client';
+import { UserContact, Prisma } from '@prisma/client';
 
 @Injectable()
 export class UserContactRepository {
@@ -12,7 +12,7 @@ export class UserContactRepository {
         label: string;
         value: string;
         isPrimary?: boolean;
-        capabilities?: any;
+        capabilities?: Prisma.InputJsonValue;
     }): Promise<UserContact> {
         return this.prisma.userContact.create({
             data
@@ -32,7 +32,7 @@ export class UserContactRepository {
         });
     }
 
-    async update(id: string, data: any) {
+    async update(id: string, data: Prisma.UserContactUpdateInput) {
         return this.prisma.userContact.update({
             where: { id },
             data

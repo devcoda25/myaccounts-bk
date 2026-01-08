@@ -6,7 +6,7 @@ import { Prisma } from '@prisma/client';
 export class UserCredentialRepository {
     constructor(private prisma: PrismaService) { }
 
-    async upsert(providerType: string, providerId: string, userId: string, metadata?: any) {
+    async upsert(providerType: string, providerId: string, userId: string, metadata?: Prisma.InputJsonValue) {
         return this.prisma.userCredential.upsert({
             where: {
                 providerType_providerId: {
