@@ -3,7 +3,7 @@ import { OrganizationRepository } from '../../repos/organizations/organization.r
 import { OrgInviteRepository } from '../../repos/organizations/invite.repository';
 import { OrgDomainRepository } from '../../repos/organizations/domain.repository';
 import { OrgSSORepository } from '../../repos/organizations/sso.repository';
-import { IOrganizationWithRelations } from '../../common/interfaces/organization.interface';
+import { IOrganizationWithRelations, IOrgMetadata } from '../../common/interfaces/organization.interface';
 import { Prisma } from '@prisma/client';
 import { EmailService } from '../notifications/email.service';
 
@@ -45,50 +45,54 @@ export class OrganizationService {
         // 1. Fetch Org with Members (to find my role)
         const orgData = await this.repo.findById(orgId);
         if (!orgData) throw new NotFoundException('Organization not found');
-        const org = orgData as unknown as IOrganizationWithRelations;
+        // orgData is Prisma result. We map it safely.
 
         // 2. Fetch Stats
         const membersByRole = await this.repo.getMembersByRole(orgId);
 
         // 3. Determine my role
         let myRole = 'Viewer';
-        if (userId && org.members) {
-            const membership = org.members.find((m) => m.userId === userId);
+        if (userId && orgData.members) {
+            const membership = orgData.members.find((m) => m.userId === userId);
             if (membership) myRole = membership.role;
         }
 
         // 4. Parse Metadata
-        const meta = org.metadata || {};
+        const meta = (orgData.metadata as unknown as IOrgMetadata) || {};
 
         // 5. Parse Wallet
-        const wallet = org.wallets?.[0]; // Relation loaded by repo
+        const wallet = orgData.wallets?.[0]; // Relation loaded by repo
         const walletBalance = wallet ? Number(wallet.balance) : 0;
         const walletCurrency = wallet ? wallet.currency : (meta.currency || 'USD');
 
         // 6. Parse Audit Logs
-        const auditHighlights = (org.auditLogs || []).map((log) => ({
-            id: log.id,
-            when: new Date(log.createdAt).getTime(),
-            actor: log.actorName || (log.user?.firstName || 'System'), // Fallback if no actorName
-            action: log.action,
-            severity: log.severity || 'info'
-        }));
+        const auditHighlights = (orgData.auditLogs || []).map((log) => {
+            // Assert structure to avoid 'any' but safely access user relation
+            const logWithUser = log as typeof log & { user?: { firstName?: string } };
+            return {
+                id: log.id,
+                when: new Date(log.createdAt).getTime(),
+                actor: log.actorName || (logWithUser.user?.firstName || 'System'), // Fallback if no actorName
+                action: log.action,
+                severity: log.severity || 'info'
+            };
+        });
 
         // 7. Dynamic Counts
         const pendingInvitesCount = (await this.inviteRepo.findPending(orgId)).length;
 
         return {
-            id: org.id,
-            name: org.name,
+            id: orgData.id,
+            name: orgData.name,
             role: myRole,
-            country: org.country || meta.country || 'Unknown',
-            createdAt: new Date(org.createdAt).getTime(),
-            membersCount: org.members?.length || 0,
+            country: orgData.country || meta.country || 'Unknown',
+            createdAt: new Date(orgData.createdAt).getTime(),
+            membersCount: orgData.members?.length || 0,
             membersByRole: membersByRole,
             pendingInvites: pendingInvitesCount,
-            ssoEnabled: org.ssoEnabled,
-            ssoDomains: org.ssoDomains || [],
-            walletEnabled: org.walletEnabled, // Explicit flag
+            ssoEnabled: orgData.ssoEnabled,
+            ssoDomains: orgData.ssoDomains || [],
+            walletEnabled: orgData.walletEnabled, // Explicit flag
             currency: walletCurrency,
             currencySymbol: walletCurrency === 'USD' ? '$' : walletCurrency, // Simple fallback
             walletBalance: walletBalance,
@@ -275,7 +279,17 @@ export class OrganizationService {
         }
 
         // Add user to organization
-        await this.repo.addMember(invite.orgId, userId, invite.role);
+        try {
+            await this.repo.addMember(invite.orgId, userId, invite.role);
+        } catch (error) {
+            // If unique constraint violation (P2002), user is already a member
+            // We can treat this as success and consume the invite
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+                // User already a member, proceed
+            } else {
+                throw error;
+            }
+        }
 
         // Mark invite as accepted
         await this.inviteRepo.accept(invite.id);

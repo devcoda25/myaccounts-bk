@@ -44,7 +44,7 @@ export interface IOrganizationWithRelations {
     id: string;
     name: string;
     createdAt: Date;
-    metadata?: IOrgMetadata | any; // 'any' for transition if JSON type is tricky
+    metadata?: IOrgMetadata;
     members?: IOrgMember[];
     wallets?: IOrgWallet[];
     auditLogs?: IAuditLog[];
