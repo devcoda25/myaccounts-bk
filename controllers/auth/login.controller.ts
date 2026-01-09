@@ -43,12 +43,12 @@ export class LoginController {
 
         const tokens = await this.loginService.generateSessionToken(user, deviceInfo);
 
-        // 1. Access Token Cookie (Short-Lived, Lax)
+        // 1. Access Token Cookie (Short-Lived, None for Cross-Site)
         res.setCookie('evzone_token', tokens.access_token, {
             path: '/',
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
+            secure: true, // Always secure for SameSite=None
+            sameSite: 'none',
             maxAge: 15 * 60, // 15m
         });
 
@@ -56,8 +56,8 @@ export class LoginController {
         res.setCookie('refresh_token', tokens.refresh_token, {
             path: '/api/v1/auth/refresh', // Strict Scope
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
+            secure: true, // Always secure for SameSite=None
+            sameSite: 'none', // Changed to None to allow refreshing from different FE domain
             maxAge: 7 * 24 * 60 * 60, // 7d
         });
 
@@ -75,16 +75,16 @@ export class LoginController {
         res.setCookie('evzone_token', tokens.access_token, {
             path: '/',
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
+            secure: true,
+            sameSite: 'none',
             maxAge: 15 * 60,
         });
 
         res.setCookie('refresh_token', tokens.refresh_token, {
             path: '/api/v1/auth/refresh',
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
+            secure: true,
+            sameSite: 'none',
             maxAge: 7 * 24 * 60 * 60,
         });
 
