@@ -100,6 +100,15 @@ export class LoginController {
         }
         return { success: true };
     }
+    @Post('exists')
+    async checkExists(@Body() body: { email: string }) {
+        // We need a service method for this.
+        // Assuming loginService has or can share access to userRepo or similar.
+        // For now, let's inject UserManagementService or LoginService should have checkUserExists
+        const exists = await this.userManagementService.checkEmailExists(body.email);
+        return { exists };
+    }
+
     @Post('logout')
     @UseGuards(AuthGuard)
     async logout(@Req() req: AuthRequest, @Res({ passthrough: true }) res: FastifyReply) {

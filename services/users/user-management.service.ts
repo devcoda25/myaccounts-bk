@@ -51,6 +51,11 @@ export class UserManagementService {
         } as any);
     }
 
+    async checkEmailExists(email: string): Promise<boolean> {
+        const user = await this.userQueryService.findByEmail(email);
+        return !!user;
+    }
+
     async updateProfile(userId: string, data: UpdateUserDto) {
         return this.userUpdateRepo.update(userId, data);
     }
