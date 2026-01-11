@@ -35,8 +35,11 @@ export async function bootstrap() {
     );
 
     // [OIDC] Enable Express-style middleware (required for oidc-provider)
-    await app.register(middie);
     const fastify = app.getHttpAdapter().getInstance();
+    // Check if 'use' decorator already exists (to avoid FST_ERR_DEC_ALREADY_PRESENT)
+    if (!fastify.use) {
+        await app.register(middie);
+    }
 
     // [OIDC] Mount Provider at Root for Discovery
     const oidc = app.get(OIDC_PROVIDER);
