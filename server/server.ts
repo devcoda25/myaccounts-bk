@@ -117,4 +117,4 @@ export async function bootstrap() {
     logger.log(`Application is running on: ${await app.getUrl()}`);
 }
 
-bootstrap();
+// bootstrap(); // Removed to prevent double-execution when imported by main.ts
