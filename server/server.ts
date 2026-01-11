@@ -15,7 +15,7 @@ import helmet from '@fastify/helmet';
 
 import { corsOptions } from '../middleware/cors';
 import middie from '@fastify/middie';
-import { OIDC_PROVIDER } from '../modules/auth/oidc.module';
+import { OIDC_PROVIDER } from '../modules/auth/oidc.constants';
 import { KeyManager } from '../utils/keys';
 
 import { validateEnv } from '../utils/env.validation';

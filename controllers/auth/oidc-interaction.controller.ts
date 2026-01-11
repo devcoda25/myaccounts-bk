@@ -2,7 +2,7 @@
 import { Controller, Get, Post, Req, Res, Param, Body, Inject, UnauthorizedException } from '@nestjs/common';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import Provider from 'oidc-provider';
-import { OIDC_PROVIDER } from '../../modules/auth/oidc.module';
+import { OIDC_PROVIDER } from '../../modules/auth/oidc.constants';
 import { LoginService } from '../../services/auth/login.service';
 import { z } from 'zod';
 

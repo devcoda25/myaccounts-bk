@@ -5,9 +5,7 @@ import { PrismaOidcAdapter } from '../../services/auth/oidc.adapter';
 import { KeyManager } from '../../utils/keys';
 import { AuthModule } from './auth.module';
 import { OidcInteractionController } from '../../controllers/auth/oidc-interaction.controller';
-
-// We export the Provider instance so it can be used in server.ts middleware
-export const OIDC_PROVIDER = 'OIDC_PROVIDER';
+import { OIDC_PROVIDER } from './oidc.constants';
 
 @Global()
 @Module({
