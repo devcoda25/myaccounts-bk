@@ -1,4 +1,6 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { jwtVerify, importJWK } from 'jose';
 import { KeyManager } from '../../utils/keys';
 import { PrismaService } from '../../prisma-lib/prisma.service';
@@ -6,9 +8,17 @@ import { AuthRequest } from '../interfaces/auth-request.interface';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
-    constructor(private prisma: PrismaService) { }
+    constructor(private prisma: PrismaService, private reflector: Reflector) { }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
+        const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+            context.getHandler(),
+            context.getClass(),
+        ]);
+        if (isPublic) {
+            return true;
+        }
+
         const request = context.switchToHttp().getRequest<AuthRequest>();
         const token = this.extractToken(request);
         if (!token) {
