@@ -41,9 +41,15 @@ export async function bootstrap() {
         await app.register(middie);
     }
 
-    // [OIDC] Mount Provider at Root for Discovery
-    const oidc = app.get(OIDC_PROVIDER);
-    fastify.use(oidc.callback());
+    // [OIDC] Mount Provider (Exclude /api to prevent hijacking)
+    const oidc = app.get(OIDC_PROVIDER); // OIDC_PROVIDER is symbol
+    const oidcCallback = oidc.callback();
+    fastify.use((req: any, res: any, next: any) => {
+        if (req.url.startsWith('/api')) {
+            return next();
+        }
+        return oidcCallback(req, res, next);
+    });
 
     // [Security] Helmet for Security Headers & CSP
     // Typed registration without 'any'
