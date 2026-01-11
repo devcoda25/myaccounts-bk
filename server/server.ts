@@ -113,7 +113,7 @@ export async function bootstrap() {
     // Middleware is now registered in AppModule
 
     const port = process.env.PORT || 3000;
-    await app.listen(port, '0.0.0.0');
+    await app.listen(port, '::');
     logger.log(`Application is running on: ${await app.getUrl()}`);
 }
 
