@@ -25,17 +25,17 @@ export class UsersController {
 
     @Get('me')
     async getProfile(@CurrentUser() user: AuthRequest['user']) {
-        return this.userQueryService.findById(user.sub || (user as any).id, { fullProfile: true });
+        return this.userQueryService.findById(user.id, { fullProfile: true });
     }
 
     @Patch('me')
     async updateProfile(@CurrentUser() user: AuthRequest['user'], @Body() body: UpdateUserDto) {
-        return this.userManagementService.updateProfile(user.sub || (user as any).id, body);
+        return this.userManagementService.updateProfile(user.id, body);
     }
 
     @Patch('me/settings')
     async updateSettings(@CurrentUser() user: AuthRequest['user'], @Body() body: Record<string, any>) {
-        return this.userManagementService.updatePreferences(user.sub || (user as any).id, body);
+        return this.userManagementService.updatePreferences(user.id, body);
     }
 
     @Post('me/avatar')
@@ -62,8 +62,8 @@ export class UsersController {
 
             const fileExtName = `.${type.ext}`;
             const randomName = randomBytes(8).toString('hex');
-            const filename = `avatar-${user.sub || (user as any).id}-${randomName}${fileExtName}`;
-            const key = `avatars/${user.sub || (user as any).id}/${filename}`;
+            const filename = `avatar-${user.id}-${randomName}${fileExtName}`;
+            const key = `avatars/${user.id}/${filename}`;
 
             // Upload to S3/Spaces
             await this.storageService.upload(key, fileBuffer, type.mime, true); // Public read for avatars
@@ -73,7 +73,7 @@ export class UsersController {
         }
 
         if (avatarUrl) {
-            await this.userManagementService.uploadAvatar(user.sub || (user as any).id, avatarUrl);
+            await this.userManagementService.uploadAvatar(user.id, avatarUrl);
         }
 
         return { url: avatarUrl };
@@ -81,23 +81,23 @@ export class UsersController {
 
     @Post('me/contacts')
     async addContact(@CurrentUser() user: AuthRequest['user'], @Body() body: { type: 'EMAIL' | 'PHONE' | 'WHATSAPP'; value: string; isPrimary?: boolean }) {
-        return this.userManagementService.addContact(user.sub || (user as any).id, body);
+        return this.userManagementService.addContact(user.id, body);
     }
 
     @Delete('me/contacts/:contactId')
     async removeContact(@CurrentUser() user: AuthRequest['user'], @Param('contactId') contactId: string) {
-        return this.userManagementService.removeContact(user.sub || (user as any).id, contactId);
+        return this.userManagementService.removeContact(user.id, contactId);
     }
 
     @Delete('me/credentials/:provider')
     async removeCredential(@CurrentUser() user: AuthRequest['user'], @Param('provider') provider: 'google' | 'apple') {
-        return this.userManagementService.removeCredential(user.sub || (user as any).id, provider);
+        return this.userManagementService.removeCredential(user.id, provider);
     }
 
     @Post('me/contacts/:contactId/verify')
     async verifyContact(@CurrentUser() user: AuthRequest['user'], @Param('contactId') contactId: string, @Body() body: { type: 'email' | 'phone' }) {
         // body could contain otp
-        return this.userManagementService.verifyContact(user.sub || (user as any).id, contactId, body.type || 'email');
+        return this.userManagementService.verifyContact(user.id, contactId, body.type || 'email');
     }
 
 

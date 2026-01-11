@@ -4,7 +4,7 @@ import { AuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthRequest } from '../../common/interfaces/auth-request.interface';
-import { LinkChildDto, UpdateHouseholdModeDto, DecideApprovalDto, CreateChildDto, UpdateChildDto } from '../../common/dto/parental/parental.dto';
+import { LinkChildDto, UpdateHouseholdModeDto, DecideApprovalDto, CreateChildDto, UpdateChildDto, InviteHouseholdMemberDto } from '../../common/dto/parental/parental.dto';
 
 @Controller('parental')
 @UseGuards(AuthGuard, RolesGuard)
@@ -14,17 +14,17 @@ export class ParentalController {
     // --- Children ---
     @Get('children')
     async getChildren(@CurrentUser() user: AuthRequest['user']) {
-        return this.parentalService.getChildren(user.sub || (user as any).id);
+        return this.parentalService.getChildren(user.id);
     }
 
     @Post('children/create')
     async createChild(@CurrentUser() user: AuthRequest['user'], @Body() body: CreateChildDto) {
-        return this.parentalService.createChild(user.sub || (user as any).id, body);
+        return this.parentalService.createChild(user.id, body);
     }
 
     @Post('children/link')
     async linkChild(@CurrentUser() user: AuthRequest['user'], @Body() body: LinkChildDto) {
-        return this.parentalService.linkChild(user.sub || (user as any).id, body.code);
+        return this.parentalService.linkChild(user.id, body.code);
     }
 
     @Patch('children/:id')
@@ -36,17 +36,17 @@ export class ParentalController {
     // --- Household ---
     @Get('household')
     async getHousehold(@CurrentUser() user: AuthRequest['user']) {
-        return this.parentalService.getHousehold(user.sub || (user as any).id);
+        return this.parentalService.getHousehold(user.id);
     }
 
     @Patch('household/mode')
     async updateHouseholdMode(@CurrentUser() user: AuthRequest['user'], @Body() body: UpdateHouseholdModeDto) {
-        return this.parentalService.updateHouseholdMode(user.sub || (user as any).id, body.mode);
+        return this.parentalService.updateHouseholdMode(user.id, body.mode);
     }
 
     @Post('household/members')
-    async inviteMember(@CurrentUser() user: AuthRequest['user'], @Body() body: any) {
-        return this.parentalService.inviteMember(user.sub || (user as any).id, body);
+    async inviteMember(@CurrentUser() user: AuthRequest['user'], @Body() body: InviteHouseholdMemberDto) {
+        return this.parentalService.inviteMember(user.id, body);
     }
 
     @Delete('household/members/:id')
@@ -57,7 +57,7 @@ export class ParentalController {
     // --- Approvals ---
     @Get('approvals')
     async getApprovals(@CurrentUser() user: AuthRequest['user']) {
-        return this.parentalService.getApprovals(user.sub || (user as any).id);
+        return this.parentalService.getApprovals(user.id);
     }
 
     @Post('approvals/:id/decide')

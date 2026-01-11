@@ -1,27 +1,34 @@
 declare module 'africastalking' {
-    interface Options {
+    export interface Options {
         apiKey: string;
         username: string;
     }
 
-    interface SendOptions {
+    export interface SendOptions {
         to: string[];
         message: string;
         from?: string;
     }
 
-    interface SendResult {
+    export interface Recipient {
+        number: string;
+        status: string;
+        cost: string;
+        messageId: string;
+    }
+
+    export interface SendResult {
         SMSMessageData: {
             Message: string;
-            Recipients: any[];
+            Recipients: Recipient[];
         };
     }
 
-    interface SmsService {
+    export interface SmsService {
         send(options: SendOptions): Promise<SendResult>;
     }
 
-    interface Client {
+    export interface Client {
         SMS: SmsService;
         PAYMENTS: any;
         VOICE: any;

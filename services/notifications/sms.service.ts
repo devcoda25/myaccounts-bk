@@ -1,9 +1,18 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { SendResult } from 'africastalking';
 import AfricasTalking = require('africastalking');
 import * as Twilio from 'twilio';
 
 interface AfricasTalkingClient {
-    send: (params: { to: string[]; message: string; from?: string }) => Promise<any>;
+    send: (params: { to: string[]; message: string; from?: string }) => Promise<SendResult>;
+}
+
+interface SubmailResponse {
+    status: string;
+    send_id?: string;
+    fee?: number;
+    msg?: string;
+    money_account?: string;
 }
 
 @Injectable()
@@ -95,7 +104,7 @@ export class SmsService {
                 })
             });
 
-            const data = await response.json() as { status: string; msg?: string;[key: string]: any };
+            const data = await response.json() as SubmailResponse;
 
             if (data.status === 'success') {
                 this.logger.log(`SMS sent via Submail to ${to}: ${JSON.stringify(data)}`);

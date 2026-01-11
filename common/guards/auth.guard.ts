@@ -2,13 +2,14 @@ import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from
 import { jwtVerify, importJWK } from 'jose';
 import { KeyManager } from '../../utils/keys';
 import { PrismaService } from '../../prisma-lib/prisma.service';
+import { AuthRequest } from '../interfaces/auth-request.interface';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
     constructor(private prisma: PrismaService) { }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
-        const request = context.switchToHttp().getRequest();
+        const request = context.switchToHttp().getRequest<AuthRequest>();
         const token = this.extractToken(request);
         if (!token) {
             throw new UnauthorizedException();
@@ -36,9 +37,16 @@ export class AuthGuard implements CanActivate {
                 if (!user) throw new UnauthorizedException('User not found');
             }
 
-            request['user'] = {
-                ...payload,
-                id: payload.sub
+            if (!payload.sub) {
+                throw new UnauthorizedException('Token missing subject');
+            }
+
+            request.user = {
+                id: payload.sub,
+                sub: payload.sub,
+                email: payload.email as string,
+                role: payload.role as string,
+                jti: payload.jti as string,
             };
         } catch (err) {
             console.error('Token verification failed:', err);
@@ -47,7 +55,7 @@ export class AuthGuard implements CanActivate {
         return true;
     }
 
-    private extractToken(request: any): string | undefined {
+    private extractToken(request: AuthRequest): string | undefined {
         const authHeader = request.headers.authorization;
         if (authHeader?.startsWith('Bearer ')) {
             return authHeader.split(' ')[1];

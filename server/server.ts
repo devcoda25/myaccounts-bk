@@ -14,6 +14,8 @@ import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
 
 import { corsOptions } from '../middleware/cors';
+import middie from '@fastify/middie';
+import { OIDC_PROVIDER } from '../modules/auth/oidc.module';
 import { KeyManager } from '../utils/keys';
 
 import { validateEnv } from '../utils/env.validation';
@@ -32,6 +34,14 @@ export async function bootstrap() {
         { logger: ['error', 'warn'] } // [Cleanup] Reduce log noise
     );
 
+    // [OIDC] Enable Express-style middleware (required for oidc-provider)
+    await app.register(middie);
+    const fastify = app.getHttpAdapter().getInstance();
+
+    // [OIDC] Mount Provider at Root for Discovery
+    const oidc = app.get(OIDC_PROVIDER);
+    fastify.use(oidc.callback());
+
     // [Security] Helmet for Security Headers & CSP
     // Typed registration without 'any'
     await app.register(helmet, {
@@ -49,7 +59,7 @@ export async function bootstrap() {
     });
 
     // Register Multipart
-    await app.register(multipart as any, {
+    await app.register(multipart, {
         limits: {
             fileSize: 5 * 1024 * 1024, // 5MB
         },
@@ -58,11 +68,11 @@ export async function bootstrap() {
     // [Scalability] Conditional Static Files
     // In production, files should be served via CDN/Object Storage
     if (!isProduction) {
-        await app.register(fastifyStatic as any, {
+        await app.register(fastifyStatic, {
             root: join(process.cwd(), 'uploads'),
             prefix: '/uploads/',
             decorateReply: false,
-            setHeaders: (res: ServerResponse) => {
+            setHeaders: (res) => {
                 // [Security] Rule B: Prevent Stored XSS via Uploads
                 res.setHeader('X-Content-Type-Options', 'nosniff');
                 res.setHeader('Content-Disposition', 'attachment');

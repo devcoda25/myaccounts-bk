@@ -2,6 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 
 import { EmailProvider } from './email-provider.interface';
 
+interface SubmailEmailResponse {
+    status: string;
+    msg?: string;
+    send_id?: string;
+    [key: string]: any; // Keep permissive for now to avoid breakage, but main fields are typed
+}
+
 @Injectable()
 export class SubmailProvider implements EmailProvider {
     name = 'apiCN';
@@ -41,7 +48,7 @@ export class SubmailProvider implements EmailProvider {
             });
 
             // Submail returns status: 'success' or 'error'
-            const data: any = await response.json();
+            const data = await response.json() as SubmailEmailResponse;
 
             if (data.status === 'success') {
                 this.logger.log(`Sent via Submail: ${JSON.stringify(data)}`);

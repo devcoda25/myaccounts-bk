@@ -35,3 +35,25 @@ export class UpdateChildDto {
     @IsObject()
     audit?: { kind: string; summary: string; severity?: string };
 }
+
+export class InviteHouseholdMemberDto {
+    @IsString()
+    @IsNotEmpty()
+    name: string;
+
+    @IsString()
+    @IsNotEmpty()
+    role: string;
+
+    @IsOptional()
+    @IsString()
+    email?: string;
+
+    @IsOptional()
+    @IsString()
+    phone?: string;
+
+    @IsOptional()
+    @IsObject()
+    channels?: any;
+}

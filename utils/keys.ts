@@ -77,4 +77,12 @@ export class KeyManager {
         // Add kid (Key ID) and use (sig) - ensure consistency
         return { ...jwk, kid: 'evzone-key-1', use: 'sig', alg: 'ES256' };
     }
+
+    static async getPrivateJWK() {
+        if (!this.privateKey) {
+            await this.init();
+        }
+        const jwk = await exportJWK(this.privateKey);
+        return { ...jwk, kid: 'evzone-key-1', use: 'sig', alg: 'ES256' };
+    }
 }

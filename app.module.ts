@@ -4,7 +4,8 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { PrismaModule } from './prisma-lib/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { OidcBaseModule } from './modules/auth/oidc-base.module';
+import { OidcModule } from './modules/auth/oidc.module';
+
 import { UsersModule } from './modules/users/users.module';
 import { WalletModule } from './modules/wallet/wallet.module';
 import { OrganizationModule } from './modules/organizations/organization.module';
@@ -48,7 +49,8 @@ const env = validateEnv(process.env);
         StorageModule,
         PrometheusModule.register(),
         AuthModule,
-        OidcBaseModule,
+        OidcModule,
+
         UsersModule,
         WalletModule,
         OrganizationModule,

@@ -1,5 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 
+interface WabaResponse {
+    messaging_product: string;
+    contacts: { input: string; wa_id: string }[];
+    messages: { id: string }[];
+    error?: { message: string; type: string; code: number; fbtrace_id: string };
+}
 
 @Injectable()
 export class WhatsappService {
@@ -19,7 +25,15 @@ export class WhatsappService {
         }
     }
 
+    private async sendViaTwilio(to: string, code: string) {
+        // ... (extracted or kept inline, but I'll keeping inline for speed, just adding types)
+        return null;
+    }
+    // I won't extract method to avoid complex diffs. Just adding type.
+
     async sendWhatsappCode(to: string, code: string) {
+        // ...
+
         // 1. Try Twilio
         const twilioSid = process.env.TWILIO_ACCOUNT_SID;
         const twilioToken = process.env.TWILIO_AUTH_TOKEN;
@@ -73,7 +87,7 @@ export class WhatsappService {
                 body: JSON.stringify(payload)
             });
 
-            const data = await response.json() as { error?: { message: string };[key: string]: any };
+            const data = await response.json() as WabaResponse;
 
             if (!response.ok) {
                 throw new Error(data?.error?.message || 'WhatsApp API Error');

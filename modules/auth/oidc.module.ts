@@ -1,0 +1,68 @@
+import { Module, Global } from '@nestjs/common';
+import Provider from 'oidc-provider';
+import { PrismaClient } from '@prisma/client';
+import { PrismaOidcAdapter } from '../../services/auth/oidc.adapter';
+import { KeyManager } from '../../utils/keys';
+import { AuthModule } from './auth.module';
+import { OidcInteractionController } from '../../controllers/auth/oidc-interaction.controller';
+
+// We export the Provider instance so it can be used in server.ts middleware
+export const OIDC_PROVIDER = 'OIDC_PROVIDER';
+
+@Global()
+@Module({
+    imports: [AuthModule],
+    controllers: [OidcInteractionController],
+    providers: [
+        {
+            provide: OIDC_PROVIDER,
+            useFactory: async () => {
+                // 1. Initialize Adapter with Prisma
+                const prisma = new PrismaClient();
+                PrismaOidcAdapter.setPrisma(prisma);
+
+                // 2. Load Keys
+                const signingKey = await KeyManager.getPrivateJWK();
+
+                const issuer = process.env.OIDC_ISSUER || 'https://accounts.evzone.app';
+
+                const configuration = {
+                    adapter: PrismaOidcAdapter,
+
+                    features: {
+                        // devInteractions: { enabled: true }, // [CHANGED] Enable interactions but handled by us via routes?
+                        // Actually, if we provide interaction routes, we don't need devInteractions: true.
+                        // oidc-provider defaults interactions.url to /interaction/:uid
+                        // We implemented /interaction/:uid
+                        // usage of devInteractions is specifically for the default generic UI.
+                        // We want to handle it ourselves. But 'devInteractions' feature flag might simply enable the default UI if we DONT implement it.
+                        // If we implement routes, we are overriding the default behavior essentially by intercepting the ID.
+                        // But we must NOT disable 'interactions' completely.
+                        // 'devInteractions' false means "don't show the debug consent screen", which is what we want.
+                        // So default false is correct.
+                        devInteractions: { enabled: false },
+                        introspection: { enabled: true },
+                        revocation: { enabled: true },
+                    },
+                    jwks: {
+                        keys: [signingKey]
+                    },
+                    // Cookies must be secure in prod, none/lax settings handled by provider?
+                    cookies: {
+                        keys: [process.env.COOKIE_SECRET || 'changeme_min_32_chars_random_string_required'],
+                    },
+                    pkce: { required: () => true }, // Force PKCE
+                };
+
+                const oidc = new Provider(issuer, configuration);
+
+                // Proxy check if behind ingress
+                oidc.proxy = true;
+
+                return oidc;
+            },
+        },
+    ],
+    exports: [OIDC_PROVIDER],
+})
+export class OidcModule { }

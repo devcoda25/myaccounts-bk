@@ -28,36 +28,36 @@ export class WalletController {
     @Get('me')
     @UseGuards(AuthGuard)
     async getMyWallet(@CurrentUser() user: AuthRequest['user']) {
-        return this.walletCore.getWallet(user.sub || (user as any).id);
+        return this.walletCore.getWallet(user.id);
     }
 
     @Get('me/limits')
     @UseGuards(AuthGuard)
     async getLimits(@CurrentUser() user: AuthRequest['user']) {
-        return this.walletCore.getLimits(user.sub || (user as any).id);
+        return this.walletCore.getLimits(user.id);
     }
 
     @Get('me/stats')
     @UseGuards(AuthGuard)
     async getStats(@CurrentUser() user: AuthRequest['user'], @Query('days') days?: number) {
-        return this.walletCore.getStats(user.sub || (user as any).id);
+        return this.walletCore.getStats(user.id);
     }
 
     @Get('me/transactions')
     @UseGuards(AuthGuard)
     async getTransactions(@CurrentUser() user: AuthRequest['user'], @Query() query: TransactionQueryDto) {
-        return this.walletTx.getHistory(user.sub || (user as any).id, query);
+        return this.walletTx.getHistory(user.id, query);
     }
 
     @Post('me/add-funds')
     @UseGuards(AuthGuard)
     async addFunds(@CurrentUser() user: AuthRequest['user'], @Body() body: FundWalletDto) {
-        return this.walletTx.deposit(user.sub || (user as any).id, body);
+        return this.walletTx.deposit(user.id, body);
     }
 
     @Post('me/withdraw')
     @UseGuards(AuthGuard)
     async withdraw(@CurrentUser() user: AuthRequest['user'], @Body() body: FundWalletDto) {
-        return this.walletTx.withdraw(user.sub || (user as any).id, body);
+        return this.walletTx.withdraw(user.id, body);
     }
 }

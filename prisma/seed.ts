@@ -19,6 +19,44 @@ async function main() {
     });
     console.log(`- Seeded OIDC Client: ${client.clientId}`);
 
+    // [New] Seed Default Clients
+    // Portal (Public - React App)
+    await prisma.oAuthClient.upsert({
+        where: { clientId: 'evzone-portal' },
+        create: {
+            clientId: 'evzone-portal',
+            name: 'EVZone Portal',
+            redirectUris: ['http://localhost:5173/auth/callback', 'https://accounts.evzone.app/auth/callback'],
+            grantTypes: ['authorization_code', 'refresh_token'],
+            isPublic: true,
+            isFirstParty: true
+        },
+        update: {
+            redirectUris: ['http://localhost:5173/auth/callback', 'https://accounts.evzone.app/auth/callback']
+        }
+    });
+    console.log('- Seeded OIDC Client: evzone-portal');
+
+    // Charging (Backend - Confidential)
+    const chargingSecret = process.env.CHARGING_CLIENT_SECRET || 'secret_charging_dev';
+    const chargingHash = await argon2.hash(chargingSecret);
+    await prisma.oAuthClient.upsert({
+        where: { clientId: 'evzone-charging' },
+        create: {
+            clientId: 'evzone-charging',
+            name: 'EVZone Charging',
+            redirectUris: ['https://charging.evzone.app/auth/callback'],
+            grantTypes: ['authorization_code'],
+            clientSecretHash: chargingHash,
+            isPublic: false,
+            isFirstParty: true
+        },
+        update: {
+            // Keep existing secret if matched
+        }
+    });
+    console.log('- Seeded OIDC Client: evzone-charging');
+
     // 2. Create Super Admin User
     const adminPasswordHash = await argon2.hash('superadmin-secure-pw');
     const adminUser = await prisma.user.upsert({

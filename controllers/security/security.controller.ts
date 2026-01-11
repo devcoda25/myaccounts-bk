@@ -11,11 +11,11 @@ export class SecurityController {
 
     @Post('reports')
     async report(@CurrentUser() user: AuthRequest['user'], @Body() body: { type: string, reason: string, details: string }, @Ip() ip: string) {
-        return this.service.reportIncident(user.sub || (user as any).id, { ...body, ip });
+        return this.service.reportIncident(user.id, { ...body, ip });
     }
 
     @Post('lock')
     async lock(@CurrentUser() user: AuthRequest['user'], @Ip() ip: string) {
-        return this.service.lockAccount(user.sub || (user as any).id, ip);
+        return this.service.lockAccount(user.id, ip);
     }
 }
