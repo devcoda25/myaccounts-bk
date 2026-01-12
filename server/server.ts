@@ -35,6 +35,29 @@ export async function bootstrap() {
         { logger: ['error', 'warn'] } // [Cleanup] Reduce log noise
     );
 
+
+    // Enable CORS (Fastify Plugin to cover all routes including middleware)
+    await app.register(cors, {
+        origin: (origin: string, cb: (err: Error | null, allow: boolean) => void) => {
+            const config = validateEnv(process.env);
+            const allowed = [
+                ...config.ALLOWED_ORIGINS.split(',').map(o => o.trim()),
+                'https://accounts.evzone.app',
+                'https://api.evzone.app'
+            ];
+            // Strict logic: Only production requires origin match. Dev allows strictness relaxation IF strictly coded.
+            const isAllowed = !origin || allowed.includes(origin) || config.NODE_ENV !== 'production';
+
+            if (isAllowed) {
+                cb(null, true);
+            } else {
+                cb(new Error('Not allowed by CORS'), false);
+            }
+        },
+        credentials: true,
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-user-id', 'x-api-key'],
+    });
+
     // [OIDC] Enable Express-style middleware (required for oidc-provider)
     const fastify = app.getHttpAdapter().getInstance();
     // Check if 'use' decorator already exists (to avoid FST_ERR_DEC_ALREADY_PRESENT)
@@ -90,31 +113,9 @@ export async function bootstrap() {
         });
     }
 
-  
 
-    // Enable CORS (Fastify Plugin to cover all routes including middleware)
-    await app.register(cors, {
-        origin: (origin: string, cb: (err: Error | null, allow: boolean) => void) => {
-            const config = validateEnv(process.env);
-            const allowed = [
-                ...config.ALLOWED_ORIGINS.split(',').map(o => o.trim()),
-                'https://accounts.evzone.app',
-                'https://api.evzone.app'
-            ];
-            // Strict logic: Only production requires origin match. Dev allows strictness relaxation IF strictly coded.
-            const isAllowed = !origin || allowed.includes(origin) || config.NODE_ENV !== 'production';
 
-            if (isAllowed) {
-                cb(null, true);
-            } else {
-                cb(new Error('Not allowed by CORS'), false);
-            }
-        },
-        credentials: true,
-        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-user-id', 'x-api-key'],
-    });
 
-    // app.enableCors(corsOptions); // Removed in favor of fastify plugin
 
     // [Security] Validation Strictness
     app.useGlobalPipes(new ValidationPipe({
