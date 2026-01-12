@@ -12,8 +12,9 @@ import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
+import cors from '@fastify/cors';
 
-import { corsOptions } from '../middleware/cors';
+
 import middie from '@fastify/middie';
 import { OIDC_PROVIDER } from '../modules/auth/oidc.constants';
 import { KeyManager } from '../utils/keys';
@@ -89,8 +90,31 @@ export async function bootstrap() {
         });
     }
 
-    // Enable CORS
-    app.enableCors(corsOptions);
+  
+
+    // Enable CORS (Fastify Plugin to cover all routes including middleware)
+    await app.register(cors, {
+        origin: (origin: string, cb: (err: Error | null, allow: boolean) => void) => {
+            const config = validateEnv(process.env);
+            const allowed = [
+                ...config.ALLOWED_ORIGINS.split(',').map(o => o.trim()),
+                'https://accounts.evzone.app',
+                'https://api.evzone.app'
+            ];
+            // Strict logic: Only production requires origin match. Dev allows strictness relaxation IF strictly coded.
+            const isAllowed = !origin || allowed.includes(origin) || config.NODE_ENV !== 'production';
+
+            if (isAllowed) {
+                cb(null, true);
+            } else {
+                cb(new Error('Not allowed by CORS'), false);
+            }
+        },
+        credentials: true,
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-user-id', 'x-api-key'],
+    });
+
+    // app.enableCors(corsOptions); // Removed in favor of fastify plugin
 
     // [Security] Validation Strictness
     app.useGlobalPipes(new ValidationPipe({

@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SendResult } from 'africastalking';
+// @ts-ignore
 import AfricasTalking = require('africastalking');
-import * as Twilio from 'twilio';
+import Twilio from 'twilio';
 
 interface AfricasTalkingClient {
     send: (params: { to: string[]; message: string; from?: string }) => Promise<SendResult>;
