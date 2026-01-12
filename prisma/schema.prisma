@@ -104,6 +104,7 @@ model OAuthClient {
   grantTypes       String[] // "authorization_code", "refresh_token"
   isPublic         Boolean  @default(false)
   isFirstParty     Boolean  @default(true) // skip consent if true
+  id_token_signed_response_alg String @default("RS256")
 
   sessions Session[]
   consents OAuthConsent[]
