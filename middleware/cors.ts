@@ -7,7 +7,11 @@ export const corsOptions: CorsOptions = {
         // env.validation.ts parses on import in some patterns, but here we can just parse process.env
         // Optimization: In real-world, we'd cache this config.
         const config = validateEnv(process.env);
-        const allowed = config.ALLOWED_ORIGINS.split(',').map(o => o.trim());
+        const allowed = [
+            ...config.ALLOWED_ORIGINS.split(',').map(o => o.trim()),
+            'https://accounts.evzone.app',
+            'https://api.evzone.app'
+        ];
 
         // Strict logic: Only production requires origin match. Dev allows strictness relaxation IF strictly coded.
         const isAllowed = !origin || allowed.includes(origin) || config.NODE_ENV !== 'production';
