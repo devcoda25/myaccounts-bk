@@ -37,11 +37,7 @@ export class SecurityService {
             }
         });
 
-        // 2. Freeze Wallet
-        await this.prisma.wallet.updateMany({
-            where: { userId },
-            data: { status: 'frozen' }
-        });
+
 
         // 3. Revoke all sessions
         await this.prisma.session.deleteMany({

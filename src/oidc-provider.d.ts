@@ -23,6 +23,7 @@ declare module 'oidc-provider' {
                 accountId: string;
             };
             consent?: {
+                grantId?: string;
                 rejectedScopes?: string[];
                 rejectedClaims?: string[];
                 replace?: boolean;

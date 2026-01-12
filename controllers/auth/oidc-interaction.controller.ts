@@ -11,6 +11,18 @@ const LoginSchema = z.object({
     password: z.string(),
 });
 
+interface InteractionParams {
+    client_id?: string;
+    [key: string]: unknown;
+}
+
+interface PromptDetails {
+    missingOIDCScope?: string[];
+    missingOIDCClaims?: string[];
+    missingResourceScopes?: Record<string, string[]>;
+    [key: string]: unknown;
+}
+
 @Controller('interaction')
 export class OidcInteractionController {
     constructor(
@@ -87,13 +99,36 @@ export class OidcInteractionController {
         @Param('uid') uid: string,
     ) {
         const interactionDetails = await this.provider.interactionDetails(req.raw, res.raw);
-        // We can inspect connection.prompt.details.scopes etc.
-        // For now, we assume FULL CONSENT given by the simple UI.
+        const { prompt, params, session } = interactionDetails;
+
+        let grantId: string;
+
+        // Create a new Grant
+        // @ts-ignore
+        const grant = new this.provider.Grant({
+            accountId: (session as any).accountId,
+            // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
+            clientId: (params as InteractionParams).client_id as string,
+        });
+
+        const details = prompt.details as PromptDetails;
+        if (details.missingOIDCScope) {
+            grant.addOIDCScope(details.missingOIDCScope.join(' '));
+        }
+        if (details.missingOIDCClaims) {
+            grant.addOIDCClaims(details.missingOIDCClaims);
+        }
+        if (details.missingResourceScopes) {
+            for (const [indicator, scopes] of Object.entries(details.missingResourceScopes)) {
+                grant.addResourceScope(indicator, (scopes as string[]).join(' '));
+            }
+        }
+
+        grantId = await grant.save();
 
         const result = {
             consent: {
-                // any scopes we want to reject? No.
-                // any claims? No.
+                grantId,
             },
         };
 

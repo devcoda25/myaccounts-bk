@@ -16,8 +16,7 @@ export class UserDeleteRepository {
             // Delete credentials
             await tx.userCredential.deleteMany({ where: { userId } });
 
-            // Delete memberships
-            await tx.userOrganization.deleteMany({ where: { userId } });
+
 
             // Finally delete user
             return tx.user.delete({
