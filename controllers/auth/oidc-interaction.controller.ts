@@ -30,7 +30,7 @@ export class OidcInteractionController {
 
         // 2. Redirect to Frontend based on Prompt
         // Ideally, configurable FRONTEND_URL
-        const frontendUrl = 'http://localhost:5173';
+        const frontendUrl = process.env.FRONTEND_URL || 'https://accounts.evzone.app';
 
         switch (prompt.name) {
             case 'login':

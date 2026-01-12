@@ -5,6 +5,9 @@ export const envSchema = z.object({
     PORT: z.coerce.number().default(3000),
     DATABASE_URL: z.string().url(),
 
+    // App Config
+    FRONTEND_URL: z.string().url().default('https://accounts.evzone.app'),
+
     // Security Secrets
     COOKIE_SECRET: z.string().min(32, "COOKIE_SECRET must be at least 32 characters long"),
 
