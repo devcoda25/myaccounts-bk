@@ -1,10 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as Twilio from 'twilio';
+import { Twilio } from 'twilio';
 
 @Injectable()
 export class WhatsappService {
     private logger = new Logger(WhatsappService.name);
-    private client: Twilio.Twilio;
+    private client: Twilio;
     private fromNumber: string;
 
     constructor() {
@@ -17,7 +17,7 @@ export class WhatsappService {
             return;
         }
 
-        this.client = Twilio(accountSid, authToken);
+        this.client = new Twilio(accountSid, authToken);
         this.fromNumber = fromNumber.startsWith('whatsapp:') ? fromNumber : `whatsapp:${fromNumber}`;
     }
 
