@@ -104,7 +104,7 @@ export async function bootstrap() {
 
     // Global Prefix for API
     app.setGlobalPrefix('api/v1', {
-        exclude: ['jwks', '.well-known/openid-configuration', 'metrics'],
+        exclude: ['jwks', '.well-known/openid-configuration', 'metrics', 'interaction/(.*)'],
     });
 
     // Filter Edge Guards (IP/API Key) manually to avoid regex routing issues
