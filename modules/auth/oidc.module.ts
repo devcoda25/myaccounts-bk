@@ -52,6 +52,18 @@ import { OIDC_PROVIDER } from './oidc.constants';
                         long: { domain: process.env.COOKIE_DOMAIN },
                     },
                     pkce: { required: () => true }, // Force PKCE
+
+                    // [CORS] Explicitly allow trusted origins to bypass oidc-provider strictness
+                    clientBasedCORS: (ctx: unknown, origin: string, client: unknown) => {
+                        const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim());
+                        const trusted = [
+                            'https://accounts.evzone.app', // Production UI
+                            'https://api.evzone.app',      // Production API
+                            ...allowedOrigins
+                        ];
+                        // Allow if origin is trusted OR if we are not in production
+                        return trusted.includes(origin) || process.env.NODE_ENV !== 'production';
+                    },
                 };
 
                 const oidc = new Provider(issuer, configuration);
