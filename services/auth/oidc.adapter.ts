@@ -60,6 +60,7 @@ export class PrismaOidcAdapter implements Provider.Adapter {
                 grant_types: client.grantTypes,
                 response_types: ['code'], // Simplify for now
                 token_endpoint_auth_method: client.isPublic ? 'none' : 'client_secret_post', // Default to post/basic
+                // @ts-ignore
                 id_token_signed_response_alg: client.id_token_signed_response_alg,
                 // Allow both basic and post if not public?
                 // For now, let's say 'client_secret_basic' is default for backend.

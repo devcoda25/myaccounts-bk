@@ -4,6 +4,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import Provider from 'oidc-provider';
 import { OIDC_PROVIDER } from '../../modules/auth/oidc.constants';
 import { LoginService } from '../../services/auth/login.service';
+import { PrismaService } from '../../prisma-lib/prisma.service';
 import { z } from 'zod';
 
 const LoginSchema = z.object({
@@ -28,6 +29,7 @@ export class OidcInteractionController {
     constructor(
         @Inject(OIDC_PROVIDER) private provider: Provider,
         private loginService: LoginService,
+        private prisma: PrismaService,
     ) { }
 
     @Get(':uid')
@@ -38,11 +40,50 @@ export class OidcInteractionController {
     ) {
         // 1. Get Interaction Details
         const details = await this.provider.interactionDetails(req.raw, res.raw);
-        const { prompt, params } = details;
+        const { prompt, params, session } = details;
 
         // 2. Redirect to Frontend based on Prompt
         // Ideally, configurable FRONTEND_URL
         const frontendUrl = process.env.FRONTEND_URL || 'https://accounts.evzone.app';
+
+        // Auto-Consent for First-Party Client
+        if (prompt.name === 'consent') {
+            const clientId = (params as InteractionParams).client_id as string;
+            const client = await this.prisma.oAuthClient.findUnique({ where: { clientId } });
+
+            if (client?.isFirstParty) {
+                let grantId: string;
+                // Create Grant
+                // @ts-ignore
+                const grant = new this.provider.Grant({
+                    accountId: (session as any).accountId,
+                    clientId: clientId,
+                });
+
+                const promptDetails = prompt.details as PromptDetails;
+                if (promptDetails.missingOIDCScope) {
+                    grant.addOIDCScope(promptDetails.missingOIDCScope.join(' '));
+                }
+                if (promptDetails.missingOIDCClaims) {
+                    grant.addOIDCClaims(promptDetails.missingOIDCClaims);
+                }
+                if (promptDetails.missingResourceScopes) {
+                    for (const [indicator, scopes] of Object.entries(promptDetails.missingResourceScopes)) {
+                        grant.addResourceScope(indicator, (scopes as string[]).join(' '));
+                    }
+                }
+
+                grantId = await grant.save();
+
+                const result = {
+                    consent: {
+                        grantId,
+                    },
+                };
+
+                return this.provider.interactionFinished(req.raw, res.raw, result, { mergeWithLastSubmission: true });
+            }
+        }
 
         switch (prompt.name) {
             case 'login':
