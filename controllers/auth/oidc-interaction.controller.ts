@@ -34,13 +34,13 @@ export class OidcInteractionController {
 
         switch (prompt.name) {
             case 'login':
-                return res.code(303).redirect(`${frontendUrl}/auth/login?uid=${uid}`);
+                return res.code(303).redirect(`${frontendUrl}/auth/sign-in?uid=${uid}`);
             case 'consent':
                 // For MVP, auto-consent or redirect to consent page
                 // Let's redirect to consent page same as login but with mode
                 return res.code(303).redirect(`${frontendUrl}/auth/consent?uid=${uid}`);
             default:
-                return res.code(303).redirect(`${frontendUrl}/auth/login?uid=${uid}`);
+                return res.code(303).redirect(`${frontendUrl}/auth/sign-in?uid=${uid}`);
         }
     }
 
