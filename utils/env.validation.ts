@@ -10,6 +10,8 @@ export const envSchema = z.object({
 
     // Security Secrets
     COOKIE_SECRET: z.string().min(32, "COOKIE_SECRET must be at least 32 characters long"),
+    COOKIE_DOMAIN: z.string().optional(),
+
 
     // CORS
     ALLOWED_ORIGINS: z.string().min(1, "ALLOWED_ORIGINS must be defined"),

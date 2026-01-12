@@ -48,6 +48,8 @@ import { OIDC_PROVIDER } from './oidc.constants';
                     // Cookies must be secure in prod, none/lax settings handled by provider?
                     cookies: {
                         keys: [process.env.COOKIE_SECRET || 'changeme_min_32_chars_random_string_required'],
+                        short: { domain: process.env.COOKIE_DOMAIN },
+                        long: { domain: process.env.COOKIE_DOMAIN },
                     },
                     pkce: { required: () => true }, // Force PKCE
                 };
