@@ -29,10 +29,12 @@ async function main() {
             redirectUris: ['http://localhost:5173/auth/callback', 'https://accounts.evzone.app/auth/callback'],
             grantTypes: ['authorization_code', 'refresh_token'],
             isPublic: true,
-            isFirstParty: true
+            isFirstParty: true,
+            id_token_signed_response_alg: 'ES256'
         },
         update: {
-            redirectUris: ['http://localhost:5173/auth/callback', 'https://accounts.evzone.app/auth/callback']
+            redirectUris: ['http://localhost:5173/auth/callback', 'https://accounts.evzone.app/auth/callback'],
+            id_token_signed_response_alg: 'ES256'
         }
     });
     console.log('- Seeded OIDC Client: evzone-portal');
