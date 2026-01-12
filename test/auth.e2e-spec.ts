@@ -5,6 +5,7 @@ import { AppModule } from '../app.module';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { LoginService } from '../services/auth/login.service';
 import { AuthGuard } from '../common/guards/auth.guard';
+import { FastifyPluginAsync } from 'fastify';
 import cookie from '@fastify/cookie';
 
 describe('LoginController (e2e)', () => {
@@ -29,7 +30,7 @@ describe('LoginController (e2e)', () => {
         );
 
         // Register Cookie Plugin
-        await app.register(cookie as any, {
+        await app.register(cookie as unknown as FastifyPluginAsync, {
             secret: 'test-secret',
         });
 

@@ -38,12 +38,9 @@ model User {
   // Relations
   credentials    UserCredential[]
   contacts       UserContact[]
-  memberships    UserOrganization[]
   sessions       Session[]
-  wallet         Wallet?
-  auditLogs      AuditLog[]
   notifications  Notification[]
-  paymentMethods PaymentMethod[]
+  auditLogs      AuditLog[]
   kyc            Kycrecord?
   consents       OAuthConsent[]
   appMemberships AppMembership[] // Relation to App Perms
@@ -54,7 +51,6 @@ model User {
   supervisedChildren   ChildProfile[]    @relation("GuardianToChildren")
 
   // Developer Relations
-  apiKeys      ApiKey[]
   ownedClients OAuthClient[] @relation("ClientOwner")
 
   @@map("users")
@@ -95,123 +91,7 @@ model UserCredential {
 }
 
 // Organizations (Tenants)
-model Organization {
-  id       String  @id @default(uuid())
-  name     String
-  domain   String? @unique // for formatting business emails or federation
-  type     String // "enterprise", "provider", "individual"
-  country  String? // Added for Org Profile
-  metadata Json? // SAML config, branding, etc.
-
-  // SSO Configuration
-  ssoEnabled Boolean  @default(false)
-  ssoDomains String[] // ["example.com", "corp.example.com"]
-
-  // Wallet Feature Flag
-  walletEnabled Boolean @default(false)
-
-  members   UserOrganization[]
-  wallets   Wallet[]
-  auditLogs AuditLog[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  invites   OrgInvite[]
-  domains   OrgDomain[]
-  ssoConfig OrgSSO?
-  roles     OrgRole[]
-
-  @@map("organizations")
-}
-
-// Organization Custom Roles
-model OrgRole {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  permissions Json?    // { "canInvite": true, "canManageWallet": false }
-  orgId       String
-  isSystem    Boolean  @default(false) // e.g. Owner, Admin (cannot be deleted)
-
-  organization Organization @relation(fields: [orgId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([orgId, name])
-  @@map("org_roles")
-}
-
-// Organization Invites
-model OrgInvite {
-  id        String   @id @default(uuid())
-  email     String
-  role      String
-  token     String   @unique
-  status    String   @default("PENDING") // PENDING, ACCEPTED, REVOKED
-  expiresAt DateTime
-  orgId     String
-
-  organization Organization @relation(fields: [orgId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("org_invites")
-}
-
-// Organization Verified Domains
-model OrgDomain {
-  id                String    @id @default(uuid())
-  domain            String
-  status            String    @default("PENDING") // PENDING, VERIFIED, FAILED
-  verificationToken String // DNS TXT value
-  verifiedAt        DateTime?
-  orgId             String
-
-  requireSso            Boolean @default(false)
-  allowPasswordFallback Boolean @default(true)
-  defaultRole           String  @default("Member")
-
-  organization Organization @relation(fields: [orgId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("org_domains")
-}
-
-// Enterprise SSO Configuration
-model OrgSSO {
-  id        String  @id @default(uuid())
-  orgId     String  @unique
-  provider  String // SAML, OIDC
-  isEnabled Boolean @default(true)
-  config    Json // issuer, certs, entryPoint, etc.
-
-  organization Organization @relation(fields: [orgId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("org_sso")
-}
-
-// Membership (Users <-> Orgs)
-model UserOrganization {
-  userId   String
-  orgId    String
-  role     String // "admin", "member", "owner" (can be normalized to role table later)
-  status   String   @default("ACTIVE") // "PENDING", "ACTIVE", "SUSPENDED"
-  joinedAt DateTime @default(now())
-
-  user         User         @relation(fields: [userId], references: [id])
-  organization Organization @relation(fields: [orgId], references: [id])
-
-  @@id([userId, orgId])
-  @@map("user_organizations")
-}
+// Organization Models Removed
 
 // OIDC Clients (EVzone Services)
 model OAuthClient {
@@ -267,22 +147,7 @@ model AppMembership {
   @@map("app_memberships")
 }
 
-model ApiKey {
-  id         String    @id @default(uuid())
-  userId     String
-  name       String
-  keyHash    String    @unique
-  prefix     String
-  scopes     String[]
-  status     String    @default("Active") // "Active", "Revoked"
-  lastUsedAt DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("api_keys")
-}
+// ApiKey model removed
 
 // Sessions & Refresh Tokens
 model Session {
@@ -336,103 +201,15 @@ model VerificationRequest {
 // Wallet Module
 // -----------------------------------------------------------------------------
 
-model Wallet {
-  id           String  @id @default(uuid())
-  userId       String? @unique // Optional if org wallet, but usually unique if present
-  orgId        String? // Optional for User Wallets
-  currency     String  @default("USD")
-  balance      Decimal @default(0.00) @db.Decimal(15, 2)
-  monthlyLimit Decimal @default(0.00) @db.Decimal(15, 2)
-  status       String  @default("active") // active, frozen
+// Wallet Module removed
 
-  user         User?         @relation(fields: [userId], references: [id])
-  organization Organization? @relation(fields: [orgId], references: [id])
-  transactions Transaction[]
-  disputes     Dispute[]
+// Transaction model removed
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// PaymentMethod model removed
 
-  @@map("wallets")
-}
+// Dispute model removed
 
-model Transaction {
-  id          String  @id @default(uuid())
-  walletId    String
-  amount      Decimal @db.Decimal(15, 2)
-  currency    String
-  type        String // "deposit", "withdrawal", "payment", "refund"
-  status      String // "pending", "completed", "failed"
-  referenceId String? // External Order ID or Payment Gateway ID
-  description String?
-
-  wallet Wallet @relation(fields: [walletId], references: [id])
-
-  // New fields for frontend alignment
-  providerRef  String?
-  counterparty String?
-  channel      String? @default("Wallet") // Wallet, Charging, Marketplace, etc.
-  disputes     Dispute[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt // Added updatedAt
-
-  @@map("wallet_transactions")
-}
-
-model PaymentMethod {
-  id        String  @id @default(uuid())
-  userId    String
-  type      String // "card", "mobile_money"
-  provider  String // "stripe", "mtn"
-  token     String // Gateway token (PCI safe)
-  details   Json? // last4, brand, etc.
-  isDefault Boolean @default(false)
-
-  user User @relation(fields: [userId], references: [id])
-
-  createdAt DateTime @default(now())
-
-  @@map("payment_methods")
-}
-
-model Dispute {
-  id          String   @id @default(uuid())
-  walletId    String
-  txnId       String?  // Optional, linked to internal transaction
-  reference   String?  // Linked to external reference
-  amount      Decimal  @db.Decimal(15, 2)
-  currency    String
-  reason      String
-  description String
-  status      String   @default("OPEN") // OPEN, UNDER_REVIEW, WON, LOST, CLOSED
-  
-  // Relations
-  wallet      Wallet   @relation(fields: [walletId], references: [id])
-  transaction Transaction? @relation(fields: [txnId], references: [id])
-  evidence    DisputeEvidence[]
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("wallet_disputes")
-}
-
-model DisputeEvidence {
-  id        String   @id @default(uuid())
-  disputeId String
-  name      String
-  url       String
-  size      Int
-  mimeType  String
-  uploadedBy String? // "USER" or "ADMIN"
-
-  dispute   Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
-
-  createdAt DateTime @default(now())
-
-  @@map("wallet_dispute_evidence")
-}
+// DisputeEvidence model removed
 
 // -----------------------------------------------------------------------------
 // Compliance & Audit
@@ -472,17 +249,15 @@ model OAuthConsent {
 model AuditLog {
   id        String  @id @default(uuid())
   userId    String?
-  orgId     String?
-  action    String // "login", "password_change", "wallet_deposit"
+  action    String // "login", "password_change", "update_profile"
   details   Json?
   ipAddress String?
 
   // Enhanced Audit Details
   severity  String  @default("info") // "info", "warning", "critical"
-  actorName String? // Snapshot of actor name (e.g. "Admin", "System", "Ronald")
+  actorName String? // Snapshot of actor name
 
   user         User?         @relation(fields: [userId], references: [id])
-  organization Organization? @relation(fields: [orgId], references: [id])
 
   createdAt DateTime @default(now())
 

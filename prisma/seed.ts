@@ -113,69 +113,24 @@ async function main() {
     });
     console.log(`- Seeded Test User: ${testUser.email}`);
 
-    // 4. Create Org with SSO and Audit Logs for Test User
-    const org = await prisma.organization.upsert({
-        where: { domain: 'evzone-enterprise.com' },
-        create: {
-            name: 'EVzone Enterprise',
-            type: 'enterprise',
-            domain: 'evzone-enterprise.com',
-            ssoEnabled: true,
-            ssoDomains: ['evzone.com', 'partners.evzone.com'],
-            members: {
-                create: {
-                    userId: testUser.id,
-                    role: 'Owner'
-                }
-            }
-        },
-        update: {
-            ssoEnabled: true,
-            ssoDomains: ['evzone.com', 'partners.evzone.com']
-        }
-    });
+    console.log(`- Seeded Test User: ${testUser.email}`);
 
-    // Determine Org ID (needed for audits)
-    const orgId = org.id;
+    // Org seeding removed
 
-    // Seed Audit Logs
-    // 1. INFO: 20 min ago. Invited 2 members. Actor: Ronald.
+    // Seed Audit Logs (User Only)
+    // 1. INFO: 20 min ago. Update Profile. Actor: Ronald.
     await prisma.auditLog.create({
         data: {
-            orgId: orgId,
-            action: 'Invited 2 members',
+            userId: testUser.id,
+            action: 'Updated Profile',
             severity: 'info',
             actorName: 'Ronald',
-            details: { invitedEmails: ['alice@evzone.com', 'bob@evzone.com'] },
+            details: { field: 'avatar' },
             createdAt: new Date(Date.now() - 20 * 60 * 1000) // 20 mins ago
         }
     });
 
-    // 2. WARNING: 4 hr ago. Enabled SSO. Actor: Admin.
-    await prisma.auditLog.create({
-        data: {
-            orgId: orgId,
-            action: 'Enabled SSO',
-            severity: 'warning',
-            actorName: 'Admin',
-            details: { enabled: true },
-            createdAt: new Date(Date.now() - 4 * 60 * 60 * 1000) // 4 hours ago
-        }
-    });
-
-    // 3. CRITICAL: 1 day ago. Blocked suspicious login. Actor: System.
-    await prisma.auditLog.create({
-        data: {
-            orgId: orgId,
-            action: 'Blocked suspicious login',
-            severity: 'critical',
-            actorName: 'System',
-            details: { reason: 'IP Reputation', ip: '192.168.1.100' },
-            createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000) // 1 day ago
-        }
-    });
-
-    console.log(`- Seeded Org and Audit Logs: ${org.name}`);
+    console.log(`- Seeded User Audit Logs`);
 
     // 5. Create 10 Extra Dummy Users
     for (let i = 1; i <= 10; i++) {

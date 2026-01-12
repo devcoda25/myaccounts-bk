@@ -7,18 +7,17 @@ import { AuthModule } from './modules/auth/auth.module';
 import { OidcModule } from './modules/auth/oidc.module';
 
 import { UsersModule } from './modules/users/users.module';
-import { WalletModule } from './modules/wallet/wallet.module';
-import { OrganizationModule } from './modules/organizations/organization.module';
+
 import { AdminModule } from './modules/admin/admin.module';
 import { DebugModule } from './modules/debug/debug.module';
 import { KycModule } from './modules/kyc/kyc.module';
 import { ParentalModule } from './modules/parental/parental.module';
 import { HealthModule } from './modules/health/health.module';
-import { DeveloperModule } from './modules/developer/developer.module';
+
 import { SecurityModule } from './modules/security/security.module';
 import { AppsModule } from './modules/apps/apps.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
-import { PaymentModule } from './modules/payment/payment.module';
+
 import { EdgeGuard } from './middleware/edge-guard.middleware';
 
 // Redis Storage
@@ -52,19 +51,19 @@ const env = validateEnv(process.env);
         OidcModule,
 
         UsersModule,
-        WalletModule,
-        OrganizationModule,
+        // WalletModule removed
+        // OrganizationModule removed
         AdminModule,
         PrismaModule,
         DebugModule,
         KycModule,
         ParentalModule,
         HealthModule,
-        DeveloperModule,
+    
         SecurityModule,
         AppsModule,
         NotificationsModule,
-        PaymentModule
+
     ],
     controllers: [],
     providers: [
