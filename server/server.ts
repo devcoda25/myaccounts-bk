@@ -45,7 +45,7 @@ export async function bootstrap() {
     const oidc = app.get(OIDC_PROVIDER); // OIDC_PROVIDER is symbol
     const oidcCallback = oidc.callback();
     fastify.use((req: any, res: any, next: any) => {
-        if (req.url.startsWith('/api')) {
+        if (req.url.startsWith('/api') || req.url.startsWith('/interaction')) {
             return next();
         }
         return oidcCallback(req, res, next);
