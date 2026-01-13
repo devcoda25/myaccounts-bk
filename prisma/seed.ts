@@ -27,6 +27,7 @@ async function main() {
             clientId: 'evzone-portal',
             name: 'EVZone Portal',
             redirectUris: ['http://localhost:5173/auth/callback', 'https://accounts.evzone.app/auth/callback'],
+            post_logout_redirect_uris: ['http://localhost:5173/auth/signed-out', 'https://accounts.evzone.app/auth/signed-out'],
             grantTypes: ['authorization_code', 'refresh_token'],
             isPublic: true,
             isFirstParty: true,
@@ -34,6 +35,7 @@ async function main() {
         },
         update: {
             redirectUris: ['http://localhost:5173/auth/callback', 'https://accounts.evzone.app/auth/callback'],
+            post_logout_redirect_uris: ['http://localhost:5173/auth/signed-out', 'https://accounts.evzone.app/auth/signed-out'],
             id_token_signed_response_alg: 'ES256'
         }
     });
