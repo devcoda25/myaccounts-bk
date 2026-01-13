@@ -39,7 +39,18 @@ export class OidcInteractionController {
         @Param('uid') uid: string,
     ) {
         // 1. Get Interaction Details
-        const details = await this.provider.interactionDetails(req.raw, res.raw);
+        let details;
+        try {
+            details = await this.provider.interactionDetails(req.raw, res.raw);
+        } catch (err) {
+            console.error('Interaction Details Error:', err);
+            // If interaction not found or cookie missing, redirect to login to start over or return 400
+            if (err instanceof Error && err.message === 'interaction not found') {
+                // return res.redirect('/auth/sign-in'); // Or specific error page
+                // For debugging, let's bubble up but maybe user needs clearer message
+            }
+            throw err;
+        }
         const { prompt, params, session } = details;
 
         // 2. Redirect to Frontend based on Prompt
