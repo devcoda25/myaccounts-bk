@@ -22,7 +22,7 @@ import { OIDC_PROVIDER } from './oidc.constants';
                 // 2. Load Keys
                 const signingKey = await KeyManager.getPrivateJWK();
 
-                const issuer = process.env.OIDC_ISSUER || 'https://accounts.evzone.app';
+                const issuer = process.env.OIDC_ISSUER || 'https://accounts.evzone.app/oidc';
 
                 const configuration = {
                     adapter: PrismaOidcAdapter,

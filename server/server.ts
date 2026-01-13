@@ -66,13 +66,19 @@ export async function bootstrap() {
     }
 
     // [OIDC] Mount Provider (Exclude /api to prevent hijacking)
+    // [OIDC] Mount Provider on /oidc namespace
     const oidc = app.get(OIDC_PROVIDER); // OIDC_PROVIDER is symbol
     const oidcCallback = oidc.callback();
     fastify.use((req: any, res: any, next: any) => {
-        if (req.url.startsWith('/api') || req.url.startsWith('/interaction')) {
-            return next();
+        // Only handle OIDC requests (starting with /oidc)
+        if (req.url.startsWith('/oidc')) {
+            // Strip /oidc prefix if necessary?
+            // oidc-provider mounts based on the issuer path.
+            // If issuer is https://accounts.evzone.app/oidc, it expects requests at /oidc/...
+            // So we pass it through directly.
+            return oidcCallback(req, res, next);
         }
-        return oidcCallback(req, res, next);
+        return next();
     });
 
     // [Security] Helmet for Security Headers & CSP
@@ -129,7 +135,7 @@ export async function bootstrap() {
 
     // Global Prefix for API
     app.setGlobalPrefix('api/v1', {
-        exclude: ['jwks', '.well-known/openid-configuration', 'metrics', 'interaction/(.*)'],
+        exclude: ['jwks', '.well-known/openid-configuration', 'metrics', 'interaction/(.*)', 'oidc/(.*)'],
     });
 
     // Filter Edge Guards (IP/API Key) manually to avoid regex routing issues
