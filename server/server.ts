@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe, Logger, RequestMethod } from '@nestjs/common';
 import {
     FastifyAdapter,
     NestFastifyApplication,
@@ -137,7 +137,16 @@ export async function bootstrap() {
 
     // Global Prefix for API
     app.setGlobalPrefix('api/v1', {
-        exclude: ['jwks', '.well-known/openid-configuration', 'metrics', 'interaction/(.*)', 'oidc/(.*)'],
+        exclude: [
+            { path: 'jwks', method: RequestMethod.ALL },
+            { path: '.well-known/openid-configuration', method: RequestMethod.ALL },
+            { path: 'metrics', method: RequestMethod.ALL },
+            { path: 'interaction/:uid', method: RequestMethod.ALL },
+            { path: 'interaction/:uid/login', method: RequestMethod.ALL },
+            { path: 'interaction/:uid/confirm', method: RequestMethod.ALL },
+            { path: 'interaction/:uid/abort', method: RequestMethod.ALL },
+            { path: 'oidc/(.*)', method: RequestMethod.ALL }
+        ],
     });
 
     // Filter Edge Guards (IP/API Key) manually to avoid regex routing issues
