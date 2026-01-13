@@ -23,6 +23,8 @@ import { OIDC_PROVIDER } from './oidc.constants';
                 const signingKey = await KeyManager.getPrivateJWK();
 
                 const issuer = process.env.OIDC_ISSUER || 'https://accounts.evzone.app/oidc';
+                console.log(`[OIDC] Initializing with Issuer: ${issuer}`);
+                console.log(`[OIDC] Cookie Domain: ${process.env.COOKIE_DOMAIN || '(unset)'}`);
 
                 const configuration = {
                     adapter: PrismaOidcAdapter,
@@ -48,8 +50,8 @@ import { OIDC_PROVIDER } from './oidc.constants';
                     // Cookies must be secure in prod, none/lax settings handled by provider?
                     cookies: {
                         keys: [process.env.COOKIE_SECRET || 'changeme_min_32_chars_random_string_required'],
-                        short: { domain: process.env.COOKIE_DOMAIN },
-                        long: { domain: process.env.COOKIE_DOMAIN },
+                        short: { domain: process.env.COOKIE_DOMAIN, sameSite: 'None', secure: true },
+                        long: { domain: process.env.COOKIE_DOMAIN, sameSite: 'None', secure: true },
                     },
                     pkce: { required: () => true }, // Force PKCE
 
