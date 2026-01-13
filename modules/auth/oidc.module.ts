@@ -64,6 +64,24 @@ import { OIDC_PROVIDER } from './oidc.constants';
                         // Allow if origin is trusted OR if we are not in production
                         return trusted.includes(origin) || process.env.NODE_ENV !== 'production';
                     },
+                    interactions: {
+                        url(ctx: unknown, interaction: any) {
+                            // This is the relative path (to issuer) where the user browser is redirected
+                            // oidc-provider appends /interaction/:uid
+                            // Since our issuer is https://accounts.evzone.app/oidc,
+                            // The provider will generate https://accounts.evzone.app/oidc/interaction/:uid
+                            // We just need to make sure we return the correct path if we override.
+                            // By default it is /interaction/:uid
+
+                            // If issuer has path component (which it does: /oidc), then default behavior:
+                            // Url is issuer + /interaction/:uid
+                            // So it SHOULD become https://accounts.evzone.app/oidc/interaction/:uid
+                            // If it is NOT, it might be because the request hostname logic mismatch.
+                            // Let's force it relative to the mount point.
+
+                            return `/interaction/${interaction.uid}`;
+                        }
+                    },
                 };
 
                 const oidc = new Provider(issuer, configuration);
