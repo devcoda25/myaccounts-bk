@@ -72,10 +72,12 @@ export async function bootstrap() {
     fastify.use((req: any, res: any, next: any) => {
         // Only handle OIDC requests (starting with /oidc)
         if (req.url.startsWith('/oidc')) {
-            // Strip /oidc prefix if necessary?
-            // oidc-provider mounts based on the issuer path.
-            // If issuer is https://accounts.evzone.app/oidc, it expects requests at /oidc/...
-            // So we pass it through directly.
+            // Strip /oidc prefix so oidc-provider sees relative paths (e.g. /.well-known/...)
+            // and NestJS interaction controller sees /interaction/...
+            req.url = req.url.replace(/^\/oidc/, '');
+            if (req.url === '' || req.url.startsWith('?')) {
+                req.url = '/' + req.url;
+            }
             return oidcCallback(req, res, next);
         }
         return next();
