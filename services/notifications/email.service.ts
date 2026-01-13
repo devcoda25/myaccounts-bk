@@ -115,4 +115,9 @@ export class EmailService {
         const validFailures = failures.filter(t => now - t < this.WINDOW_MS);
         this.failureCounts.set(provider, validFailures);
     }
+
+    async checkHealth(): Promise<'Operational' | 'Degraded'> {
+        const isUp = await this.zohoProvider.checkHealth();
+        return isUp ? 'Operational' : 'Degraded';
+    }
 }

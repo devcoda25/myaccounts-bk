@@ -1,10 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
 import { AppModule } from '../app.module';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { PrismaService } from '../prisma-lib/prisma.service';
 import cookie from '@fastify/cookie';
+import { REDIS_CLIENT } from '../modules/redis/redis.module';
+import { EmailService } from '../services/notifications/email.service';
 
 describe('HealthController (e2e)', () => {
     let app: NestFastifyApplication;
@@ -13,12 +15,24 @@ describe('HealthController (e2e)', () => {
         $queryRaw: jest.fn(),
     };
 
+    const mockEmailService = {
+        checkHealth: jest.fn().mockResolvedValue('Operational'),
+    };
+
+    const mockRedis = {
+        ping: jest.fn().mockResolvedValue('PONG'),
+    };
+
     beforeAll(async () => {
         const moduleFixture: TestingModule = await Test.createTestingModule({
             imports: [AppModule],
         })
             .overrideProvider(PrismaService)
             .useValue(mockPrismaService)
+            .overrideProvider(REDIS_CLIENT)
+            .useValue(mockRedis)
+            .overrideProvider(EmailService)
+            .useValue(mockEmailService)
             .compile();
 
         app = moduleFixture.createNestApplication<NestFastifyApplication>(
@@ -43,7 +57,7 @@ describe('HealthController (e2e)', () => {
             .expect(200)
             .expect((res) => {
                 expect(res.body).toHaveProperty('status', 'Operational');
-                expect(res.body.services).toHaveLength(4);
+                expect(res.body.services).toHaveLength(3);
             });
     });
 

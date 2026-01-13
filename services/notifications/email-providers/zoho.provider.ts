@@ -45,4 +45,14 @@ export class ZohoProvider implements EmailProvider {
             return { success: false, error: error.message };
         }
     }
+
+    async checkHealth(): Promise<boolean> {
+        if (!this.transporter) return false;
+        try {
+            await this.transporter.verify();
+            return true;
+        } catch {
+            return false;
+        }
+    }
 }
