@@ -117,8 +117,9 @@ export class LoginController {
         }
 
         // Clear Cookies
-        res.clearCookie('evzone_token', { path: '/' });
-        res.clearCookie('refresh_token', { path: '/api/v1/auth/refresh' });
+        // Clear Cookies with explicit options matching setCookie
+        res.clearCookie('evzone_token', { path: '/', httpOnly: true, secure: true, sameSite: 'none' });
+        res.clearCookie('refresh_token', { path: '/api/v1/auth/refresh', httpOnly: true, secure: true, sameSite: 'none' });
 
         return { success: true };
     }
