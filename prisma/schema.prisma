@@ -53,6 +53,9 @@ model User {
   // Developer Relations
   ownedClients OAuthClient[] @relation("ClientOwner")
 
+  // Organization Relations
+  orgMemberships OrganizationMember[]
+
   @@map("users")
 }
 
@@ -91,7 +94,36 @@ model UserCredential {
 }
 
 // Organizations (Tenants)
-// Organization Models Removed
+model Organization {
+  id          String   @id @default(uuid())
+  name        String
+  domain      String?  @unique // For enterprise SSO discovery
+  type        String   @default("individual") // "enterprise", "provider", "individual"
+  config      Json?    // SAML/OIDC federation settings, branding
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     OrganizationMember[]
+  clients     OAuthClient[] @relation("OrgClients")
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id        String   @id @default(uuid())
+  userId    String
+  orgId     String
+  role      String   @default("Member") // "Owner", "Admin", "Member"
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  joinedAt  DateTime @default(now())
+
+  @@unique([userId, orgId])
+  @@map("organization_members")
+}
 
 // OIDC Clients (EVzone Services)
 model OAuthClient {
@@ -110,8 +142,12 @@ model OAuthClient {
   sessions Session[]
   consents OAuthConsent[]
 
+  // Ownership: Can be owned by a User (Dev) OR an Organization (Tenant App)
   ownerId String?
   owner   User?   @relation("ClientOwner", fields: [ownerId], references: [id])
+  
+  orgId   String?
+  organization Organization? @relation("OrgClients", fields: [orgId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

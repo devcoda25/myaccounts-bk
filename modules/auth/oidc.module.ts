@@ -84,6 +84,40 @@ import { OIDC_PROVIDER } from './oidc.constants';
                             return `/interaction/${interaction.uid}`;
                         }
                     },
+                    async findAccount(ctx: unknown, id: string) {
+                        const user = await prisma.user.findUnique({
+                            where: { id },
+                            include: {
+                                orgMemberships: {
+                                    include: { organization: true }
+                                }
+                            }
+                        });
+
+                        if (!user) return undefined;
+
+                        return {
+                            accountId: id,
+                            async claims(use, scope, claims, rejected) {
+                                return {
+                                    sub: id,
+                                    email: user.email,
+                                    email_verified: user.emailVerified,
+                                    name: user.firstName ? `${user.firstName} ${user.otherNames || ''}`.trim() : user.email,
+                                    given_name: user.firstName,
+                                    family_name: user.otherNames,
+                                    picture: user.avatarUrl,
+                                    // Custom EVzone Claims
+                                    orgs: user.orgMemberships.map(m => ({
+                                        id: m.orgId,
+                                        name: m.organization.name,
+                                        role: m.role,
+                                        domain: m.organization.domain
+                                    }))
+                                };
+                            },
+                        };
+                    },
                 };
 
                 const oidc = new Provider(issuer, configuration);

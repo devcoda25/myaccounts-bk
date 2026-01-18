@@ -119,7 +119,29 @@ async function main() {
 
     console.log(`- Seeded Test User: ${testUser.email}`);
 
-    // Org seeding removed
+    // Seed Organization
+    const demoOrg = await prisma.organization.upsert({
+        where: { domain: 'demo.evzone.app' },
+        create: {
+            name: 'Demo Enterprise',
+            domain: 'demo.evzone.app',
+            type: 'enterprise'
+        },
+        update: {}
+    });
+    console.log(`- Seeded Org: ${demoOrg.name}`);
+
+    // Add Test User to Org
+    await prisma.organizationMember.upsert({
+        where: { userId_orgId: { userId: testUser.id, orgId: demoOrg.id } },
+        create: {
+            userId: testUser.id,
+            orgId: demoOrg.id,
+            role: 'Member'
+        },
+        update: {}
+    });
+    console.log(`- Added ${testUser.email} to ${demoOrg.name}`);
 
     // Seed Audit Logs (User Only)
     // 1. INFO: 20 min ago. Update Profile. Actor: Ronald.
