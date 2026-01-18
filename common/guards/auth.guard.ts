@@ -33,12 +33,26 @@ export class AuthGuard implements CanActivate {
             });
 
             // [Security] Rule E: Session Revocation Check
+            // [Security] Rule E: Session Revocation Check
             if (payload.jti) {
+                // 1. Check Custom Auth Session
                 const session = await this.prisma.session.findUnique({
                     where: { id: payload.jti as string }
                 });
-                if (!session) {
-                    throw new UnauthorizedException('Session revoked');
+
+                if (session) {
+                    // Valid Custom Session
+                } else {
+                    // 2. Check OIDC Access Token (if session not found)
+                    // OIDC Provider stores AccessTokens with prefix "AccessToken:"
+                    // The payload.jti from OIDC is the unique ID of the AccessToken.
+                    const oidcToken = await this.prisma.oidcPayload.findUnique({
+                        where: { id: `AccessToken:${payload.jti}` }
+                    });
+
+                    if (!oidcToken || (oidcToken.expiresAt && oidcToken.expiresAt < new Date())) {
+                        throw new UnauthorizedException('Session revoked or invalid token');
+                    }
                 }
                 // Check expiry logic if needed, but jwtVerify handles exp check.
             } else {
