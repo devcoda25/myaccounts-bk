@@ -28,7 +28,9 @@ import { OIDC_PROVIDER } from './oidc.constants';
 
                 const configuration = {
                     adapter: PrismaOidcAdapter,
-
+                    formats: {
+                        AccessToken: 'jwt',
+                    },
                     features: {
                         // devInteractions: { enabled: true }, // [CHANGED] Enable interactions but handled by us via routes?
                         // Actually, if we provide interaction routes, we don't need devInteractions: true.
@@ -98,7 +100,7 @@ import { OIDC_PROVIDER } from './oidc.constants';
 
                         return {
                             accountId: id,
-                            async claims(use, scope, claims, rejected) {
+                            async claims(use: any, scope: any, claims: any, rejected: any) {
                                 return {
                                     sub: id,
                                     email: user.email,
