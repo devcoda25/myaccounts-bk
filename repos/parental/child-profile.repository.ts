@@ -29,8 +29,16 @@ export class ChildProfileRepository {
             where: { id },
             include: {
                 approvals: true,
-                activities: true,
+                activities: {
+                    orderBy: { at: 'desc' },
+                },
             },
+        });
+    }
+
+    async findOneByInviteCode(inviteCode: string) {
+        return this.prisma.childProfile.findUnique({
+            where: { inviteCode },
         });
     }
 

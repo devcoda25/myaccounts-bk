@@ -61,8 +61,8 @@ export class ParentalController {
     }
 
     @Post('approvals/:id/decide')
-    async decideApproval(@Param('id') id: string, @Body() body: DecideApprovalDto) {
-        return this.parentalService.decideApproval(id, body.approve);
+    async decideApproval(@Param('id') id: string, @Body() body: DecideApprovalDto, @CurrentUser() user: AuthRequest['user']) {
+        return this.parentalService.decideApproval(id, body.approve, user.id);
     }
 
     // --- Activity ---

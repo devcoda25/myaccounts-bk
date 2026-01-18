@@ -382,6 +382,9 @@ model ChildProfile {
   approvals  ParentalApproval[]
   activities ParentalActivity[]
 
+  // Real Linking Support
+  inviteCode String? @unique
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -436,6 +439,10 @@ model ParentalApproval {
   reason   String?
   details  String?
   status   String   @default("Pending") // "Pending", "Approved", "Declined"
+  
+  // Multi-guardian support
+  votes    String[] // List of Guardian IDs who approved
+
   at       DateTime @default(now())
 
   child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)

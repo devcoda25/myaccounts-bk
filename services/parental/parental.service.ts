@@ -20,10 +20,14 @@ export class ParentalService {
     }
 
     async createChild(parentId: string, data: Omit<Prisma.ChildProfileUncheckedCreateInput, 'parentId' | 'dob'> & { dob: string | Date }) {
+        // Generate random 6-char invite code
+        const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
         const child = await this.childRepo.create({
             ...data,
             parentId,
             dob: new Date(data.dob),
+            inviteCode
         });
 
         await this.activityRepo.create({
@@ -50,16 +54,19 @@ export class ParentalService {
     }
 
     async linkChild(parentId: string, code: string) {
-        // In a real system, we'd look up the child by the invite code.
-        // For demo/parity, we'll create a "linked" child.
-        const child = await this.childRepo.create({
-            parentId,
-            name: 'Linked Child',
-            dob: new Date('2013-06-01'),
-            status: 'Active',
-            country: 'Uganda',
-            template: 'Child (6-12)',
-        });
+        // 1. Find child by invite code
+        const child = await this.childRepo.findOneByInviteCode(code);
+        if (!child) {
+            throw new NotFoundException('Invalid invite code');
+        }
+
+        // 2. Add parent to household or update child's guardian list
+        // For strict "transfer" logic (demo simplicity): we just update the parentId
+        // In a real multi-guardian system, we'd add this parent to the child's guardian list.
+        await this.childRepo.update(child.id, { parentId });
+
+        // 3. Clear code to prevent reuse
+        await this.childRepo.update(child.id, { inviteCode: null });
 
         await this.activityRepo.create({
             childId: child.id,
@@ -94,18 +101,67 @@ export class ParentalService {
         return this.approvalRepo.findPendingByOwner(ownerId);
     }
 
-    async decideApproval(approvalId: string, approve: boolean) {
-        const status = approve ? 'Approved' : 'Declined';
-        const approval = await this.approvalRepo.updateStatus(approvalId, status);
+    async decideApproval(approvalId: string, approve: boolean, guardianId: string) {
+        // Fetch approval to get childId
+        const existing = await this.approvalRepo.findOneById(approvalId);
+        if (!existing) throw new NotFoundException('Approval not found');
 
-        await this.activityRepo.create({
-            childId: approval.childId,
-            kind: approve ? 'Approval Approved' : 'Approval Declined',
-            summary: `${approve ? 'Approved' : 'Declined'}: ${approval.title}`,
-            severity: approve ? 'info' : 'warning',
-        });
+        // Fetch household mode via Child -> Parent -> Household
+        // (Assuming parentId is the household owner for simplicity)
+        const child = await this.childRepo.findOneById(existing.childId);
+        const household = await this.householdRepo.findOrCreateForUser(child?.parentId || '');
 
-        return approval;
+        let newStatus = existing.status;
+        const currentVotes = (existing.votes as string[]) || [];
+
+        if (approve) {
+            // "Both guardians" Mode
+            if (household.approvalMode === 'Both guardians') {
+                // Add vote if not already present
+                if (!currentVotes.includes(guardianId)) {
+                    await this.approvalRepo.addVote(approvalId, guardianId);
+                    currentVotes.push(guardianId);
+                }
+
+                // Check consensus
+                // If there's only 1 guardian in the household, allow single vote.
+                // Otherwise require 2 distinct votes.
+                const guardianCount = household.members.filter(m =>
+                    (m.role === 'Guardian' || m.role === 'Co-guardian') && m.status === 'Active'
+                ).length + 1; // +1 for Owner
+
+                const requiredVotes = guardianCount > 1 ? 2 : 1;
+
+                if (currentVotes.length >= requiredVotes) {
+                    newStatus = 'Approved';
+                } else {
+                    // Stay Pending
+                }
+            } else {
+                // "Any guardian" Mode -> Approved immediately
+                newStatus = 'Approved';
+                // Record vote anyway
+                if (!currentVotes.includes(guardianId)) {
+                    await this.approvalRepo.addVote(approvalId, guardianId);
+                }
+            }
+        } else {
+            newStatus = 'Declined';
+        }
+
+        // Only update status if it changed to final
+        if (newStatus !== existing.status) {
+            const approval = await this.approvalRepo.updateStatus(approvalId, newStatus);
+            await this.activityRepo.create({
+                childId: approval.childId,
+                kind: approve ? 'Approval Update' : 'Approval Declined',
+                summary: `${newStatus}: ${approval.title}`,
+                severity: newStatus === 'Approved' ? 'info' : 'warning',
+            });
+            return approval;
+        }
+
+        return existing;
     }
 
     // --- Activity ---

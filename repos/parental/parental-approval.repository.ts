@@ -36,6 +36,18 @@ export class ParentalApprovalRepository {
         });
     }
 
+    async addVote(id: string, guardianId: string) {
+        // Use Prisma's atomic push for arrays
+        return this.prisma.parentalApproval.update({
+            where: { id },
+            data: {
+                votes: {
+                    push: guardianId
+                }
+            }
+        });
+    }
+
     async findOneById(id: string) {
         return this.prisma.parentalApproval.findUnique({
             where: { id },
