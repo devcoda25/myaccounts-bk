@@ -73,6 +73,34 @@ export class AuthGuard implements CanActivate {
                 jti: payload.jti as string,
             };
         } catch (err) {
+            // Fallback: Check for Opaque OIDC Token
+            try {
+                const oidcToken = await this.prisma.oidcPayload.findUnique({
+                    where: { id: `AccessToken:${token}` }
+                });
+
+                if (oidcToken && (!oidcToken.expiresAt || oidcToken.expiresAt > new Date())) {
+                    // Valid Opaque Token
+                    const payload = oidcToken.payload as any;
+                    if (payload && payload.accountId) {
+                        const userId = payload.accountId;
+                        const user = await this.prisma.user.findUnique({ where: { id: userId } });
+                        if (user) {
+                            request.user = {
+                                id: user.id,
+                                sub: user.id,
+                                email: user.email,
+                                role: user.role || 'USER',
+                                jti: token
+                            };
+                            return true;
+                        }
+                    }
+                }
+            } catch (innerErr) {
+                // Ignore DB error, throw original
+            }
+
             console.error('Token verification failed:', err);
             throw new UnauthorizedException();
         }
