@@ -40,8 +40,11 @@ export class ParentalService {
         return child;
     }
 
-    async updateChild(id: string, data: Prisma.ChildProfileUpdateInput, audit?: { kind: string; summary: string; severity?: string }) {
-        const child = await this.childRepo.update(id, data);
+    async updateChild(id: string, data: any, audit?: { kind: string; summary: string; severity?: string }) {
+        // Flatten the data if it comes from frontend nested structure
+        const flattened = this.flattenChildPatch(data);
+
+        const child = await this.childRepo.update(id, flattened);
         if (audit) {
             await this.activityRepo.create({
                 childId: id,
@@ -51,6 +54,54 @@ export class ParentalService {
             });
         }
         return child;
+    }
+
+    private flattenChildPatch(data: any): Prisma.ChildProfileUpdateInput {
+        const flat: any = { ...data };
+
+        // Flatten Charging
+        if (data.charging) {
+            flat.chargingEnabled = data.charging.enabled;
+            flat.dailyKwhCap = data.charging.dailyKwhCap;
+            flat.sessionKwhCap = data.charging.sessionKwhCap;
+            flat.reqApprovalAboveKwh = data.charging.requireApprovalAboveKwh;
+            flat.allowedStations = data.charging.allowedStations;
+            delete flat.charging;
+        }
+
+        // Flatten Curfew
+        if (data.curfew) {
+            flat.curfewEnabled = data.curfew.enabled;
+            flat.curfewStart = data.curfew.start;
+            flat.curfewEnd = data.curfew.end;
+            flat.curfewHardLock = data.curfew.hardLock;
+            flat.curfewAllowSchool = data.curfew.allowSchoolOnlyDuringCurfew;
+            delete flat.curfew;
+        }
+
+        // Flatten Geofences
+        if (data.geofences) {
+            flat.geofencesEnabled = data.geofences.enabled;
+            flat.geofencesAlerts = data.geofences.alertsOnEnterLeave;
+            if (data.geofences.home) {
+                flat.homeAddress = data.geofences.home.address;
+                flat.homeRadius = data.geofences.home.radiusKm;
+            }
+            if (data.geofences.school) {
+                flat.schoolAddress = data.geofences.school.address;
+                flat.schoolRadius = data.geofences.school.radiusKm;
+            }
+            delete flat.geofences;
+        }
+
+        // Flatten Daily Window
+        if (data.dailyWindow) {
+            flat.dailyWindowStart = data.dailyWindow.start;
+            flat.dailyWindowEnd = data.dailyWindow.end;
+            delete flat.dailyWindow;
+        }
+
+        return flat;
     }
 
     async linkChild(parentId: string, code: string) {
@@ -63,7 +114,7 @@ export class ParentalService {
         // 2. Add parent to household or update child's guardian list
         // For strict "transfer" logic (demo simplicity): we just update the parentId
         // In a real multi-guardian system, we'd add this parent to the child's guardian list.
-        await this.childRepo.update(child.id, { parentId });
+        await this.childRepo.update(child.id, { parent: { connect: { id: parentId } } });
 
         // 3. Clear code to prevent reuse
         await this.childRepo.update(child.id, { inviteCode: null });
