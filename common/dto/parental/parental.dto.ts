@@ -24,6 +24,10 @@ export class CreateChildDto {
 
     @IsString()
     dob: string;
+
+    @IsOptional()
+    @IsString()
+    school?: string;
 }
 
 export class UpdateChildDto {
