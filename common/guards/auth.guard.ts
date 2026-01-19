@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, Logger } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { jwtVerify } from 'jose';
@@ -9,6 +9,8 @@ import { AuthCacheService } from '../services/auth-cache.service';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
+    private readonly logger = new Logger(AuthGuard.name);
+
     constructor(
         private prisma: PrismaService,
         private reflector: Reflector,
@@ -36,6 +38,7 @@ export class AuthGuard implements CanActivate {
 
             const { payload } = await jwtVerify(token, publicKey, {
                 algorithms: ['ES256'],
+                clockTolerance: 30, // [Fix] Allow 30s clock skew
             });
 
             // [Security] Rule E: Session Revocation Check
@@ -46,7 +49,10 @@ export class AuthGuard implements CanActivate {
                 // Cache Check
                 const cachedSession = await this.authCache.getSession(sessionId);
                 if (cachedSession) {
-                    if (!cachedSession.isValid) throw new UnauthorizedException('Session revoked');
+                    if (!cachedSession.isValid) {
+                        this.logger.warn(`Session ${sessionId} is marked invalid in Cache.`);
+                        throw new UnauthorizedException('Session revoked');
+                    }
                     // Get User from Cache
                     const cachedUser = await this.authCache.getUser(cachedSession.userId);
                     if (cachedUser) {
@@ -82,19 +88,28 @@ export class AuthGuard implements CanActivate {
                                 jti: sessionId,
                             };
                             return true;
+                        } else {
+                            this.logger.warn(`User ${session.userId} not found for valid session ${sessionId}`);
                         }
                     } else {
+                        this.logger.warn(`Session ${sessionId} expired in DB. ExpiresAt: ${session.expiresAt}, Now: ${new Date()}`);
                         throw new UnauthorizedException('Session expired');
                     }
                 } else {
                     // 2. Check OIDC Access Token (if custom session not found)
-                    // TODO: Cache OIDC tokens too if needed, but they are short lived.
-                    // OIDC Provider stores AccessTokens with prefix "AccessToken:"
+                    this.logger.log(`Session ${sessionId} not found in DB. Checking OIDC tokens...`);
+
                     const oidcToken = await this.prisma.oidcPayload.findUnique({
                         where: { id: `AccessToken:${payload.jti}` }
                     });
 
-                    if (!oidcToken || (oidcToken.expiresAt && oidcToken.expiresAt < new Date())) {
+                    if (!oidcToken) {
+                        this.logger.warn(`OIDC AccessToken:${payload.jti} not found.`);
+                        throw new UnauthorizedException('Session revoked or invalid token');
+                    }
+
+                    if (oidcToken.expiresAt && oidcToken.expiresAt < new Date()) {
+                        this.logger.warn(`OIDC AccessToken:${payload.jti} expired. ExpiresAt: ${oidcToken.expiresAt}`);
                         throw new UnauthorizedException('Session revoked or invalid token');
                     }
                 }
@@ -133,9 +148,8 @@ export class AuthGuard implements CanActivate {
             // Should have returned by now if found via Cache/DB logic above.
             // If request.user is set, we are good.
             if (!request.user) {
-                // Final safety net - we verified signature but failed to find session/user context
-                // Usually means orphaned token or logic gap.
-                // Re-construct minimal user from payload if desperate, but better to fail secure.
+                this.logger.error(`Verified signature but failed to resolve user context for sub: ${payload.sub} / jti: ${payload.jti}`);
+
                 request.user = {
                     id: payload.sub,
                     sub: payload.sub,
@@ -174,7 +188,7 @@ export class AuthGuard implements CanActivate {
                 // Ignore DB error, throw original
             }
 
-            console.error('Token verification failed:', err);
+            this.logger.error(`Token verification failed: ${(err as Error).message}`, (err as Error).stack);
             throw new UnauthorizedException();
         }
         return true;
