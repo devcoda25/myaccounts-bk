@@ -31,7 +31,16 @@ export class VerificationService {
         } else if (deliveryMethod === 'whatsapp_code') {
             await this.whatsappService.sendWhatsappCode(identifier, code);
         } else if (deliveryMethod === 'email_link' || !deliveryMethod) {
-            await this.emailService.sendEmail(identifier, 'Verification Code', `Your code is ${code}`);
+            const frontend = process.env.FRONTEND_URL || 'https://accounts.evzone.app';
+            const link = `${frontend}/auth/reset-password?code=${code}&email=${encodeURIComponent(identifier)}`;
+            const html = `
+                <h3>Reset Your Password</h3>
+                <p>Click the link below to reset your password:</p>
+                <p><a href="${link}" style="background:#03cd8c;color:white;padding:10px 20px;text-decoration:none;border-radius:5px">Reset Password</a></p>
+                <p>Or enter this code manually via the App: <b>${code}</b></p>
+                <p><small>Link expires in 15 minutes.</small></p>
+            `;
+            await this.emailService.sendEmail(identifier, 'Reset Password', `Reset link: ${link}`, html);
         }
 
         // REMOVED debug_code for security
