@@ -7,6 +7,33 @@ import { AuthModule } from './auth.module';
 import { OidcInteractionController } from '../../controllers/auth/oidc-interaction.controller';
 import { OIDC_PROVIDER } from './oidc.constants';
 
+// [Types] definitions to satisfy strict mode since @types/oidc-provider is missing
+interface OidcContext {
+    [key: string]: unknown;
+}
+interface OidcInteraction {
+    uid: string;
+    [key: string]: unknown;
+}
+interface OidcConfiguration {
+    adapter?: any;
+    formats?: Record<string, string>;
+    features?: Record<string, { enabled: boolean;[key: string]: unknown }>;
+    ttl?: Record<string, (ctx: OidcContext, token: unknown, client: unknown) => number>;
+    jwks?: { keys: unknown[] };
+    cookies?: {
+        keys: string[];
+        short?: { domain?: string; sameSite?: string; secure?: boolean };
+        long?: { domain?: string; sameSite?: string; secure?: boolean };
+    };
+    pkce?: { required: () => boolean };
+    clientBasedCORS?: (ctx: OidcContext, origin: string, client: unknown) => boolean;
+    interactions?: {
+        url?: (ctx: OidcContext, interaction: OidcInteraction) => string;
+    };
+    findAccount?: (ctx: OidcContext, id: string) => Promise<any>;
+}
+
 @Global()
 @Module({
     imports: [AuthModule],
@@ -26,7 +53,7 @@ import { OIDC_PROVIDER } from './oidc.constants';
                 console.log(`[OIDC] Initializing with Issuer: ${issuer}`);
                 console.log(`[OIDC] Cookie Domain: ${process.env.COOKIE_DOMAIN || '(unset)'}`);
 
-                const configuration = {
+                const configuration: OidcConfiguration = {
                     adapter: PrismaOidcAdapter,
                     formats: {
                         AccessToken: 'jwt',
@@ -46,6 +73,30 @@ import { OIDC_PROVIDER } from './oidc.constants';
                         introspection: { enabled: true },
                         revocation: { enabled: true },
                     },
+                    // [Fix] Explicit TTLs to prevent premature expiration during login flow
+                    ttl: {
+                        AccessToken: (_ctx, _token, _client) => {
+                            return 60 * 60 * 24; // 24 hours (seconds)
+                        },
+                        AuthorizationCode: (_ctx, _token, _client) => {
+                            return 60 * 10; // 10 minutes
+                        },
+                        IdToken: (_ctx, _token, _client) => {
+                            return 60 * 60; // 1 hour
+                        },
+                        DeviceCode: (_ctx, _token, _client) => {
+                            return 60 * 10; // 10 minutes
+                        },
+                        Grant: (_ctx, _token, _client) => {
+                            return 60 * 60 * 24 * 14; // 14 days
+                        },
+                        Interaction: (_ctx, _token, _client) => {
+                            return 60 * 60; // 1 hour (allow time for user to login)
+                        },
+                        Session: (_ctx, _token, _client) => {
+                            return 60 * 60 * 24 * 14; // 14 days (Remember Me)
+                        },
+                    },
                     jwks: {
                         keys: [signingKey]
                     },
@@ -58,7 +109,7 @@ import { OIDC_PROVIDER } from './oidc.constants';
                     pkce: { required: () => true }, // Force PKCE
 
                     // [CORS] Explicitly allow trusted origins to bypass oidc-provider strictness
-                    clientBasedCORS: (ctx: unknown, origin: string, client: unknown) => {
+                    clientBasedCORS: (_ctx, origin, _client) => {
                         const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim());
                         const trusted = [
                             'https://accounts.evzone.app', // Production UI
@@ -69,7 +120,7 @@ import { OIDC_PROVIDER } from './oidc.constants';
                         return trusted.includes(origin) || process.env.NODE_ENV !== 'production';
                     },
                     interactions: {
-                        url(ctx: unknown, interaction: any) {
+                        url(_ctx, interaction) {
                             // This is the relative path (to issuer) where the user browser is redirected
                             // oidc-provider appends /interaction/:uid
                             // Since our issuer is https://accounts.evzone.app/oidc,
@@ -86,7 +137,7 @@ import { OIDC_PROVIDER } from './oidc.constants';
                             return `/interaction/${interaction.uid}`;
                         }
                     },
-                    async findAccount(ctx: unknown, id: string) {
+                    async findAccount(_ctx, id) {
                         const user = await prisma.user.findUnique({
                             where: { id },
                             include: {
@@ -100,7 +151,7 @@ import { OIDC_PROVIDER } from './oidc.constants';
 
                         return {
                             accountId: id,
-                            async claims(use: any, scope: any, claims: any, rejected: any) {
+                            async claims(_use: unknown, _scope: unknown, _claims: unknown, _rejected: unknown) {
                                 return {
                                     sub: id,
                                     email: user.email,
