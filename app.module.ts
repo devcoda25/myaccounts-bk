@@ -28,6 +28,9 @@ import { KafkaModule } from './modules/kafka/kafka.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { ConfigModule } from '@nestjs/config';
 
+import { JwkService } from './common/services/jwk.service';
+import { AuthCacheService } from './common/services/auth-cache.service';
+
 const env = validateEnv(process.env);
 
 @Module({
@@ -59,7 +62,7 @@ const env = validateEnv(process.env);
         KycModule,
         ParentalModule,
         HealthModule,
-    
+
         SecurityModule,
         AppsModule,
         NotificationsModule,
@@ -75,6 +78,9 @@ const env = validateEnv(process.env);
             provide: APP_GUARD,
             useClass: ThrottlerGuard,
         },
+        JwkService,      // [Performance] Singleton Key Service
+        AuthCacheService // [Performance] Redis Session Cache
     ],
+    exports: [JwkService, AuthCacheService],
 })
 export class AppModule { }

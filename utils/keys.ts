@@ -85,4 +85,12 @@ export class KeyManager {
         const jwk = await exportJWK(this.privateKey);
         return { ...jwk, kid: 'evzone-key-1', use: 'sig', alg: 'ES256' };
     }
+
+    // [Performance] Expose the raw KeyObject to avoid re-parsing in AuthGuard
+    static getPublicKeyObject() {
+        if (!this.publicKey) {
+            throw new Error('KeyManager not initialized. Call init() first.');
+        }
+        return this.publicKey;
+    }
 }

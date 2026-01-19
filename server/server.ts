@@ -84,13 +84,17 @@ export async function bootstrap() {
     });
 
     // [Security] Helmet for Security Headers & CSP
-    // Typed registration without 'any'
+    const trustedDomains = (process.env.CSP_DOMAINS || '').split(',').map(d => d.trim()).filter(Boolean);
+
     await app.register(helmet, {
         contentSecurityPolicy: {
             directives: {
                 defaultSrc: ["'self'"],
-                scriptSrc: ["'self'"], // No unsafe-inline
+                scriptSrc: ["'self'", ...trustedDomains], // Allow analytics/scripts
+                imgSrc: ["'self'", 'data:', 'https:', ...trustedDomains], // Allow CDN images
+                connectSrc: ["'self'", ...trustedDomains], // Allow API calls
                 objectSrc: ["'none'"],
+                upgradeInsecureRequests: [],
             },
         },
     });
