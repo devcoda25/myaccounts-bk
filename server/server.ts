@@ -16,6 +16,7 @@ import cors from '@fastify/cors';
 
 
 import middie from '@fastify/middie';
+import formbody from '@fastify/formbody';
 import { OIDC_PROVIDER } from '../modules/auth/oidc.constants';
 import { KeyManager } from '../utils/keys';
 
@@ -57,6 +58,9 @@ export async function bootstrap() {
         credentials: true,
         allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-user-id', 'x-api-key'],
     });
+
+    // [Fix] Enable Form Body Parsing (x-www-form-urlencoded) for OIDC interactions
+    await app.register(formbody);
 
     // [OIDC] Enable Express-style middleware (required for oidc-provider)
     const fastify = app.getHttpAdapter().getInstance();
