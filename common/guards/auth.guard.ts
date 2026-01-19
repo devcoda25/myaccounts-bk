@@ -30,6 +30,7 @@ export class AuthGuard implements CanActivate {
         const request = context.switchToHttp().getRequest<AuthRequest>();
         const token = this.extractToken(request);
         if (!token) {
+            this.logger.warn(`[AuthGuard] No token found in request headers or cookies for path: ${request.url}`);
             throw new UnauthorizedException();
         }
         try {
