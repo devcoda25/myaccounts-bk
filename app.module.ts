@@ -28,8 +28,7 @@ import { KafkaModule } from './modules/kafka/kafka.module';
 import { StorageModule } from './modules/storage/storage.module';
 import { ConfigModule } from '@nestjs/config';
 
-import { JwkService } from './common/services/jwk.service';
-import { AuthCacheService } from './common/services/auth-cache.service';
+import { CommonModule } from './common/common.module';
 
 const env = validateEnv(process.env);
 
@@ -39,6 +38,7 @@ const env = validateEnv(process.env);
             isGlobal: true,
             validate: validateEnv,
         }),
+        CommonModule, // [Architecture] Shared Global Services
         ThrottlerModule.forRoot({
             throttlers: [{
                 ttl: 60000,
@@ -78,9 +78,6 @@ const env = validateEnv(process.env);
             provide: APP_GUARD,
             useClass: ThrottlerGuard,
         },
-        JwkService,      // [Performance] Singleton Key Service
-        AuthCacheService // [Performance] Redis Session Cache
     ],
-    exports: [JwkService, AuthCacheService],
 })
 export class AppModule { }
