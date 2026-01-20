@@ -128,6 +128,73 @@ export class MfaService {
         }
     }
 
+    async sendChallenge(userId: string, channel: 'sms' | 'whatsapp' | 'email') {
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            include: { contacts: true }
+        });
+        if (!user) throw new UnauthorizedException();
+
+        // Find appropriate contact
+        let contact;
+        if (channel === 'email') {
+            contact = user.contacts.find(c => c.type === 'EMAIL' && c.verified); // Default to verified email
+            // Prefer settings if possible (TODO)
+        } else {
+            contact = user.contacts.find(c => {
+                if (c.type !== 'PHONE' || !c.verified) return false;
+                const caps = c.capabilities as Record<string, boolean> || {};
+                return channel === 'whatsapp' ? caps['whatsapp'] === true : caps['sms'] === true;
+            });
+        }
+
+        if (!contact) throw new BadRequestException(`No verified contact found for ${channel}`);
+
+        const method = channel === 'whatsapp' ? 'whatsapp_message' : channel === 'email' ? 'email_code' : 'sms_code';
+        const type = channel === 'email' ? 'EMAIL_VERIFY' : 'PHONE_VERIFY';
+
+        await this.verificationService.requestVerification(contact.value, type, method);
+        return { success: true, message: `Code sent to ${channel}` };
+    }
+
+    async verifyChallenge(userId: string, code: string, channel: 'authenticator' | 'sms' | 'whatsapp' | 'email') {
+        if (channel === 'authenticator') {
+            const valid = await this.verifyTotp(userId, code);
+            if (!valid) throw new BadRequestException('Invalid TOTP code');
+            return { success: true };
+        } else {
+            // For Email/SMS, we verify using VerificationService.
+            // We need the identifier. We have to look it up again or ask client to send it.
+            // Client might NOT want to send identifier for privacy/UX (just "Verify SMS").
+            // So we look up the USER's contact again.
+            const user = await this.prisma.user.findUnique({
+                where: { id: userId },
+                include: { contacts: true }
+            });
+
+            let contact;
+            if (channel === 'email') {
+                contact = user?.contacts.find(c => c.type === 'EMAIL' && c.verified);
+            } else {
+                contact = user?.contacts.find(c => {
+                    if (c.type !== 'PHONE' || !c.verified) return false;
+                    const caps = c.capabilities as Record<string, boolean> || {};
+                    return channel === 'whatsapp' ? caps['whatsapp'] === true : caps['sms'] === true;
+                });
+            }
+
+            if (!contact) throw new BadRequestException(`No contact found for ${channel}`);
+
+            const type = channel === 'email' ? 'EMAIL_VERIFY' : 'PHONE_VERIFY';
+            // We use verifyCode (which returns record or null)
+            const record = await this.verificationService.verifyCode(contact.value, code, type);
+            if (!record) throw new BadRequestException('Invalid or expired code');
+
+            await this.verificationService.consumeCode(record.id);
+            return { success: true };
+        }
+    }
+
     // --- Helpers ---
 
     private async generateAndHashRecoveryCodes() {

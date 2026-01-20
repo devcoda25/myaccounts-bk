@@ -40,4 +40,14 @@ export class MfaController {
     async regenerateCodes(@Req() req: AuthRequest) {
         return this.mfaService.regenerateRecoveryCodes(req.user.sub);
     }
+
+    @Post('challenge/send')
+    async sendChallenge(@Req() req: AuthRequest, @Body() body: { channel: 'sms' | 'whatsapp' | 'email' }) {
+        return this.mfaService.sendChallenge(req.user.sub, body.channel);
+    }
+
+    @Post('challenge/verify')
+    async verifyChallenge(@Req() req: AuthRequest, @Body() body: { code: string; channel: 'authenticator' | 'sms' | 'whatsapp' | 'email' }) {
+        return this.mfaService.verifyChallenge(req.user.sub, body.code, body.channel);
+    }
 }
