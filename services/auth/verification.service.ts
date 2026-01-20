@@ -32,17 +32,35 @@ export class VerificationService {
             await this.smsService.sendSms(identifier, `Your verification code is ${code}`);
         } else if (deliveryMethod === 'whatsapp_code') {
             await this.whatsappService.sendWhatsappCode(identifier, code);
-        } else if (deliveryMethod === 'email_link' || !deliveryMethod) {
+        } else if (deliveryMethod === 'email_code' || deliveryMethod === 'email_link' || !deliveryMethod) {
             const frontend = process.env.FRONTEND_URL || 'https://accounts.evzone.app';
-            const link = `${frontend}/auth/reset-password?code=${code}&email=${encodeURIComponent(identifier)}`;
+
+            let subject = 'Verification Code';
+            let title = 'Verify Your Account';
+            let actionLink = '';
+            let actionText = '';
+
+            if (type === 'PASSWORD_RESET') {
+                subject = 'Reset Your Password';
+                title = 'Reset Your Password';
+                actionLink = `${frontend}/auth/reset-password?code=${code}&email=${encodeURIComponent(identifier)}`;
+                actionText = 'Reset Password';
+            } else if (type === 'EMAIL_VERIFY') {
+                subject = 'Verify Your Email';
+                title = 'Verify Your Email Address';
+                // optional: link to verify directly? usually verify-email page takes code
+                // actionLink = `${frontend}/auth/verify-email?code=${code}&email=${encodeURIComponent(identifier)}`;
+                // actionText = 'Verify Email';
+            }
+
             const html = `
-                <h3>Reset Your Password</h3>
-                <p>Click the link below to reset your password:</p>
-                <p><a href="${link}" style="background:#03cd8c;color:white;padding:10px 20px;text-decoration:none;border-radius:5px">Reset Password</a></p>
-                <p>Or enter this code manually via the App: <b>${code}</b></p>
-                <p><small>Link expires in 15 minutes.</small></p>
+                <h3>${title}</h3>
+                ${actionLink ? `<p>Click the link below to proceed:</p>
+                <p><a href="${actionLink}" style="background:#03cd8c;color:white;padding:10px 20px;text-decoration:none;border-radius:5px">${actionText}</a></p>` : ''}
+                <p>Your verification code is: <b>${code}</b></p>
+                <p><small>Code expires in 15 minutes.</small></p>
             `;
-            await this.emailService.sendEmail(identifier, 'Reset Password', `Reset link: ${link}`, html);
+            await this.emailService.sendEmail(identifier, subject, `Verification code: ${code}`, html);
         }
 
         // REMOVED debug_code for security
