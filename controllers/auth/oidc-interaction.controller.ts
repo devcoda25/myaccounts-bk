@@ -108,6 +108,16 @@ export class OidcInteractionController {
         }
     }
 
+
+    @Get(':uid/login')
+    async loginView(
+        @Res() res: FastifyReply,
+        @Param('uid') uid: string,
+    ) {
+        const frontendUrl = process.env.FRONTEND_URL || 'https://accounts.evzone.app';
+        return res.code(303).redirect(`${frontendUrl}/auth/sign-in?uid=${uid}`);
+    }
+
     @Post(':uid/login')
     async login(
         @Req() req: FastifyRequest,
