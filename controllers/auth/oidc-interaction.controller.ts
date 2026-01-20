@@ -141,7 +141,16 @@ export class OidcInteractionController {
         };
 
         // This commits the interaction and redirects the User Agent back to the Authorization Endpoint
-        await this.provider.interactionFinished(req.raw, res.raw, interactionResult, { mergeWithLastSubmission: false });
+        try {
+            await this.provider.interactionFinished(req.raw, res.raw, interactionResult, { mergeWithLastSubmission: false });
+        } catch (err: any) {
+            // [Fix] Handle Stale Sessions (e.g. server restart)
+            // If interaction is not found or invalid, restart the flow
+            if (err.message === 'invalid_request' || err.name === 'SessionNotFound') {
+                return res.redirect('/auth/sign-in');
+            }
+            throw err;
+        }
     }
 
     @Post(':uid/confirm')
