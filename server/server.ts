@@ -60,7 +60,7 @@ export async function bootstrap() {
     });
 
     // [Fix] Enable Form Body Parsing (x-www-form-urlencoded) for OIDC interactions
-    await app.register(formbody);
+    // await app.register(formbody); // [REMOVED] NestJS registers this automatically, causing FST_ERR_CTP_ALREADY_PRESENT if we do it here.
 
     // [OIDC] Enable Express-style middleware (required for oidc-provider)
     const fastify = app.getHttpAdapter().getInstance();
