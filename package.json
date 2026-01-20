@@ -89,7 +89,9 @@
     "overrides": {
         "fastify": "$fastify",
         "@fastify/middie": "^9.0.0",
-        "@fastify/cors": "^10.0.0"
+        "@fastify/cors": "^10.0.0",
+        "@fastify/static": "^9.0.0",
+        "@fastify/formbody": "^8.0.2"
     },
     "prisma": {
         "seed": "ts-node prisma/seed.ts"
