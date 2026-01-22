@@ -76,16 +76,23 @@ export async function bootstrap() {
     fastify.use((req: any, res: any, next: any) => {
         // [OIDC] Standard mount point
         if (req.url.startsWith('/oidc')) {
-            // DEBUG: log OIDC request details to troubleshoot "unrecognized route"
-            // console.log(`[OIDC Request] ${req.method} ${req.url} (Host: ${req.headers.host}, Proto: ${req.headers['x-forwarded-proto']})`);
-
+            // Let NestJS handle OIDC interaction routes
             if (req.url.startsWith('/oidc/interaction')) {
                 return next();
             }
 
-            // node-oidc-provider with a path in the issuer (e.g. /oidc) 
-            // generally expects the path to be present in the request if mounted at root.
-            return oidcCallback(req, res, next);
+            // [Fix] node-oidc-provider expects the path relative to its mount point.
+            // When using issuer with path '/oidc', and mounting via manual middleware,
+            // we must strip the prefix so it matches internal routes like /.well-known/...
+            const originalUrl = req.url;
+            req.url = req.url.slice(5) || '/'; // Strip '/oidc'
+
+            // logger.log(`[OIDC Request] Forwarding to Provider: ${originalUrl} -> ${req.url}`);
+
+            return oidcCallback(req, res, () => {
+                req.url = originalUrl; // Restore if it proceeds (not matched)
+                next();
+            });
         }
         return next();
     });
