@@ -65,7 +65,10 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy, OnApplicatio
         if (this.handlers.size > 0 && !this.isConsumerRunning) {
             this.logger.log(`Starting Kafka Consumer with ${this.handlers.size} topic(s)...`);
             this.isConsumerRunning = true;
-            await this.consumer.run({
+            // [Fix] DO NOT await this.consumer.run() here. 
+            // It is a long-running loop that blocks the NestJS bootstrap process.
+            // Awaiting it prevents the HTTP server from starting, causing a 503 error.
+            this.consumer.run({
                 eachMessage: async ({ topic, message }) => {
                     const value = message.value?.toString();
                     if (value) {
@@ -80,6 +83,9 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy, OnApplicatio
                         }
                     }
                 },
+            }).catch(err => {
+                this.isConsumerRunning = false;
+                this.logger.error('Kafka Consumer loop crashed', err);
             });
         }
     }
