@@ -28,10 +28,6 @@ export const envSchema = z.object({
     KAFKA_SSL: z.coerce.boolean().default(true),
 
     // Kafka Topics
-    KAFKA_TOPIC_PAYMENT_RECEIVED: z.string().default('payment.received'),
-    KAFKA_TOPIC_PAYMENT_PROCESSED: z.string().default('payment.processed'),
-    KAFKA_TOPIC_KYC_UPLOADED: z.string().default('kyc.uploaded'),
-    KAFKA_TOPIC_KYC_VERIFIED: z.string().default('kyc.verified'),
     KAFKA_TOPIC_MAIL_SEND: z.string().default('mail.send'),
     KAFKA_TOPIC_USER_LOGGED_IN: z.string().default('auth.user.login'),
     KAFKA_TOPIC_USER_LOCKED: z.string().default('auth.user.locked'),

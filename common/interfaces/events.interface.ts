@@ -33,14 +33,6 @@ export interface OrgMembershipUpdatedEventPayload {
 }
 
 export const EventPattern = {
-    // Payment
-    PAYMENT_RECEIVED: process.env.KAFKA_TOPIC_PAYMENT_RECEIVED || 'payment.received',
-    PAYMENT_PROCESSED: process.env.KAFKA_TOPIC_PAYMENT_PROCESSED || 'payment.processed',
-
-    // KYC
-    KYC_UPLOADED: process.env.KAFKA_TOPIC_KYC_UPLOADED || 'kyc.uploaded',
-    KYC_VERIFIED: process.env.KAFKA_TOPIC_KYC_VERIFIED || 'kyc.verified',
-
     // Email
     MAIL_SEND: process.env.KAFKA_TOPIC_MAIL_SEND || 'mail.send',
 
