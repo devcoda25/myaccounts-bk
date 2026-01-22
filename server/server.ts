@@ -102,6 +102,15 @@ export async function bootstrap() {
                 return next();
             }
 
+            // [Fix] Path Normalization: Strip the issuer's path from the URL.
+            // oidc-provider expects the URL to be relative to its base when mounted manually.
+            // e.g. /oidc/.well-known/... -> /.well-known/...
+            const issuerPath = issuerUrl.pathname.replace(/\/$/, '');
+            if (issuerPath && req.url.startsWith(issuerPath)) {
+                req.url = req.url.replace(issuerPath, '');
+                if (!req.url.startsWith('/')) req.url = '/' + req.url;
+            }
+
             // [Fix] Pass exactly what oidc-provider expects
             return oidcCallback(req, res, next);
         }
