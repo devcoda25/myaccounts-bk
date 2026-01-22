@@ -76,12 +76,15 @@ export async function bootstrap() {
     fastify.use((req: any, res: any, next: any) => {
         // Only handle OIDC requests (starting with /oidc)
         if (req.url.startsWith('/oidc')) {
+            // DEBUG: log OIDC request
+            // logger.log(`[OIDC Request] ${req.method} ${req.url}`);
+
             // Let NestJS handle OIDC interaction routes
+            // Note: req.url in Fastify middleware is the full path
             if (req.url.startsWith('/oidc/interaction')) {
                 return next();
             }
             // oidc-provider handles the rest (discovery, token, etc.)
-            // NOTE: No need to strip /oidc if issuer has the same path component
             return oidcCallback(req, res, next);
         }
         return next();
@@ -129,10 +132,6 @@ export async function bootstrap() {
         });
     }
 
-
-
-
-
     // [Security] Validation Strictness
     app.useGlobalPipes(new ValidationPipe({
         whitelist: true,
@@ -146,18 +145,14 @@ export async function bootstrap() {
     // Global Prefix for API
     app.setGlobalPrefix('api/v1', {
         exclude: [
-            { path: 'jwks', method: RequestMethod.ALL },
-            { path: '.well-known/openid-configuration', method: RequestMethod.ALL },
-            { path: 'metrics', method: RequestMethod.ALL },
-            { path: 'interaction/:uid', method: RequestMethod.ALL },
-            { path: 'interaction/:uid/login', method: RequestMethod.ALL },
-            { path: 'interaction/:uid/confirm', method: RequestMethod.ALL },
-            { path: 'interaction/:uid/abort', method: RequestMethod.ALL },
+            { path: 'health', method: RequestMethod.GET },
+            { path: 'oidc/jwks', method: RequestMethod.GET },
+            { path: 'oidc/.well-known/openid-configuration', method: RequestMethod.GET },
+            { path: 'oidc/interaction/:uid', method: RequestMethod.ALL },
             { path: 'oidc/(.*)', method: RequestMethod.ALL }
         ],
     });
 
-    // Filter Edge Guards (IP/API Key) manually to avoid regex routing issues
     const logger = new Logger('Bootstrap');
 
     // DEBUG: Print DB URL info
@@ -166,10 +161,8 @@ export async function bootstrap() {
     const maskedUrl = dbUrl.replace(/:([^:@]+)@/, ':***@');
     logger.log(`Using Database: ${maskedUrl}`);
 
-    // Middleware is now registered in AppModule
-
     const port = process.env.PORT || 3000;
-    await app.listen(port, '::');
+    await app.listen(port, '0.0.0.0');
     logger.log(`Application is running on: ${await app.getUrl()}`);
 }
 
