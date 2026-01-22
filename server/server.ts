@@ -76,11 +76,16 @@ export async function bootstrap() {
     fastify.use((req: any, res: any, next: any) => {
         // [OIDC] Standard mount point
         if (req.url.startsWith('/oidc')) {
+            // [DEBUG] Log all details to find why it says "unrecognized route"
+            console.log(`[OIDC DEBUG] Incoming: ${req.method} ${req.url}`);
+            console.log(`[OIDC DEBUG] Headers: ${JSON.stringify(req.headers, null, 2)}`);
+
             // [Fix] Force Host header and Proto to match Issuer strictness.
             // This is critical when api.evzone.app is a proxy for accounts.evzone.app
-            req.headers.host = 'accounts.evzone.app';
+            const targetHost = 'accounts.evzone.app';
+            req.headers.host = targetHost;
+            req.headers['x-forwarded-host'] = targetHost;
             req.headers['x-forwarded-proto'] = 'https';
-            req.headers['x-forwarded-host'] = 'accounts.evzone.app';
 
             // Let NestJS handle OIDC interaction routes
             if (req.url.startsWith('/oidc/interaction')) {

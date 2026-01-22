@@ -24,8 +24,10 @@ import { OidcConfiguration, OidcContext, OidcInteraction } from '../../common/in
                 const signingKey = await KeyManager.getPrivateJWK();
 
                 const issuer = process.env.OIDC_ISSUER || 'https://accounts.evzone.app/oidc';
-                console.log(`[OIDC] Initializing with Issuer: ${issuer}`);
-                console.log(`[OIDC] Cookie Domain: ${process.env.COOKIE_DOMAIN || '(unset)'}`);
+                console.log('================================================');
+                console.log(`[OIDC] INITIALIZING WITH ISSUER: ${issuer}`);
+                console.log(`[OIDC] COOKIE DOMAIN: ${process.env.COOKIE_DOMAIN || '(unset)'}`);
+                console.log('================================================');
 
                 const configuration: OidcConfiguration = {
                     adapter: PrismaOidcAdapter,
