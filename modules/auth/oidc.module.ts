@@ -84,8 +84,16 @@ import { OidcConfiguration, OidcContext, OidcInteraction } from '../../common/in
                     // Cookies must be secure in prod, none/lax settings handled by provider?
                     cookies: {
                         keys: [process.env.COOKIE_SECRET || 'changeme_min_32_chars_random_string_required'],
-                        short: { domain: cookieDomain, sameSite: isProduction ? 'lax' : 'none', secure: true },
-                        long: { domain: cookieDomain, sameSite: isProduction ? 'lax' : 'none', secure: true },
+                        short: {
+                            domain: cookieDomain,
+                            sameSite: 'lax',
+                            secure: true
+                        },
+                        long: {
+                            domain: cookieDomain,
+                            sameSite: 'lax',
+                            secure: true
+                        },
                     },
                     pkce: { required: () => true }, // Force PKCE
 
