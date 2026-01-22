@@ -74,17 +74,17 @@ export async function bootstrap() {
     const oidc = app.get(OIDC_PROVIDER); // OIDC_PROVIDER is symbol
     const oidcCallback = oidc.callback();
     fastify.use((req: any, res: any, next: any) => {
-        // Only handle OIDC requests (starting with /oidc)
+        // [OIDC] Standard mount point
         if (req.url.startsWith('/oidc')) {
-            // DEBUG: log OIDC request
-            // logger.log(`[OIDC Request] ${req.method} ${req.url}`);
+            // DEBUG: log OIDC request details to troubleshoot "unrecognized route"
+            // console.log(`[OIDC Request] ${req.method} ${req.url} (Host: ${req.headers.host}, Proto: ${req.headers['x-forwarded-proto']})`);
 
-            // Let NestJS handle OIDC interaction routes
-            // Note: req.url in Fastify middleware is the full path
             if (req.url.startsWith('/oidc/interaction')) {
                 return next();
             }
-            // oidc-provider handles the rest (discovery, token, etc.)
+
+            // node-oidc-provider with a path in the issuer (e.g. /oidc) 
+            // generally expects the path to be present in the request if mounted at root.
             return oidcCallback(req, res, next);
         }
         return next();
