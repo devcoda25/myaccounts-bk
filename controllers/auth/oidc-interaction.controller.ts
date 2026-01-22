@@ -15,7 +15,7 @@ const LoginSchema = z.object({
 
 
 
-@Controller('interaction')
+@Controller('oidc/interaction')
 export class OidcInteractionController {
     constructor(
         @Inject(OIDC_PROVIDER) private provider: Provider,

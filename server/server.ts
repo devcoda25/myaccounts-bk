@@ -76,12 +76,12 @@ export async function bootstrap() {
     fastify.use((req: any, res: any, next: any) => {
         // Only handle OIDC requests (starting with /oidc)
         if (req.url.startsWith('/oidc')) {
-            // Strip /oidc prefix so oidc-provider sees relative paths (e.g. /.well-known/...)
-            // and NestJS interaction controller sees /interaction/...
-            req.url = req.url.replace(/^\/oidc/, '');
-            if (req.url === '' || req.url.startsWith('?')) {
-                req.url = '/' + req.url;
+            // Let NestJS handle OIDC interaction routes
+            if (req.url.startsWith('/oidc/interaction')) {
+                return next();
             }
+            // oidc-provider handles the rest (discovery, token, etc.)
+            // NOTE: No need to strip /oidc if issuer has the same path component
             return oidcCallback(req, res, next);
         }
         return next();
