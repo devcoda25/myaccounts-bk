@@ -16,7 +16,7 @@ export class UserQueryService {
 
     async findById(id: string, options?: { kycRecord?: boolean; fullProfile?: boolean; includeSessions?: boolean; includeAuditLogs?: boolean }): Promise<SanitizedUserWithProfile | null> {
         const user = await this.userFindRepo.findOneById(id, {
-            includeKyc: options?.kycRecord || options?.fullProfile,
+            // includeKyc: options?.kycRecord || options?.fullProfile,
             includeContacts: options?.fullProfile,
             includeCredentials: options?.fullProfile,
             includeSessions: options?.includeSessions || options?.fullProfile,
