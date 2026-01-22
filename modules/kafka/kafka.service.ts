@@ -1,15 +1,17 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import { Injectable, OnModuleInit, OnModuleDestroy, OnApplicationBootstrap, Logger } from '@nestjs/common';
 import { Kafka, Producer, Consumer, KafkaConfig } from 'kafkajs';
 import * as fs from 'fs';
 import * as path from 'path';
 import { validateEnv } from '../../utils/env.validation';
 
 @Injectable()
-export class KafkaService implements OnModuleInit, OnModuleDestroy {
+export class KafkaService implements OnModuleInit, OnModuleDestroy, OnApplicationBootstrap {
     private kafka: Kafka;
     private producer: Producer;
     private consumer: Consumer;
     private readonly logger = new Logger(KafkaService.name);
+    private readonly handlers = new Map<string, ((payload: any) => Promise<void>)[]>();
+    private isConsumerRunning = false;
 
     constructor() {
         const config = validateEnv(process.env);
@@ -59,6 +61,29 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
         await this.connect();
     }
 
+    async onApplicationBootstrap() {
+        if (this.handlers.size > 0 && !this.isConsumerRunning) {
+            this.logger.log(`Starting Kafka Consumer with ${this.handlers.size} topic(s)...`);
+            this.isConsumerRunning = true;
+            await this.consumer.run({
+                eachMessage: async ({ topic, message }) => {
+                    const value = message.value?.toString();
+                    if (value) {
+                        try {
+                            const payload = JSON.parse(value);
+                            const topicHandlers = this.handlers.get(topic);
+                            if (topicHandlers) {
+                                await Promise.all(topicHandlers.map(h => h(payload)));
+                            }
+                        } catch (e) {
+                            this.logger.error(`Error processing message on ${topic}`, e);
+                        }
+                    }
+                },
+            });
+        }
+    }
+
     async onModuleDestroy() {
         await this.disconnect();
     }
@@ -95,19 +120,14 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
     }
 
     async subscribe<T = any>(topic: string, handler: (payload: T) => Promise<void>) {
+        if (this.isConsumerRunning) {
+            throw new Error(`Cannot subscribe to ${topic}: Consumer is already running.`);
+        }
+
+        this.logger.log(`Registering subscription for topic: ${topic}`);
+        const existing = this.handlers.get(topic) || [];
+        this.handlers.set(topic, [...existing, handler]);
+
         await this.consumer.subscribe({ topic, fromBeginning: false });
-        await this.consumer.run({
-            eachMessage: async ({ topic: t, message }) => {
-                const value = message.value?.toString();
-                if (value) {
-                    try {
-                        const payload = JSON.parse(value);
-                        await handler(payload);
-                    } catch (e) {
-                        this.logger.error(`Error processing message on ${t}`, e);
-                    }
-                }
-            },
-        });
     }
 }
