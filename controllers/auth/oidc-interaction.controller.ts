@@ -31,22 +31,21 @@ export class OidcInteractionController {
     ) {
         // 1. Get Interaction Details
         let details;
+        const frontendUrl = process.env.FRONTEND_URL || 'https://accounts.evzone.app';
+
         try {
             details = await this.provider.interactionDetails(req.raw, res.raw);
-        } catch (err) {
+        } catch (err: any) {
             console.error('Interaction Details Error:', err);
-            // If interaction not found or cookie missing, redirect to login to start over or return 400
-            if (err instanceof Error && err.message === 'interaction not found') {
-                // return res.redirect('/auth/sign-in'); // Or specific error page
-                // For debugging, let's bubble up but maybe user needs clearer message
-            }
-            throw err;
+
+            // Redirect to login with specific error message instead of showing raw JSON
+            const signinUrl = `${frontendUrl}/auth/sign-in?interaction_error=${encodeURIComponent(err.message || 'session_expired')}`;
+            return res.redirect(signinUrl);
         }
         const { prompt, params, session } = details as unknown as OidcInteraction;
 
         // 2. Redirect to Frontend based on Prompt
         // Ideally, configurable FRONTEND_URL
-        const frontendUrl = process.env.FRONTEND_URL || 'https://accounts.evzone.app';
 
         // Auto-Consent for First-Party Client
         if (prompt.name === 'consent') {
