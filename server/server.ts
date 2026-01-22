@@ -145,7 +145,6 @@ export async function bootstrap() {
     // Global Prefix for API
     app.setGlobalPrefix('api/v1', {
         exclude: [
-            { path: 'health', method: RequestMethod.GET },
             { path: 'oidc/jwks', method: RequestMethod.GET },
             { path: 'oidc/.well-known/openid-configuration', method: RequestMethod.GET },
             { path: 'oidc/interaction/:uid', method: RequestMethod.ALL },
@@ -154,6 +153,7 @@ export async function bootstrap() {
     });
 
     const logger = new Logger('Bootstrap');
+    logger.log('Bootstrap phase starting...');
 
     // DEBUG: Print DB URL info
     const dbUrl = process.env.DATABASE_URL || 'NOT SET';
