@@ -39,18 +39,26 @@ export class HealthController {
         // 4. OIDC Discovery Check (Regression Prevention)
         let oidcStatus: 'Operational' | 'Degraded' = 'Operational';
         try {
-            // We fetch the issuer from ENV and append discovery path
-            const issuer = (process.env.OIDC_ISSUER || 'https://accounts.evzone.app/oidc').replace(/\/$/, '');
-            const discoveryUrl = `${issuer}/.well-known/openid-configuration`;
+            // [Fix] Use local loopback (127.0.0.1) to avoid DNS/SSL issues when server calls itself.
+            const envIssuer = (process.env.OIDC_ISSUER || 'https://accounts.evzone.app/oidc').replace(/\/$/, '');
+            const issuerUrl = new URL(envIssuer);
+            const targetHost = issuerUrl.host;
 
-            const response = await fetch(discoveryUrl, {
+            const port = process.env.PORT || 3000;
+            const localDiscoveryUrl = `http://127.0.0.1:${port}/oidc/.well-known/openid-configuration`;
+
+            const response = await fetch(localDiscoveryUrl, {
                 method: 'GET',
-                headers: { 'Accept': 'application/json' },
+                headers: {
+                    'Accept': 'application/json',
+                    'Host': targetHost // [Fix] Must match issuer host for oidc-provider
+                },
                 signal: AbortSignal.timeout(3000) // Don't hang the health check
             });
 
             if (!response.ok) {
-                console.error(`[HEALTH] OIDC Discovery failed with status: ${response.status}`);
+                const body = await response.text().catch(() => 'No body');
+                console.error(`[HEALTH] OIDC Discovery failed. Status: ${response.status}. Body: ${body.substring(0, 100)}`);
                 oidcStatus = 'Degraded';
             } else {
                 const data = await response.json();
