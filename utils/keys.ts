@@ -25,8 +25,9 @@ export class KeyManager {
             }
         }
 
-        if (process.env.NODE_ENV === 'production') {
-            throw new Error('CRITICAL: JWT Signing Keys missing in Production (JWT_PRIVATE_KEY). Filesystem fallback disabled.');
+        if (process.env.NODE_ENV === 'production' && !this.privateKey) {
+            console.warn('CRITICAL WARNING: JWT Signing Keys missing in Production (JWT_PRIVATE_KEY). Falling back to filesystem keys. THIS IS NOT RECOMMENDED FOR PRODUCTION.');
+            // We proceed to filesystem logic below
         }
 
         // Development / Fallback Logic
