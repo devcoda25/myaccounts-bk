@@ -76,23 +76,20 @@ export async function bootstrap() {
     fastify.use((req: any, res: any, next: any) => {
         // [OIDC] Standard mount point
         if (req.url.startsWith('/oidc')) {
+            // [Fix] Force Host header and Proto to match Issuer strictness.
+            // This is critical when api.evzone.app is a proxy for accounts.evzone.app
+            req.headers.host = 'accounts.evzone.app';
+            req.headers['x-forwarded-proto'] = 'https';
+            req.headers['x-forwarded-host'] = 'accounts.evzone.app';
+
             // Let NestJS handle OIDC interaction routes
             if (req.url.startsWith('/oidc/interaction')) {
                 return next();
             }
 
-            // [Fix] node-oidc-provider expects the path relative to its mount point.
-            // When using issuer with path '/oidc', and mounting via manual middleware,
-            // we must strip the prefix so it matches internal routes like /.well-known/...
-            const originalUrl = req.url;
-            req.url = req.url.slice(5) || '/'; // Strip '/oidc'
-
-            // logger.log(`[OIDC Request] Forwarding to Provider: ${originalUrl} -> ${req.url}`);
-
-            return oidcCallback(req, res, () => {
-                req.url = originalUrl; // Restore if it proceeds (not matched)
-                next();
-            });
+            // [Fix] DO NOT strip /oidc prefix. 
+            // node-oidc-provider with issuer path '/oidc' expects the path to be present.
+            return oidcCallback(req, res, next);
         }
         return next();
     });
