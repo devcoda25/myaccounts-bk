@@ -47,6 +47,10 @@ export class OAuthClientRepository {
         redirectUris: string[];
         isFirstParty: boolean;
         isPublic: boolean;
+        description?: string;
+        icon?: string;
+        color?: string;
+        website?: string;
     }) {
         return this.prisma.oAuthClient.upsert({
             where: { clientId: data.clientId },
@@ -58,7 +62,11 @@ export class OAuthClientRepository {
                 // Let's decide to UPDATE it to match our seed config.
                 clientSecretHash: data.clientSecretHash,
                 isFirstParty: data.isFirstParty,
-                isPublic: data.isPublic
+                isPublic: data.isPublic,
+                description: data.description,
+                icon: data.icon,
+                color: data.color,
+                website: data.website
             },
             create: data
         });
@@ -77,6 +85,12 @@ export class OAuthClientRepository {
         });
 
         return { firstParty, consents };
+    }
+
+    async findFirstParty() {
+        return this.prisma.oAuthClient.findMany({
+            where: { isFirstParty: true }
+        });
     }
 
     async revokeConsent(userId: string, clientId: string) {

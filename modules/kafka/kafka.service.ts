@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
-import { Kafka, Producer, Consumer, Admin } from 'kafkajs';
+import { Kafka, Producer, Consumer, KafkaConfig } from 'kafkajs';
 import * as fs from 'fs';
 import * as path from 'path';
 import { validateEnv } from '../../utils/env.validation';
@@ -15,7 +15,7 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
         const config = validateEnv(process.env);
 
         // Default SSL config: trust self-signed / mismatched hostnames (critical for DO Internal)
-        let sslConfig: any = config.KAFKA_SSL ? { rejectUnauthorized: false } : false;
+        let sslConfig: boolean | { ca?: Buffer[], cert?: Buffer, key?: Buffer, rejectUnauthorized?: boolean } = config.KAFKA_SSL ? { rejectUnauthorized: false } : false;
 
         const certPath = path.join(process.cwd(), 'certs', 'kafka-user.crt');
         const keyPath = path.join(process.cwd(), 'certs', 'kafka-user.key');
@@ -34,10 +34,10 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
             }
         }
 
-        const kafkaConfig: any = {
+        const kafkaConfig: KafkaConfig = {
             clientId: config.KAFKA_CLIENT_ID,
             brokers: config.KAFKA_BROKERS.split(','),
-            ssl: sslConfig,
+            ssl: sslConfig as any, // kafkajs types are a bit complex for ssl union
         };
 
         if (config.KAFKA_USERNAME && config.KAFKA_PASSWORD) {
@@ -78,7 +78,7 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
         await this.consumer.disconnect();
     }
 
-    async emit(topic: string, event: any) {
+    async emit<T>(topic: string, event: T) {
         // Enforce Event Contract wrapper
         const message = {
             value: JSON.stringify({
@@ -94,17 +94,17 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
         });
     }
 
-    async subscribe(topic: string, handler: (payload: any) => Promise<void>) {
+    async subscribe<T = any>(topic: string, handler: (payload: T) => Promise<void>) {
         await this.consumer.subscribe({ topic, fromBeginning: false });
         await this.consumer.run({
-            eachMessage: async ({ topic, partition, message }) => {
+            eachMessage: async ({ topic: t, message }) => {
                 const value = message.value?.toString();
                 if (value) {
                     try {
                         const payload = JSON.parse(value);
                         await handler(payload);
                     } catch (e) {
-                        this.logger.error(`Error processing message on ${topic}`, e);
+                        this.logger.error(`Error processing message on ${t}`, e);
                     }
                 }
             },

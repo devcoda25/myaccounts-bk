@@ -6,33 +6,7 @@ import { KeyManager } from '../../utils/keys';
 import { AuthModule } from './auth.module';
 import { OidcInteractionController } from '../../controllers/auth/oidc-interaction.controller';
 import { OIDC_PROVIDER } from './oidc.constants';
-
-// [Types] definitions to satisfy strict mode since @types/oidc-provider is missing
-interface OidcContext {
-    [key: string]: unknown;
-}
-interface OidcInteraction {
-    uid: string;
-    [key: string]: unknown;
-}
-interface OidcConfiguration {
-    adapter?: any;
-    formats?: Record<string, string>;
-    features?: Record<string, { enabled: boolean;[key: string]: unknown }>;
-    ttl?: Record<string, (ctx: OidcContext, token: unknown, client: unknown) => number>;
-    jwks?: { keys: unknown[] };
-    cookies?: {
-        keys: string[];
-        short?: { domain?: string; sameSite?: string; secure?: boolean };
-        long?: { domain?: string; sameSite?: string; secure?: boolean };
-    };
-    pkce?: { required: () => boolean };
-    clientBasedCORS?: (ctx: OidcContext, origin: string, client: unknown) => boolean;
-    interactions?: {
-        url?: (ctx: OidcContext, interaction: OidcInteraction) => string;
-    };
-    findAccount?: (ctx: OidcContext, id: string) => Promise<any>;
-}
+import { OidcConfiguration, OidcContext, OidcInteraction } from '../../common/interfaces/oidc.interface';
 
 @Global()
 @Module({
@@ -137,12 +111,15 @@ interface OidcConfiguration {
                             return `/interaction/${interaction.uid}`;
                         }
                     },
-                    async findAccount(_ctx, id) {
+                    async findAccount(ctx: OidcContext, id: string) {
                         const user = await prisma.user.findUnique({
                             where: { id },
                             include: {
+                                appMemberships: true,
                                 orgMemberships: {
-                                    include: { organization: true }
+                                    include: {
+                                        organization: true
+                                    }
                                 }
                             }
                         });
@@ -151,7 +128,7 @@ interface OidcConfiguration {
 
                         return {
                             accountId: id,
-                            async claims(_use: unknown, _scope: unknown, _claims: unknown, _rejected: unknown) {
+                            async claims() {
                                 return {
                                     sub: id,
                                     email: user.email,
@@ -160,12 +137,18 @@ interface OidcConfiguration {
                                     given_name: user.firstName,
                                     family_name: user.otherNames,
                                     picture: user.avatarUrl,
-                                    // Custom EVzone Claims
-                                    orgs: user.orgMemberships.map(m => ({
+                                    // Custom EVzone Claims: App-specific role
+                                    app_role: user.role === 'SUPER_ADMIN'
+                                        ? 'SUPER_APP_ADMIN'
+                                        : (ctx.oidc?.client?.clientId)
+                                            ? user.appMemberships.find(m => m.clientId === ctx.oidc.client?.clientId)?.role || 'USER'
+                                            : 'USER',
+                                    global_role: user.role, // SUPER_ADMIN, ADMIN, USER
+                                    // Organizations for Corporate Pay
+                                    orgs: user.orgMemberships.map((m: any) => ({
                                         id: m.orgId,
-                                        name: m.organization.name,
+                                        name: m.organization?.name,
                                         role: m.role,
-                                        domain: m.organization.domain
                                     }))
                                 };
                             },

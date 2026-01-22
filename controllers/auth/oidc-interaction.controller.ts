@@ -6,23 +6,14 @@ import { OIDC_PROVIDER } from '../../modules/auth/oidc.constants';
 import { LoginService } from '../../services/auth/login.service';
 import { PrismaService } from '../../prisma-lib/prisma.service';
 import { z } from 'zod';
+import { OidcInteraction, OidcContext } from '../../common/interfaces/oidc.interface';
 
 const LoginSchema = z.object({
     email: z.string().email(),
     password: z.string(),
 });
 
-interface InteractionParams {
-    client_id?: string;
-    [key: string]: unknown;
-}
 
-interface PromptDetails {
-    missingOIDCScope?: string[];
-    missingOIDCClaims?: string[];
-    missingResourceScopes?: Record<string, string[]>;
-    [key: string]: unknown;
-}
 
 @Controller('interaction')
 export class OidcInteractionController {
@@ -51,7 +42,7 @@ export class OidcInteractionController {
             }
             throw err;
         }
-        const { prompt, params, session } = details;
+        const { prompt, params, session } = details as unknown as OidcInteraction;
 
         // 2. Redirect to Frontend based on Prompt
         // Ideally, configurable FRONTEND_URL
@@ -59,19 +50,19 @@ export class OidcInteractionController {
 
         // Auto-Consent for First-Party Client
         if (prompt.name === 'consent') {
-            const clientId = (params as InteractionParams).client_id as string;
+            const clientId = params.client_id as string;
             const client = await this.prisma.oAuthClient.findUnique({ where: { clientId } });
 
             if (client?.isFirstParty) {
                 let grantId: string;
                 // Create Grant
                 // @ts-ignore
-                const grant = new this.provider.Grant({
-                    accountId: (session as any).accountId,
+                const grant = new (this.provider as any).Grant({
+                    accountId: session?.accountId,
                     clientId: clientId,
                 });
 
-                const promptDetails = prompt.details as PromptDetails;
+                const promptDetails = prompt.details;
                 if (promptDetails.missingOIDCScope) {
                     grant.addOIDCScope(promptDetails.missingOIDCScope.join(' '));
                 }
@@ -170,19 +161,19 @@ export class OidcInteractionController {
         @Param('uid') uid: string,
     ) {
         const interactionDetails = await this.provider.interactionDetails(req.raw, res.raw);
-        const { prompt, params, session } = interactionDetails;
+        const { prompt, params, session } = interactionDetails as unknown as OidcInteraction;
 
         let grantId: string;
 
         // Create a new Grant
         // @ts-ignore
-        const grant = new this.provider.Grant({
-            accountId: (session as any).accountId,
+        const grant = new (this.provider as any).Grant({
+            accountId: session?.accountId,
             // eslint-disable-next-line @typescript-eslint/consistent-type-assertions
-            clientId: (params as InteractionParams).client_id as string,
+            clientId: params.client_id as string,
         });
 
-        const details = prompt.details as PromptDetails;
+        const details = prompt.details;
         if (details.missingOIDCScope) {
             grant.addOIDCScope(details.missingOIDCScope.join(' '));
         }

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma-lib/prisma.service';
 import { User, Prisma } from '@prisma/client';
+import { UserWithProfile } from '../../common/interfaces/user.interface';
 
 @Injectable()
 export class UserFindRepository {
@@ -27,15 +28,16 @@ export class UserFindRepository {
         });
     }
 
-    async findOneById(id: string, options: { includeKyc?: boolean; includeContacts?: boolean; includeCredentials?: boolean; includeSessions?: boolean; includeAuditLogs?: boolean } = {}): Promise<User | null> {
-        return this.prisma.user.findUnique({
+    async findOneById(id: string, options: { includeKyc?: boolean; includeContacts?: boolean; includeCredentials?: boolean; includeSessions?: boolean; includeAuditLogs?: boolean; includeOrgs?: boolean } = {}): Promise<UserWithProfile | null> {
+        return (this.prisma as any).user.findUnique({
             where: { id },
             include: {
                 kyc: options.includeKyc,
                 contacts: options.includeContacts,
                 credentials: options.includeCredentials,
                 sessions: options.includeSessions ? { orderBy: { createdAt: 'desc' }, take: 20 } : false,
-                auditLogs: options.includeAuditLogs ? { orderBy: { createdAt: 'desc' }, take: 50 } : false
+                auditLogs: options.includeAuditLogs ? { orderBy: { createdAt: 'desc' }, take: 50 } : false,
+                orgMemberships: options.includeOrgs ? { include: { organization: true } } : false
             }
         });
     }
@@ -46,7 +48,7 @@ export class UserFindRepository {
         query?: string;
         role?: string;
         status?: string; // 'Active' or 'Disabled' mapped to emailVerified
-    }): Promise<{ users: User[]; total: number }> {
+    }): Promise<{ users: UserWithProfile[]; total: number }> {
         const { skip, take, query, role, status } = params;
 
         const where: Prisma.UserWhereInput = {};
@@ -76,6 +78,7 @@ export class UserFindRepository {
                 skip,
                 take,
                 orderBy: { createdAt: 'desc' },
+                include: { kyc: true }
             }),
             this.prisma.user.count({ where }),
         ]);

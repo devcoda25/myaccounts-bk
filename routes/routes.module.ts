@@ -6,7 +6,7 @@ import { UsersModule } from '../modules/users/users.module';
 import { DebugModule } from '../modules/debug/debug.module';
 // Removed WalletModule and OrganizationModule
 import { AdminModule } from '../modules/admin/admin.module';
-import { KycModule } from '../modules/kyc/kyc.module';
+
 import { ParentalModule } from '../modules/parental/parental.module';
 import { AppsModule } from '../modules/apps/apps.module';
 
@@ -20,7 +20,7 @@ const routes: Routes = [
     // { path: 'wallets', module: WalletModule },
     // { path: 'orgs', module: OrganizationModule },
     { path: 'admin', module: AdminModule },
-    { path: 'kyc', module: KycModule }, // Expose /kyc
+
     { path: 'debug', module: DebugModule },
     { path: 'parental', module: ParentalModule },
     { path: 'apps', module: AppsModule }

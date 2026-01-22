@@ -6,6 +6,24 @@ import { Prisma } from '@prisma/client';
 export class AdminRepository {
     constructor(private prisma: PrismaService) { }
 
+    async ping() {
+        return this.prisma.$queryRaw`SELECT 1`;
+    }
+
+
+    async revokeUserSessions(userId: string) {
+        return this.prisma.session.deleteMany({
+            where: { userId }
+        });
+    }
+
+    async updateUserPassword(userId: string, passwordHash: string) {
+        return this.prisma.user.update({
+            where: { id: userId },
+            data: { passwordHash }
+        });
+    }
+
     async getCounts() {
         const [users, sessions] = await Promise.all([
             this.prisma.user.count(),
@@ -131,6 +149,52 @@ export class AdminRepository {
         return this.prisma.user.update({
             where: { id: userId },
             data: { role }
+        });
+    }
+
+    // --- App Memberships ---
+
+    async getAppMemberships(clientId: string) {
+        return this.prisma.appMembership.findMany({
+            where: { clientId },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        otherNames: true,
+                        email: true
+                    }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+    }
+
+    async createAppMembership(data: { userId: string, clientId: string, role: string }) {
+        return this.prisma.appMembership.create({
+            data: {
+                userId: data.userId,
+                clientId: data.clientId,
+                role: data.role as any // AppRole enum
+            }
+        });
+    }
+
+    async deleteAppMembership(id: string) {
+        return this.prisma.appMembership.delete({
+            where: { id }
+        });
+    }
+
+    async getAppMembershipByUserAndClient(userId: string, clientId: string) {
+        return this.prisma.appMembership.findUnique({
+            where: {
+                userId_clientId: {
+                    userId,
+                    clientId
+                }
+            }
         });
     }
 }

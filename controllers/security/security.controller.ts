@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Ip, Req } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Ip, Req, Get } from '@nestjs/common';
 import { SecurityService } from '../../services/security/security.service';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -17,5 +17,10 @@ export class SecurityController {
     @Post('lock')
     async lock(@CurrentUser() user: AuthRequest['user'], @Ip() ip: string) {
         return this.service.lockAccount(user.id, ip);
+    }
+
+    @Get('activity')
+    async getActivities(@CurrentUser() user: AuthRequest['user']) {
+        return this.service.getActivityLogs(user.id);
     }
 }

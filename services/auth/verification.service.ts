@@ -18,7 +18,7 @@ export class VerificationService {
         private whatsappService: WhatsappService
     ) { }
 
-    async requestVerification(identifier: string, type: 'EMAIL_VERIFY' | 'PASSWORD_RESET' | 'PHONE_VERIFY', deliveryMethod?: string) {
+    async requestVerification(identifier: string, type: 'EMAIL_VERIFY' | 'PASSWORD_RESET' | 'PHONE_VERIFY' | 'OTP_SIGNIN', deliveryMethod?: string) {
         console.log(`[VerificationService] Requesting verification for ${identifier} via ${deliveryMethod}`);
 
         // SECURE GENERATION: crypto.randomInt
@@ -49,8 +49,8 @@ export class VerificationService {
                 subject = 'Verify Your Email';
                 title = 'Verify Your Email Address';
                 // optional: link to verify directly? usually verify-email page takes code
-                // actionLink = `${frontend}/auth/verify-email?code=${code}&email=${encodeURIComponent(identifier)}`;
-                // actionText = 'Verify Email';
+                actionLink = `${frontend}/auth/verify-email?code=${code}&email=${encodeURIComponent(identifier)}`;
+                actionText = 'Verify Email';
             }
 
             const html = `

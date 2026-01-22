@@ -41,25 +41,103 @@ async function main() {
     });
     console.log('- Seeded OIDC Client: evzone-portal');
 
-    // Charging (Backend - Confidential)
-    const chargingSecret = process.env.CHARGING_CLIENT_SECRET || 'secret_charging_dev';
-    const chargingHash = await argon2.hash(chargingSecret);
-    await prisma.oAuthClient.upsert({
-        where: { clientId: 'evzone-charging' },
-        create: {
-            clientId: 'evzone-charging',
-            name: 'EVZone Charging',
-            redirectUris: ['https://charging.evzone.app/auth/callback'],
-            grantTypes: ['authorization_code'],
-            clientSecretHash: chargingHash,
-            isPublic: false,
-            isFirstParty: true
+    // Seed System Apps
+    const systemApps = [
+        {
+            clientId: 'wallet',
+            name: 'EVZone Wallet',
+            description: 'Manage funds, top-ups, and payments.',
+            icon: 'CreditCard',
+            website: 'https://wallet.evzone.app',
+            color: '#03CD8C',
+            isFirstParty: true,
+            isPublic: true,
+            redirectUris: ['https://wallet.evzone.app/callback']
         },
-        update: {
-            // Keep existing secret if matched
+        {
+            clientId: 'orgs',
+            name: 'Organization Hub',
+            description: 'Team management and enterprise billing.',
+            icon: 'Users',
+            website: 'https://orgs.evzone.app',
+            color: '#3B82F6',
+            isFirstParty: true,
+            isPublic: true,
+            redirectUris: ['https://orgs.evzone.app/callback']
+        },
+        {
+            clientId: 'dev',
+            name: 'Developer Portal',
+            description: 'API keys, OAuth clients, and docs.',
+            icon: 'Code',
+            website: 'https://developers.evzone.app',
+            color: '#8B5CF6',
+            isFirstParty: true,
+            isPublic: true,
+            redirectUris: ['https://developers.evzone.app/callback']
+        },
+        {
+            clientId: 'marketplace',
+            name: 'Marketplace',
+            description: 'Buy and sell across the Evzone ecosystem.',
+            icon: 'ShoppingCart',
+            website: 'https://marketplace.evzone.app',
+            color: '#10B981',
+            isFirstParty: true,
+            isPublic: true,
+            redirectUris: ['https://marketplace.evzone.app/callback']
+        },
+        {
+            clientId: 'rider',
+            name: 'Rider App',
+            description: 'Reliable deliveries and rides.',
+            icon: 'Bike',
+            website: 'https://rider.evzone.app',
+            color: '#F59E0B',
+            isFirstParty: true,
+            isPublic: true,
+            redirectUris: ['https://rider.evzone.app/callback']
+        },
+        {
+            clientId: 'mylivedeals',
+            name: 'MyLiveDeals',
+            description: 'Real-time discounts and offers.',
+            icon: 'Percent',
+            website: 'https://mylivedeals.evzone.app',
+            color: '#EF4444',
+            isFirstParty: true,
+            isPublic: true,
+            redirectUris: ['https://mylivedeals.evzone.app/callback']
+        },
+        {
+            clientId: 'charging',
+            name: 'EVzone Charging',
+            description: 'Locate and pay for EV charging.',
+            icon: 'Zap',
+            website: 'https://charging.evzone.app',
+            color: '#03CD8C',
+            isFirstParty: true,
+            isPublic: true,
+            redirectUris: ['https://charging.evzone.app/callback']
         }
-    });
-    console.log('- Seeded OIDC Client: evzone-charging');
+    ];
+
+    for (const app of systemApps) {
+        await prisma.oAuthClient.upsert({
+            where: { clientId: app.clientId },
+            create: app,
+            update: {
+                name: app.name,
+                description: app.description,
+                icon: app.icon,
+                website: app.website,
+                color: app.color,
+                isFirstParty: app.isFirstParty,
+                isPublic: app.isPublic
+            }
+        });
+        console.log(`- Seeded System App: ${app.name}`);
+    }
 
     // 2. Create Super Admin User
     const adminPasswordHash = await argon2.hash('superadmin-secure-pw');
@@ -117,31 +195,6 @@ async function main() {
     });
     console.log(`- Seeded Test User: ${testUser.email}`);
 
-    console.log(`- Seeded Test User: ${testUser.email}`);
-
-    // Seed Organization
-    const demoOrg = await prisma.organization.upsert({
-        where: { domain: 'demo.evzone.app' },
-        create: {
-            name: 'Demo Enterprise',
-            domain: 'demo.evzone.app',
-            type: 'enterprise'
-        },
-        update: {}
-    });
-    console.log(`- Seeded Org: ${demoOrg.name}`);
-
-    // Add Test User to Org
-    await prisma.organizationMember.upsert({
-        where: { userId_orgId: { userId: testUser.id, orgId: demoOrg.id } },
-        create: {
-            userId: testUser.id,
-            orgId: demoOrg.id,
-            role: 'Member'
-        },
-        update: {}
-    });
-    console.log(`- Added ${testUser.email} to ${demoOrg.name}`);
 
     // Seed Audit Logs (User Only)
     // 1. INFO: 20 min ago. Update Profile. Actor: Ronald.

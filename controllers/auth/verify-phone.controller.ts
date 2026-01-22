@@ -27,16 +27,25 @@ export class VerifyPhoneController {
 
             const tokens = await this.loginService.generateSessionToken(result.user, deviceInfo);
 
-            // Set HttpOnly Cookie
-            res.setCookie('access_token', tokens.access_token, {
+            // Access Token Cookie
+            res.setCookie('evzone_token', tokens.access_token, {
                 path: '/',
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax',
-                maxAge: 24 * 60 * 60, // 24h
+                secure: true,
+                sameSite: 'none',
+                maxAge: 15 * 60,
             });
 
-            return { success: true };
+            // Refresh Token Cookie
+            res.setCookie('refresh_token', tokens.refresh_token, {
+                path: '/api/v1/auth/refresh',
+                httpOnly: true,
+                secure: true,
+                sameSite: 'none',
+                maxAge: 7 * 24 * 60 * 60,
+            });
+
+            return { success: true, access_token: tokens.access_token, expires_in: tokens.expires_in };
         }
 
         return { success: true };

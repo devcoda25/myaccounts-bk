@@ -8,6 +8,11 @@ import { AuthRequest } from '../../common/interfaces/auth-request.interface';
 export class AppsController {
     constructor(private readonly appsService: AppsService) { }
 
+    @Get('system')
+    async getSystemApps() {
+        return this.appsService.getSystemApps();
+    }
+
     @Get()
     async getApps(@Req() req: AuthRequest) {
         return this.appsService.getApps(req.user.sub || (req.user as any).id);

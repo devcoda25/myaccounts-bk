@@ -3,10 +3,28 @@ import { AdminRepository } from '../../repos/admin/admin.repository';
 import * as argon2 from 'argon2';
 import * as crypto from 'crypto';
 import { AdminCreateOAuthClientDto, AdminUpdateOAuthClientDto } from '../../common/dto/admin/admin-apps.dto';
+import { AuditLogDetails } from '../../common/interfaces/audit-log.interface';
 
 @Injectable()
 export class AdminService {
     constructor(private repo: AdminRepository) { }
+
+    async getSystemHealth() {
+        try {
+            await this.repo.ping();
+            return {
+                db: 'Operational',
+                auth: 'Operational', // If we are here, Auth is up
+                api: 'Operational'
+            };
+        } catch (e) {
+            return {
+                db: 'Degraded',
+                auth: 'Operational',
+                api: 'Operational'
+            };
+        }
+    }
 
     async getDashboardStats() {
         const counts = await this.repo.getCounts();
@@ -30,8 +48,8 @@ export class AdminService {
         );
 
         const mapped = logs.map(l => {
-            const riskMap: Record<string, string> = { 'critical': 'High', 'warning': 'Medium', 'info': 'Low' };
-            const details = l.details as Record<string, any>;
+            const riskMap: Record<string, 'High' | 'Medium' | 'Low'> = { 'critical': 'High', 'warning': 'Medium', 'info': 'Low' };
+            const details = (l.details || {}) as AuditLogDetails;
 
             return {
                 id: l.id,
@@ -39,12 +57,12 @@ export class AdminService {
                 actor: l.actorName || l.user?.email || 'System',
                 role: l.user?.role || 'N/A',
                 action: l.action,
-                target: details?.target || 'N/A',
+                target: details.target || 'N/A',
                 ip: l.ipAddress || '0.0.0.0',
-                outcome: (details?.outcome as any) || 'Success',
-                risk: riskMap[l.severity] || 'Low' as any,
-                requestId: details?.requestId || 'N/A',
-                meta: details || {}
+                outcome: details.outcome || 'Success',
+                risk: riskMap[l.severity] || 'Low',
+                requestId: details.requestId || 'N/A',
+                meta: details
             };
         });
 
@@ -85,7 +103,10 @@ export class AdminService {
             clientSecretHash,
             redirectUris: dto.redirectUris,
             isFirstParty: dto.isFirstParty || false,
-            isPublic: dto.type === 'public'
+            isPublic: dto.type === 'public',
+            description: dto.description,
+            icon: dto.icon,
+            color: dto.color
         });
 
         return {
@@ -102,7 +123,10 @@ export class AdminService {
             name: dto.name,
             website: dto.website,
             redirectUris: dto.redirectUris,
-            isFirstParty: dto.isFirstParty
+            isFirstParty: dto.isFirstParty,
+            description: dto.description,
+            icon: dto.icon,
+            color: dto.color
         });
     }
 
@@ -123,6 +147,18 @@ export class AdminService {
         const app = await this.repo.getOAuthClientById(id);
         if (!app) throw new NotFoundException('App not found');
         return this.repo.deleteOAuthClient(id);
+    }
+
+
+    // --- User Management ---
+
+    async revokeUserSessions(userId: string) {
+        return this.repo.revokeUserSessions(userId);
+    }
+
+    async resetUserPassword(userId: string, password: string) {
+        const hash = await argon2.hash(password);
+        return this.repo.updateUserPassword(userId, hash);
     }
 
     async getAdmins() {
@@ -149,5 +185,42 @@ export class AdminService {
     async removeAdmin(id: string) {
         // Downgrade to USER
         return this.repo.updateUserRole(id, 'USER');
+    }
+
+    // --- App Memberships ---
+
+    async getAppMembers(clientId: string) {
+        const memberships = await this.repo.getAppMemberships(clientId);
+        return memberships.map(m => ({
+            id: m.id,
+            userId: m.userId,
+            name: `${m.user.firstName || ''} ${m.user.otherNames || ''}`.trim() || 'Unknown',
+            email: m.user.email,
+            role: m.role,
+            createdAt: m.createdAt.toISOString()
+        }));
+    }
+
+    async inviteAppAdmin(clientId: string, email: string, role: string) {
+        const user = await this.repo.getAdminByEmail(email);
+        if (!user) {
+            throw new NotFoundException('User not found. Please ask them to sign up first.');
+        }
+
+        // Check if already an admin for this app
+        const existing = await this.repo.getAppMembershipByUserAndClient(user.id, clientId);
+        if (existing) {
+            throw new Error('User is already an admin for this application.');
+        }
+
+        return this.repo.createAppMembership({
+            userId: user.id,
+            clientId,
+            role
+        });
+    }
+
+    async removeAppAdmin(membershipId: string) {
+        return this.repo.deleteAppMembership(membershipId);
     }
 }

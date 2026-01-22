@@ -4,6 +4,7 @@ import { LoginService } from '../../services/auth/login.service';
 import { LoginDto } from '../../common/dto/auth/login.dto';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { AuthRequest } from '../../common/interfaces/auth-request.interface';
+import { VerificationService } from '../../services/auth/verification.service';
 
 import { LocationService } from '../../services/users/location.service';
 import { UserManagementService } from '../../services/users/user-management.service';
@@ -13,7 +14,8 @@ export class LoginController {
     constructor(
         private loginService: LoginService,
         private locationService: LocationService,
-        private userManagementService: UserManagementService
+        private userManagementService: UserManagementService,
+        private verificationService: VerificationService
     ) { }
 
     @Post('login')
@@ -107,6 +109,56 @@ export class LoginController {
         // For now, let's inject UserManagementService or LoginService should have checkUserExists
         const exists = await this.userManagementService.checkEmailExists(body.email);
         return { exists };
+    }
+
+    @Post('otp/request')
+    async requestOtp(@Body() body: { identifier: string }) {
+        const user = await this.userManagementService.findOneByIdentifier(body.identifier);
+        if (!user) throw new UnauthorizedException('User not found');
+
+        const deliveryMethod = body.identifier.includes('@') ? 'email_code' : 'sms_code';
+        return this.verificationService.requestVerification(body.identifier, 'OTP_SIGNIN', deliveryMethod);
+    }
+
+    @Post('otp/login')
+    async loginWithOtp(@Body() body: { identifier: string, code: string }, @Res({ passthrough: true }) res: FastifyReply, @Req() req: AuthRequest) {
+        const record = await this.verificationService.verifyCode(body.identifier, body.code, 'OTP_SIGNIN');
+        if (!record) throw new UnauthorizedException('Invalid or expired code');
+
+        const user = await this.userManagementService.findOneByIdentifier(body.identifier);
+        if (!user) throw new UnauthorizedException('User not found');
+
+        // Consume code
+        await this.verificationService.consumeCode(record.id);
+
+        const ip = req.ip || (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '';
+        const location = this.locationService.getLocation(ip);
+
+        const deviceInfo = {
+            ip: ip,
+            device: req.headers['user-agent'] || 'Unknown',
+            location
+        };
+
+        const tokens = await this.loginService.generateSessionToken(user, deviceInfo);
+
+        res.setCookie('evzone_token', tokens.access_token, {
+            path: '/',
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            maxAge: 15 * 60,
+        });
+
+        res.setCookie('refresh_token', tokens.refresh_token, {
+            path: '/api/v1/auth/refresh',
+            httpOnly: true,
+            secure: true,
+            sameSite: 'none',
+            maxAge: 7 * 24 * 60 * 60,
+        });
+
+        return { access_token: tokens.access_token, expires_in: tokens.expires_in };
     }
 
     @Post('logout')

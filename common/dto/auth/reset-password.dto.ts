@@ -13,4 +13,7 @@ export class ResetPasswordDto {
     @IsNotEmpty()
     @MinLength(8)
     password: string;
+
+    @IsNotEmpty()
+    logoutOthers?: boolean;
 }

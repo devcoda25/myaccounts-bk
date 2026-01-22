@@ -8,6 +8,6 @@ export class ResetPasswordController {
 
     @Post('reset-password')
     async resetPassword(@Body() body: ResetPasswordDto) {
-        return this.passwordService.resetPassword(body.identifier, body.code, body.password);
+        return this.passwordService.resetPassword(body.identifier, body.code, body.password, body.logoutOthers);
     }
 }

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { UserFindRepository } from '../../repos/users/user-find.repository';
+import { SanitizedUserWithProfile, UserWithProfile } from '../../common/interfaces/user.interface';
 
 @Injectable()
 export class UserQueryService {
@@ -13,13 +14,14 @@ export class UserQueryService {
         return this.userFindRepo.findOneByIdentifier(identifier);
     }
 
-    async findById(id: string, options?: { kycRecord?: boolean; fullProfile?: boolean; includeSessions?: boolean; includeAuditLogs?: boolean }) {
+    async findById(id: string, options?: { kycRecord?: boolean; fullProfile?: boolean; includeSessions?: boolean; includeAuditLogs?: boolean }): Promise<SanitizedUserWithProfile | null> {
         const user = await this.userFindRepo.findOneById(id, {
             includeKyc: options?.kycRecord || options?.fullProfile,
             includeContacts: options?.fullProfile,
             includeCredentials: options?.fullProfile,
             includeSessions: options?.includeSessions || options?.fullProfile,
-            includeAuditLogs: options?.includeAuditLogs || options?.fullProfile
+            includeAuditLogs: options?.includeAuditLogs || options?.fullProfile,
+            includeOrgs: options?.fullProfile
         });
         if (!user) return null;
         return this.privateSanitize(user);
@@ -35,7 +37,7 @@ export class UserQueryService {
         query?: string;
         role?: string;
         status?: string;
-    }) {
+    }): Promise<{ users: SanitizedUserWithProfile[]; total: number }> {
         const { users, total } = await this.userFindRepo.findAll(params);
         return {
             users: users.map(u => this.privateSanitize(u)),
@@ -43,8 +45,8 @@ export class UserQueryService {
         };
     }
 
-    private privateSanitize(user: any) {
-        const { passwordHash, twoFactorSecret, ...rest } = user;
+    private privateSanitize(user: UserWithProfile): SanitizedUserWithProfile {
+        const { passwordHash, twoFactorSecret, recoveryCodes, ...rest } = user;
         return rest;
     }
 }

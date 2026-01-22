@@ -84,6 +84,15 @@ export class UsersController {
         return this.userManagementService.addContact(user.id, body);
     }
 
+    @Patch('me/contacts/:contactId')
+    async updateContact(
+        @CurrentUser() user: AuthRequest['user'],
+        @Param('contactId') contactId: string,
+        @Body() body: { label?: string; capabilities?: any }
+    ) {
+        return this.userManagementService.updateContact(user.id, contactId, body);
+    }
+
     @Delete('me/contacts/:contactId')
     async removeContact(@CurrentUser() user: AuthRequest['user'], @Param('contactId') contactId: string) {
         return this.userManagementService.removeContact(user.id, contactId);

@@ -23,6 +23,18 @@ export class AdminCreateOAuthClientDto {
     @IsString()
     @IsOptional()
     clientId?: string; // Optional: can be provided or auto-generated
+
+    @IsString()
+    @IsOptional()
+    description?: string;
+
+    @IsString()
+    @IsOptional()
+    icon?: string;
+
+    @IsString()
+    @IsOptional()
+    color?: string;
 }
 
 export class AdminUpdateOAuthClientDto {
@@ -43,4 +55,16 @@ export class AdminUpdateOAuthClientDto {
     @IsBoolean()
     @IsOptional()
     isFirstParty?: boolean;
+
+    @IsString()
+    @IsOptional()
+    description?: string;
+
+    @IsString()
+    @IsOptional()
+    icon?: string;
+
+    @IsString()
+    @IsOptional()
+    color?: string;
 }

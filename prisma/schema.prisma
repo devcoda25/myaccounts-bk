@@ -41,7 +41,6 @@ model User {
   sessions       Session[]
   notifications  Notification[]
   auditLogs      AuditLog[]
-  kyc            Kycrecord?
   consents       OAuthConsent[]
   appMemberships AppMembership[] // Relation to App Perms
 
@@ -53,8 +52,10 @@ model User {
   // Developer Relations
   ownedClients OAuthClient[] @relation("ClientOwner")
 
-  // Organization Relations
-  orgMemberships OrganizationMember[]
+
+  securityReports SecurityReport[]
+  supportTickets  SupportTicket[]
+  orgMemberships  OrgMembership[] // Relation to Orgs
 
   @@index([lastLocation], type: Gin)
   @@map("users")
@@ -94,37 +95,6 @@ model UserCredential {
   @@map("user_credentials")
 }
 
-// Organizations (Tenants)
-model Organization {
-  id          String   @id @default(uuid())
-  name        String
-  domain      String?  @unique // For enterprise SSO discovery
-  type        String   @default("individual") // "enterprise", "provider", "individual"
-  config      Json?    // SAML/OIDC federation settings, branding
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  members     OrganizationMember[]
-  clients     OAuthClient[] @relation("OrgClients")
-
-  @@map("organizations")
-}
-
-model OrganizationMember {
-  id        String   @id @default(uuid())
-  userId    String
-  orgId     String
-  role      String   @default("Member") // "Owner", "Admin", "Member"
-  
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-
-  joinedAt  DateTime @default(now())
-
-  @@unique([userId, orgId])
-  @@map("organization_members")
-}
 
 // OIDC Clients (EVzone Services)
 model OAuthClient {
@@ -132,6 +102,9 @@ model OAuthClient {
   clientId         String   @unique
   clientSecretHash String? // for confidential clients
   name             String
+  description      String?
+  icon             String?  // e.g. "CreditCard"
+  color            String?  // e.g. "#03CD8C"
   website          String? // App Homepage/Domain
   redirectUris     String[]
   post_logout_redirect_uris String[] @default([])
@@ -148,7 +121,7 @@ model OAuthClient {
   owner   User?   @relation("ClientOwner", fields: [ownerId], references: [id])
   
   orgId   String?
-  organization Organization? @relation("OrgClients", fields: [orgId], references: [id])
+  organization Organization? @relation(fields: [orgId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -166,6 +139,48 @@ enum AppRole {
   SUPER_APP_ADMIN
   REGIONAL_ADMIN
   STAFF
+}
+
+// -----------------------------------------------------------------------------
+// Organization & Corporate Pay (Lean Reference)
+// -----------------------------------------------------------------------------
+
+enum OrgRole {
+  OWNER
+  ADMIN
+  MEMBER
+  ACCOUNTANT
+}
+
+model Organization {
+  id          String   @id @default(uuid())
+  name        String
+  taxId       String?  // Lightweight VAT/Registration ref
+  icon        String?
+  
+  members     OrgMembership[]
+  clients     OAuthClient[]   // Apps managed by this org
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("organizations")
+}
+
+model OrgMembership {
+  id             String       @id @default(uuid())
+  orgId          String
+  userId         String
+  role           OrgRole      @default(MEMBER)
+  
+  organization   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([orgId, userId])
+  @@map("org_memberships")
 }
 
 model AppMembership {
@@ -254,23 +269,6 @@ model VerificationRequest {
 // Compliance & Audit
 // -----------------------------------------------------------------------------
 
-model Kycrecord {
-  id        String  @id @default(uuid())
-  userId    String  @unique
-  status    String // "Pending", "Verified", "Rejected", "In Review"
-  level     Int     @default(1)
-  documents Json? // URLs for idFront, idBack, selfie
-  docType   String? // "National ID", "Passport", etc.
-  riskScore String  @default("Low")
-  notes     String?
-
-  user User @relation(fields: [userId], references: [id])
-
-  submittedAt DateTime  @default(now())
-  verifiedAt  DateTime?
-
-  @@map("kyc_records")
-}
 
 model OAuthConsent {
   userId    String
@@ -499,4 +497,37 @@ model OidcPayload {
   
   @@index([type])
   @@index([grantId])
+}
+
+model SecurityReport {
+  id          String   @id @default(uuid())
+  userId      String
+  type        String   // "SUSPICIOUS_LOGIN", "COMPROMISED_ACCOUNT", "OTHER"
+  severity    String   @default("high")
+  description String
+  metadata    Json?    // Specific details like eventId, IP, etc.
+  status      String   @default("OPEN") // "OPEN", "INVESTIGATING", "RESOLVED", "CLOSED"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("security_reports")
+}
+
+model SupportTicket {
+  id          String   @id @default(uuid())
+  userId      String?
+  subject     String
+  description String
+  category    String   // "Billing", "Technical", "Privacy", "General"
+  priority    String   @default("medium")
+  status      String   @default("OPEN")
+  metadata    Json?    // browser info, attachments labels
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("support_tickets")
 }

@@ -10,13 +10,16 @@ import { UsersModule } from './modules/users/users.module';
 
 import { AdminModule } from './modules/admin/admin.module';
 import { DebugModule } from './modules/debug/debug.module';
-import { KycModule } from './modules/kyc/kyc.module';
+
 import { ParentalModule } from './modules/parental/parental.module';
 import { HealthModule } from './modules/health/health.module';
 
 import { SecurityModule } from './modules/security/security.module';
 import { AppsModule } from './modules/apps/apps.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { SupportModule } from './modules/support/support.module';
+import { PrivacyModule } from './modules/privacy/privacy.module';
+import { OrgsModule } from './modules/orgs/orgs.module';
 
 import { EdgeGuard } from './middleware/edge-guard.middleware';
 
@@ -55,18 +58,19 @@ const env = validateEnv(process.env);
 
         UsersModule,
         // WalletModule removed
-        // OrganizationModule removed
+        OrgsModule,
         AdminModule,
         PrismaModule,
         DebugModule,
-        KycModule,
+
         ParentalModule,
         HealthModule,
 
         SecurityModule,
         AppsModule,
         NotificationsModule,
-
+        SupportModule,
+        PrivacyModule
     ],
     controllers: [],
     providers: [

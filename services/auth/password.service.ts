@@ -15,7 +15,7 @@ export class PasswordService {
         private sessionRepo: SessionRepository
     ) { }
 
-    async resetPassword(identifier: string, code: string, newPass: string) {
+    async resetPassword(identifier: string, code: string, newPass: string, logoutOthers: boolean = false) {
         const record = await this.verificationService.verifyCode(identifier, code, 'PASSWORD_RESET');
         if (!record) throw new UnauthorizedException('Invalid or expired code');
 
@@ -24,6 +24,10 @@ export class PasswordService {
 
         const hash = await argon2.hash(newPass);
         await this.userUpdateRepo.updatePassword(user.id, hash);
+
+        if (logoutOthers) {
+            await this.sessionRepo.deleteUserSessions(user.id);
+        }
 
         await this.verificationService.consumeCode(record.id);
         return { success: true };
