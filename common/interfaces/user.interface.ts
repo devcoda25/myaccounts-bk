@@ -1,11 +1,11 @@
-import { User, UserContact, UserCredential, Session, AuditLog, Kycrecord } from '@prisma/client';
+import { User, UserContact, UserCredential, Session, AuditLog } from '@prisma/client';
 
 export type UserWithProfile = User & {
     contacts?: UserContact[];
     credentials?: UserCredential[];
     sessions?: Session[];
     auditLogs?: AuditLog[];
-    kyc?: Kycrecord | null;
+
     orgMemberships?: any[]; // Use any[] temporarily due to stale Prisma types
 };
 

@@ -28,11 +28,10 @@ export class UserFindRepository {
         });
     }
 
-    async findOneById(id: string, options: { includeKyc?: boolean; includeContacts?: boolean; includeCredentials?: boolean; includeSessions?: boolean; includeAuditLogs?: boolean; includeOrgs?: boolean } = {}): Promise<UserWithProfile | null> {
+    async findOneById(id: string, options: { includeContacts?: boolean; includeCredentials?: boolean; includeSessions?: boolean; includeAuditLogs?: boolean; includeOrgs?: boolean } = {}): Promise<UserWithProfile | null> {
         return (this.prisma as any).user.findUnique({
             where: { id },
             include: {
-                kyc: options.includeKyc,
                 contacts: options.includeContacts,
                 credentials: options.includeCredentials,
                 sessions: options.includeSessions ? { orderBy: { createdAt: 'desc' }, take: 20 } : false,
@@ -78,7 +77,6 @@ export class UserFindRepository {
                 skip,
                 take,
                 orderBy: { createdAt: 'desc' },
-                include: { kyc: true }
             }),
             this.prisma.user.count({ where }),
         ]);
