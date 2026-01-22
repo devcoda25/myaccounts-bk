@@ -36,7 +36,9 @@ export class OidcInteractionController {
         try {
             details = await this.provider.interactionDetails(req.raw, res.raw);
         } catch (err: any) {
-            console.error('Interaction Details Error:', err);
+            console.error('[OIDC INTERACTION ERROR] Message:', err.message);
+            console.error('[OIDC INTERACTION ERROR] Original Headers:', JSON.stringify(req.headers, null, 2));
+            console.error('[OIDC INTERACTION ERROR] Cookies:', req.headers.cookie);
 
             // Redirect to login with specific error message instead of showing raw JSON
             const signinUrl = `${frontendUrl}/auth/sign-in?interaction_error=${encodeURIComponent(err.message || 'session_expired')}`;

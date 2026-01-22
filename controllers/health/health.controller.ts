@@ -36,14 +36,39 @@ export class HealthController {
         // 3. Notifications (Email) Check
         const notifStatus = await this.emailService.checkHealth();
 
-        // 4. API (Self) Check
+        // 4. OIDC Discovery Check (Regression Prevention)
+        let oidcStatus: 'Operational' | 'Degraded' = 'Operational';
+        try {
+            // We fetch the issuer from ENV and append discovery path
+            const issuer = (process.env.OIDC_ISSUER || 'https://accounts.evzone.app/oidc').replace(/\/$/, '');
+            const discoveryUrl = `${issuer}/.well-known/openid-configuration`;
+
+            const response = await fetch(discoveryUrl, {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+                signal: AbortSignal.timeout(3000) // Don't hang the health check
+            });
+
+            if (!response.ok) {
+                console.error(`[HEALTH] OIDC Discovery failed with status: ${response.status}`);
+                oidcStatus = 'Degraded';
+            } else {
+                const data = await response.json();
+                if (!data.issuer) oidcStatus = 'Degraded';
+            }
+        } catch (e: any) {
+            console.error(`[HEALTH] OIDC Discovery Error: ${e.message}`);
+            oidcStatus = 'Degraded';
+        }
+
+        // 5. API (Self) Check
         // If we are here, API is responsive.
         const apiStatus = 'Operational';
 
         const now = Date.now();
 
         // Determine overall
-        const status = (dbStatus === 'Operational' && authStatus === 'Operational' && notifStatus === 'Operational')
+        const status = (dbStatus === 'Operational' && authStatus === 'Operational' && notifStatus === 'Operational' && oidcStatus === 'Operational')
             ? 'Operational'
             : 'Degraded';
 
@@ -56,6 +81,13 @@ export class HealthController {
                     desc: "Identity, sessions, and OIDC",
                     health: authStatus,
                     lastUpdatedAt: growTime(now, 2)
+                },
+                {
+                    key: "oidc",
+                    name: "OIDC Provider",
+                    desc: "Protocol discovery and keys",
+                    health: oidcStatus,
+                    lastUpdatedAt: growTime(now, 1)
                 },
                 {
                     key: "notifications",

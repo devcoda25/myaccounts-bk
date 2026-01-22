@@ -23,10 +23,15 @@ import { OidcConfiguration, OidcContext, OidcInteraction } from '../../common/in
                 // 2. Load Keys
                 const signingKey = await KeyManager.getPrivateJWK();
 
-                const issuer = process.env.OIDC_ISSUER || 'https://accounts.evzone.app/oidc';
+                const envIssuer = process.env.OIDC_ISSUER || 'https://accounts.evzone.app/oidc';
+                const issuer = envIssuer.replace(/\/$/, '');
+                const cookieDomain = process.env.COOKIE_DOMAIN || '.evzone.app';
+                const isProduction = process.env.NODE_ENV === 'production';
+
                 console.log('================================================');
                 console.log(`[OIDC] INITIALIZING WITH ISSUER: ${issuer}`);
-                console.log(`[OIDC] COOKIE DOMAIN: ${process.env.COOKIE_DOMAIN || '(unset)'}`);
+                console.log(`[OIDC] COOKIE DOMAIN: ${cookieDomain}`);
+                console.log(`[OIDC] ENV: ${process.env.NODE_ENV}`);
                 console.log('================================================');
 
                 const configuration: OidcConfiguration = {
@@ -79,8 +84,8 @@ import { OidcConfiguration, OidcContext, OidcInteraction } from '../../common/in
                     // Cookies must be secure in prod, none/lax settings handled by provider?
                     cookies: {
                         keys: [process.env.COOKIE_SECRET || 'changeme_min_32_chars_random_string_required'],
-                        short: { domain: process.env.COOKIE_DOMAIN, sameSite: 'Lax', secure: true },
-                        long: { domain: process.env.COOKIE_DOMAIN, sameSite: 'Lax', secure: true },
+                        short: { domain: cookieDomain, sameSite: isProduction ? 'lax' : 'none', secure: true },
+                        long: { domain: cookieDomain, sameSite: isProduction ? 'lax' : 'none', secure: true },
                     },
                     pkce: { required: () => true }, // Force PKCE
 

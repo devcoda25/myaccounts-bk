@@ -76,24 +76,33 @@ export async function bootstrap() {
     fastify.use((req: any, res: any, next: any) => {
         // [OIDC] Standard mount point
         if (req.url.startsWith('/oidc')) {
-            // [DEBUG] Log all details to find why it says "unrecognized route"
-            console.log(`[OIDC DEBUG] Incoming: ${req.method} ${req.url}`);
-            console.log(`[OIDC DEBUG] Headers: ${JSON.stringify(req.headers, null, 2)}`);
+            // [Fortress] Isolate OIDC from general API changes
+            const envIssuer = process.env.OIDC_ISSUER || 'https://accounts.evzone.app/oidc';
+            const issuerUrl = new URL(envIssuer);
+            const targetHost = issuerUrl.host;
+            const targetProto = issuerUrl.protocol.replace(':', '');
+
+            // [DEBUG] Log ORIGINAL details to find why it says "unrecognized route"
+            if (process.env.NODE_ENV !== 'production') {
+                console.log(`[OIDC DEBUG] Incoming: ${req.method} ${req.url}`);
+                console.log(`[OIDC DEBUG] Original Host: ${req.headers.host}`);
+                console.log(`[OIDC DEBUG] Detected Target: ${targetHost} (${targetProto})`);
+            }
 
             // [Fix] Force Host header and Proto to match Issuer strictness.
-            // This is critical when api.evzone.app is a proxy for accounts.evzone.app
-            const targetHost = 'accounts.evzone.app';
             req.headers.host = targetHost;
             req.headers['x-forwarded-host'] = targetHost;
-            req.headers['x-forwarded-proto'] = 'https';
+            req.headers['x-forwarded-proto'] = targetProto;
+            if (targetProto === 'https') {
+                req.headers['x-forwarded-port'] = '443';
+            }
 
             // Let NestJS handle OIDC interaction routes
             if (req.url.startsWith('/oidc/interaction')) {
                 return next();
             }
 
-            // [Fix] DO NOT strip /oidc prefix. 
-            // node-oidc-provider with issuer path '/oidc' expects the path to be present.
+            // [Fix] Pass exactly what oidc-provider expects
             return oidcCallback(req, res, next);
         }
         return next();
