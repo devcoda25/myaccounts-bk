@@ -42,7 +42,7 @@ export class AdminController {
     // --- OAuth Clients ---
 
     @Get('apps')
-    async getApps(@Query() query: { skip?: number; take?: number; query?: string }) {
+    async getApps(@Query() query: AdminQueryDto) {
         return this.adminService.getApps(query);
     }
 
