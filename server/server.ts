@@ -111,9 +111,9 @@ export async function bootstrap() {
 
             // [Fix] Path Normalization for oidc-provider internal router
             // We strip the prefix so oidc-provider's internal router sees root-relative paths.
+            // MUST ONLY mutate req.raw.url because Fastify's req.url is a getter-only property.
             if (issuerPath && req.url.startsWith(issuerPath)) {
                 const newUrl = req.url.replace(issuerPath, '') || '/';
-                (req as any).url = newUrl;
                 if (req.raw) req.raw.url = newUrl;
             }
 
