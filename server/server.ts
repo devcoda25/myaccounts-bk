@@ -73,45 +73,34 @@ export async function bootstrap() {
     // [OIDC] Mount Provider on /oidc namespace
     const oidc = app.get(OIDC_PROVIDER); // OIDC_PROVIDER is symbol
     const oidcCallback = oidc.callback();
-    fastify.use((req: any, res: any, next: any) => {
-        // [OIDC] Standard mount point
+    // [OIDC Fortress] Persistent OIDC Stability Hook
+    fastify.addHook('onRequest', async (req, res) => {
         if (req.url.startsWith('/oidc')) {
-            // [Fortress] Isolate OIDC from general API changes
             const envIssuer = process.env.OIDC_ISSUER || 'https://accounts.evzone.app/oidc';
             const issuerUrl = new URL(envIssuer);
             const targetHost = issuerUrl.host;
             const targetProto = issuerUrl.protocol.replace(':', '');
 
-            // [DEBUG] Log ORIGINAL details to find why it says "unrecognized route"
-            if (process.env.NODE_ENV !== 'production') {
-                console.log(`[OIDC DEBUG] Incoming: ${req.method} ${req.url}`);
-                console.log(`[OIDC DEBUG] Original Host: ${req.headers.host}`);
-                console.log(`[OIDC DEBUG] Detected Target: ${targetHost} (${targetProto})`);
-            }
-
-            // [Fix] Host Enforcement: Redirect to canonical OIDC domain if browser uses wrong host.
+            // [Fix] Host Enforcement: Hard Redirect to canonical domain.
             // This ensures cookies are reliably set/read on the correct domain.
             const currentHost = req.headers.host;
             if (currentHost && currentHost !== targetHost && currentHost !== '127.0.0.1' && !currentHost.startsWith('127.0.0.1:')) {
-                const redirectUrl = `${targetProto}://${targetHost}${req.originalUrl || req.url}`;
-                console.log(`[OIDC FORTRESS] Redirecting wrong host ${currentHost} -> ${redirectUrl}`);
-                res.statusCode = 302;
-                res.setHeader('Location', redirectUrl);
-                res.end();
-                return;
+                const redirectUrl = `${targetProto}://${targetHost}${req.url}`;
+                console.log(`[OIDC FORTRESS] Redirecting ${currentHost} -> ${redirectUrl}`);
+                return res.code(302).redirect(redirectUrl);
             }
 
-            // [Fix] Force Host header and Proto to match Issuer strictness for the provider logic.
-            // MUST update both Fastify req and Node req.raw because oidc-provider reads both.
+            // [DEBUG] Log interaction state
+            if (req.url.includes('/interaction/')) {
+                console.log(`[OIDC DEBUG] Interaction: ${req.url} | Cookies: ${!!req.headers.cookie}`);
+            }
+
+            // [Fix] Absolute Header Enforcement for oidc-provider
             const forceHeaders = (target: any) => {
                 target.headers.host = targetHost;
                 target.headers['x-forwarded-host'] = targetHost;
                 target.headers['x-forwarded-proto'] = targetProto;
-                if (targetProto === 'https') {
-                    target.headers['x-forwarded-port'] = '443';
-                } else {
-                    target.headers['x-forwarded-port'] = issuerUrl.port || '80';
-                }
+                target.headers['x-forwarded-port'] = (targetProto === 'https') ? '443' : (issuerUrl.port || '80');
             };
 
             forceHeaders(req);
@@ -119,22 +108,24 @@ export async function bootstrap() {
 
             // Let NestJS handle OIDC interaction routes
             if (req.url.startsWith('/oidc/interaction')) {
-                return next();
+                return; // Proceed to NestJS controllers
             }
 
-            // [Fix] Path Normalization: Strip the issuer's path from the URL.
-            // oidc-provider expects the URL to be relative to its base when mounted manually.
-            // e.g. /oidc/.well-known/... -> /.well-known/...
+            // [Fix] Path Normalization for oidc-provider internal router
             const issuerPath = issuerUrl.pathname.replace(/\/$/, '');
             if (issuerPath && req.url.startsWith(issuerPath)) {
-                req.url = req.url.replace(issuerPath, '');
-                if (!req.url.startsWith('/')) req.url = '/' + req.url;
+                (req as any).url = req.url.replace(issuerPath, '');
+                if (!req.url.startsWith('/')) (req as any).url = '/' + req.url;
             }
 
-            // [Fix] Pass exactly what oidc-provider expects
-            return oidcCallback(req, res, next);
+            // [Fix] Pass to oidc-provider (Wait for the Express-style callback)
+            return new Promise<void>((resolve, reject) => {
+                oidcCallback(req.raw, res.raw, (err: any) => {
+                    if (err) return reject(err);
+                    resolve();
+                });
+            });
         }
-        return next();
     });
 
     // [Security] Helmet for Security Headers & CSP
