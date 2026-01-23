@@ -76,35 +76,27 @@ export async function bootstrap() {
     // [OIDC Fortress] Persistent OIDC Stability Hook (Atomic Stability Patch)
     fastify.addHook('onRequest', async (req, res) => {
         if (req.url.startsWith('/oidc')) {
-            // [Fix] Atomic Host Enforcement: In production, force canonical issuer regardless of .env misconfiguration.
+            // [Fix] Namespace Integrity: Strict Production Issuer
             const isProduction = process.env.NODE_ENV === 'production';
-            const canonicalIssuer = 'https://accounts.evzone.app/oidc';
-            const envIssuer = process.env.OIDC_ISSUER || canonicalIssuer;
+            const envIssuer = isProduction ? 'https://accounts.evzone.app/oidc' : (process.env.OIDC_ISSUER || 'http://localhost:3000/oidc');
 
-            // If in production and env is pointing to localhost or missing, force canonical.
-            const finalIssuer = (isProduction && (envIssuer.includes('localhost') || envIssuer.includes('127.0.0.1')))
-                ? canonicalIssuer
-                : envIssuer;
-
-            const issuerUrl = new URL(finalIssuer);
+            const issuerUrl = new URL(envIssuer);
             const targetHost = issuerUrl.host;
             const targetProto = issuerUrl.protocol.replace(':', '');
-            const issuerPath = issuerUrl.pathname.replace(/\/$/, '');
 
-            // [Fix] Host Enforcement: Immediate 302 redirect to canonical domain if host mismatch occurs.
+            // [Fix] Host Enforcement: Immediate 302 redirect.
             const currentHost = req.headers.host;
             if (currentHost && currentHost !== targetHost && currentHost !== '127.0.0.1' && !currentHost.startsWith('127.0.0.1:')) {
-                const redirectUrl = `${targetProto}://${targetHost}${req.url}`;
-                console.log(`[OIDC FORTRESS] Force Host Redirect: ${currentHost} -> ${redirectUrl}`);
-                return res.code(302).redirect(redirectUrl);
+                return res.code(302).redirect(`${targetProto}://${targetHost}${req.url}`);
             }
 
-            // [Fix] Header & Prefix Spoofing: Required for oidc-provider absolute URL generation.
+            // [Fix] Header Spoofing: Required for internal absolute URL generation.
             const forceHeaders = (target: any) => {
                 target.headers.host = targetHost;
                 target.headers['x-forwarded-host'] = targetHost;
                 target.headers['x-forwarded-proto'] = targetProto;
-                target.headers['x-forwarded-prefix'] = issuerPath || '/oidc';
+                // Important: Signal prefix explicitly even if path is preserved
+                target.headers['x-forwarded-prefix'] = '/oidc';
                 target.headers['x-forwarded-port'] = (targetProto === 'https') ? '443' : (issuerUrl.port || '80');
             };
 
@@ -113,15 +105,11 @@ export async function bootstrap() {
 
             // Let NestJS handle OIDC interaction routes
             if (req.url.startsWith('/oidc/interaction')) {
-                return; // Proceed to NestJS controllers
+                return;
             }
 
-            // [Fix] Path Normalization: MUST ONLY mutate req.raw.url. 
-            // Fastify's req.url is a read-only getter. Mutating it causes TypeError: Cannot set property url.
-            if (issuerPath && req.url.startsWith(issuerPath)) {
-                const newUrl = req.url.replace(issuerPath, '') || '/';
-                if (req.raw) req.raw.url = newUrl;
-            }
+            // [Fix] Namespace Integrity: DO NOT strip /oidc.
+            // We pass the full path to oidc-provider. Since issuer has /oidc path, it naturally handles it.
 
             // [Fix] Pass to oidc-provider (Wait for the callback to finish)
             return new Promise<void>((resolve, reject) => {
