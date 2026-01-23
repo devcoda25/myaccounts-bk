@@ -80,26 +80,24 @@ export async function bootstrap() {
             const issuerUrl = new URL(envIssuer);
             const targetHost = issuerUrl.host;
             const targetProto = issuerUrl.protocol.replace(':', '');
+            const issuerPath = issuerUrl.pathname.replace(/\/$/, '');
 
             // [Fix] Host Enforcement: Hard Redirect to canonical domain.
-            // This ensures cookies are reliably set/read on the correct domain.
             const currentHost = req.headers.host;
             if (currentHost && currentHost !== targetHost && currentHost !== '127.0.0.1' && !currentHost.startsWith('127.0.0.1:')) {
                 const redirectUrl = `${targetProto}://${targetHost}${req.url}`;
-                console.log(`[OIDC FORTRESS] Redirecting ${currentHost} -> ${redirectUrl}`);
+                console.log(`[OIDC FORTRESS] Host Redirect: ${currentHost} -> ${redirectUrl}`);
                 return res.code(302).redirect(redirectUrl);
             }
 
-            // [DEBUG] Log interaction state
-            if (req.url.includes('/interaction/')) {
-                console.log(`[OIDC DEBUG] Interaction: ${req.url} | Cookies: ${!!req.headers.cookie}`);
-            }
-
-            // [Fix] Absolute Header Enforcement for oidc-provider
+            // [Fix] Header & Prefix Spoofing
+            // We strip /oidc for the provider to match routes, BUT we must tell it 
+            // the prefix via X-Forwarded-Prefix so it generates correct discovery URLs.
             const forceHeaders = (target: any) => {
                 target.headers.host = targetHost;
                 target.headers['x-forwarded-host'] = targetHost;
                 target.headers['x-forwarded-proto'] = targetProto;
+                target.headers['x-forwarded-prefix'] = issuerPath || '/oidc';
                 target.headers['x-forwarded-port'] = (targetProto === 'https') ? '443' : (issuerUrl.port || '80');
             };
 
@@ -109,6 +107,14 @@ export async function bootstrap() {
             // Let NestJS handle OIDC interaction routes
             if (req.url.startsWith('/oidc/interaction')) {
                 return; // Proceed to NestJS controllers
+            }
+
+            // [Fix] Path Normalization for oidc-provider internal router
+            // We strip the prefix so oidc-provider's internal router sees root-relative paths.
+            if (issuerPath && req.url.startsWith(issuerPath)) {
+                const newUrl = req.url.replace(issuerPath, '') || '/';
+                (req as any).url = newUrl;
+                if (req.raw) req.raw.url = newUrl;
             }
 
             // [Fix] Pass to oidc-provider (Wait for the Express-style callback)
