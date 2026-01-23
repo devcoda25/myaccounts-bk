@@ -89,7 +89,19 @@ export async function bootstrap() {
                 console.log(`[OIDC DEBUG] Detected Target: ${targetHost} (${targetProto})`);
             }
 
-            // [Fix] Force Host header and Proto to match Issuer strictness.
+            // [Fix] Host Enforcement: Redirect to canonical OIDC domain if browser uses wrong host.
+            // This ensures cookies are reliably set/read on the correct domain.
+            const currentHost = req.headers.host;
+            if (currentHost && currentHost !== targetHost && currentHost !== '127.0.0.1' && !currentHost.startsWith('127.0.0.1:')) {
+                const redirectUrl = `${targetProto}://${targetHost}${req.originalUrl || req.url}`;
+                console.log(`[OIDC FORTRESS] Redirecting wrong host ${currentHost} -> ${redirectUrl}`);
+                res.statusCode = 302;
+                res.setHeader('Location', redirectUrl);
+                res.end();
+                return;
+            }
+
+            // [Fix] Force Host header and Proto to match Issuer strictness for the provider logic.
             req.headers.host = targetHost;
             req.headers['x-forwarded-host'] = targetHost;
             req.headers['x-forwarded-proto'] = targetProto;
