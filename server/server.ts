@@ -111,15 +111,6 @@ export async function bootstrap() {
                 return; // Proceed to NestJS controllers
             }
 
-            // [Fix] Path Normalization for oidc-provider internal router
-            const issuerPath = issuerUrl.pathname.replace(/\/$/, '');
-            if (issuerPath && req.url.startsWith(issuerPath)) {
-                // MUST mutate req.raw.url because Fastify's req.url is a getter-only property.
-                // Mutating req.raw.url is the standard way to rewrite URLs in onRequest hooks.
-                req.raw.url = req.raw.url!.replace(issuerPath, '');
-                if (!req.raw.url.startsWith('/')) req.raw.url = '/' + req.raw.url;
-            }
-
             // [Fix] Pass to oidc-provider (Wait for the Express-style callback)
             return new Promise<void>((resolve, reject) => {
                 oidcCallback(req.raw, res.raw, (err: any) => {
