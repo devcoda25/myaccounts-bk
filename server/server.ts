@@ -102,12 +102,20 @@ export async function bootstrap() {
             }
 
             // [Fix] Force Host header and Proto to match Issuer strictness for the provider logic.
-            req.headers.host = targetHost;
-            req.headers['x-forwarded-host'] = targetHost;
-            req.headers['x-forwarded-proto'] = targetProto;
-            if (targetProto === 'https') {
-                req.headers['x-forwarded-port'] = '443';
-            }
+            // MUST update both Fastify req and Node req.raw because oidc-provider reads both.
+            const forceHeaders = (target: any) => {
+                target.headers.host = targetHost;
+                target.headers['x-forwarded-host'] = targetHost;
+                target.headers['x-forwarded-proto'] = targetProto;
+                if (targetProto === 'https') {
+                    target.headers['x-forwarded-port'] = '443';
+                } else {
+                    target.headers['x-forwarded-port'] = issuerUrl.port || '80';
+                }
+            };
+
+            forceHeaders(req);
+            if (req.raw) forceHeaders(req.raw);
 
             // Let NestJS handle OIDC interaction routes
             if (req.url.startsWith('/oidc/interaction')) {
