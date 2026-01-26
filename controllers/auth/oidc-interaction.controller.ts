@@ -133,8 +133,10 @@ export class OidcInteractionController {
         const { email, password } = result.data;
 
         // Validate User
+        console.log(`[OIDC] Login attempt for interaction ${uid}, email: ${email}`);
         const user = await this.loginService.validateUser(email, password);
         if (!user) {
+            console.warn(`[OIDC] Invalid credentials for ${email}`);
             return res.status(401).send({ error: 'Invalid credentials' });
         }
 
@@ -145,6 +147,7 @@ export class OidcInteractionController {
 
         // This commits the interaction and redirects the User Agent back to the Authorization Endpoint
         try {
+            console.log(`[OIDC] Interaction ${uid} finished for user ${user.id}. Redirecting...`);
             // ✅ CRITICAL: Must return the response to send the redirect
             return await this.provider.interactionFinished(req.raw, res.raw, interactionResult, { mergeWithLastSubmission: false });
         } catch (err: any) {
