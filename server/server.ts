@@ -151,14 +151,23 @@ export async function bootstrap() {
         }
     });
 
-    // [DEBUG] Log all OIDC redirects and status codes
+    // [DEBUG] Intensive OIDC Traceability Hook
     fastify.addHook('onSend', async (req, reply, payload) => {
-        if (req.url.startsWith('/oidc') || req.url.startsWith('/auth')) {
+        const isOidc = req.url.startsWith('/oidc') || req.url.startsWith('/auth');
+        if (isOidc) {
             const status = reply.statusCode;
+            const location = reply.getHeader('location');
+            const setCookie = reply.getHeader('set-cookie');
+
             if (status >= 300 && status < 400) {
-                console.log(`[OIDC REDIRECT] ${req.method} ${req.url} -> ${reply.getHeader('location')} (Status: ${status})`);
+                console.log(`[OIDC TRACE] REDIRECT ${req.method} ${req.url} -> ${location} (Status: ${status})`);
             } else if (status >= 400) {
-                console.warn(`[OIDC ERROR] ${req.method} ${req.url} -> Status: ${status}`);
+                console.warn(`[OIDC TRACE] ERROR ${req.method} ${req.url} -> Status: ${status}`);
+            }
+
+            if (setCookie) {
+                const cookies = Array.isArray(setCookie) ? setCookie : [String(setCookie)];
+                cookies.forEach(c => console.log(`[OIDC TRACE] Response SET-COOKIE: ${c.split(';')[0]}...`));
             }
         }
         return payload;
