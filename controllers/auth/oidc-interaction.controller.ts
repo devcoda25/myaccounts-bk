@@ -145,7 +145,8 @@ export class OidcInteractionController {
 
         // This commits the interaction and redirects the User Agent back to the Authorization Endpoint
         try {
-            await this.provider.interactionFinished(req.raw, res.raw, interactionResult, { mergeWithLastSubmission: false });
+            // ✅ CRITICAL: Must return the response to send the redirect
+            return await this.provider.interactionFinished(req.raw, res.raw, interactionResult, { mergeWithLastSubmission: false });
         } catch (err: any) {
             // [Fix] Handle Stale Sessions (e.g. server restart)
             // If interaction is not found or invalid, restart the flow
@@ -196,7 +197,8 @@ export class OidcInteractionController {
             },
         };
 
-        await this.provider.interactionFinished(req.raw, res.raw, result, { mergeWithLastSubmission: true });
+        // ✅ CRITICAL: Must return the response to send the redirect
+        return await this.provider.interactionFinished(req.raw, res.raw, result, { mergeWithLastSubmission: true });
     }
 
     @Get(':uid/abort')
@@ -209,6 +211,7 @@ export class OidcInteractionController {
             error: 'access_denied',
             error_description: 'User canceled the interaction',
         };
-        await this.provider.interactionFinished(req.raw, res.raw, result, { mergeWithLastSubmission: false });
+        // ✅ CRITICAL: Must return the response to send the redirect
+        return await this.provider.interactionFinished(req.raw, res.raw, result, { mergeWithLastSubmission: false });
     }
 }
