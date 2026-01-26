@@ -41,8 +41,8 @@ export interface OidcConfiguration {
     };
     cookies?: {
         keys: string[];
-        short?: { domain?: string; sameSite?: string; secure?: boolean };
-        long?: { domain?: string; sameSite?: string; secure?: boolean };
+        short?: { domain?: string; sameSite?: string; secure?: boolean; path?: string };
+        long?: { domain?: string; sameSite?: string; secure?: boolean; path?: string };
     };
     jwks?: {
         keys: any[];

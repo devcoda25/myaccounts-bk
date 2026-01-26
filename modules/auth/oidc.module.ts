@@ -86,11 +86,13 @@ import { OidcConfiguration, OidcContext, OidcInteraction } from '../../common/in
                         keys: [process.env.COOKIE_SECRET || 'changeme_min_32_chars_random_string_required'],
                         short: {
                             domain: cookieDomain,
+                            path: '/',
                             sameSite: 'lax',
                             secure: true
                         },
                         long: {
                             domain: cookieDomain,
+                            path: '/',
                             sameSite: 'lax',
                             secure: true
                         },
@@ -156,7 +158,7 @@ import { OidcConfiguration, OidcContext, OidcInteraction } from '../../common/in
                                     app_role: user.role === 'SUPER_ADMIN'
                                         ? 'SUPER_APP_ADMIN'
                                         : (ctx.oidc?.client?.clientId)
-                                            ? user.appMemberships.find(m => m.clientId === ctx.oidc.client?.clientId)?.role || 'USER'
+                                            ? user.appMemberships.find((m: any) => m.clientId === ctx.oidc.client?.clientId)?.role || 'USER'
                                             : 'USER',
                                     global_role: user.role, // SUPER_ADMIN, ADMIN, USER
                                     // Organizations for Corporate Pay
