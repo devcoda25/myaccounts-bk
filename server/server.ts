@@ -106,14 +106,23 @@ export async function bootstrap() {
             forceHeaders(req);
             if (req.raw) forceHeaders(req.raw);
 
-            // [Security] Clear stale/old OIDC cookies to prevent confusion with renamed ones (ev_*)
-            const staleCookies = ['_interaction', '_interaction.sig', '_session', '_session.sig', '_resume', '_resume.sig'];
-            const cookieHeader = req.headers.cookie || '';
-            if (staleCookies.some(name => cookieHeader.includes(name + '='))) {
-                staleCookies.forEach(name => {
-                    res.header('Set-Cookie', `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Lax`);
+            // [Security] Force Purge Stale OIDC cookies from all possible domains (host and wildcard)
+            const staleTokens = ['_interaction', '_session', '_resume'];
+            const domains = [undefined, '.evzone.app'];
+
+            staleTokens.forEach(name => {
+                const sigName = `${name}.sig`;
+                domains.forEach(domain => {
+                    const domainAttr = domain ? `; Domain=${domain}` : '';
+                    const baseCookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Lax${domainAttr}`;
+                    const sigCookie = `${sigName}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Lax${domainAttr}`;
+
+                    // Use res.raw.setHeader to send multiple Set-Cookie headers correctly in Node.js/Fastify
+                    const current = res.raw.getHeader('Set-Cookie');
+                    const existing = Array.isArray(current) ? current : (current ? [String(current)] : []);
+                    res.raw.setHeader('Set-Cookie', [...existing, baseCookie, sigCookie]);
                 });
-            }
+            });
 
             // Let NestJS handle OIDC interaction routes
             if (req.url.startsWith('/oidc/interaction')) {
