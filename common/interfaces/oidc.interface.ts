@@ -41,6 +41,13 @@ export interface OidcConfiguration {
     };
     cookies?: {
         keys: string[];
+        names?: {
+            session?: string;
+            interaction?: string;
+            resume?: string;
+            state?: string;
+            [key: string]: string | undefined;
+        };
         short?: { domain?: string; sameSite?: string; secure?: boolean; path?: string };
         long?: { domain?: string; sameSite?: string; secure?: boolean; path?: string };
     };

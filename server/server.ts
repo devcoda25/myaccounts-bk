@@ -132,6 +132,19 @@ export async function bootstrap() {
         }
     });
 
+    // [DEBUG] Log all OIDC redirects and status codes
+    fastify.addHook('onSend', async (req, reply, payload) => {
+        if (req.url.startsWith('/oidc') || req.url.startsWith('/auth')) {
+            const status = reply.statusCode;
+            if (status >= 300 && status < 400) {
+                console.log(`[OIDC REDIRECT] ${req.method} ${req.url} -> ${reply.getHeader('location')} (Status: ${status})`);
+            } else if (status >= 400) {
+                console.warn(`[OIDC ERROR] ${req.method} ${req.url} -> Status: ${status}`);
+            }
+        }
+        return payload;
+    });
+
     // [Security] Helmet for Security Headers & CSP
     const trustedDomains = (process.env.CSP_DOMAINS || '').split(',').map(d => d.trim()).filter(Boolean);
 
