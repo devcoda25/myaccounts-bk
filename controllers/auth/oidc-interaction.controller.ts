@@ -148,6 +148,7 @@ export class OidcInteractionController {
         // This commits the interaction and redirects the User Agent back to the Authorization Endpoint
         try {
             console.log(`[OIDC] Interaction ${uid} finished for user ${user.id}. Redirecting...`);
+            console.log(`[OIDC DEBUG] Interaction Cookies: ${req.raw.headers.cookie || 'NONE'}`);
             // ✅ CRITICAL: Must return the response to send the redirect
             return await this.provider.interactionFinished(req.raw, res.raw, interactionResult, { mergeWithLastSubmission: false });
         } catch (err: any) {

@@ -85,13 +85,11 @@ import { OidcConfiguration, OidcContext, OidcInteraction } from '../../common/in
                     cookies: {
                         keys: [process.env.COOKIE_SECRET || 'changeme_min_32_chars_random_string_required'],
                         short: {
-                            domain: cookieDomain,
                             path: '/',
                             sameSite: 'lax',
                             secure: true
                         },
                         long: {
-                            domain: cookieDomain,
                             path: '/',
                             sameSite: 'lax',
                             secure: true

@@ -100,6 +100,9 @@ export async function bootstrap() {
                 target.headers['x-forwarded-port'] = (targetProto === 'https') ? '443' : (issuerUrl.port || '80');
             };
 
+            // [DEBUG] Log incoming OIDC request
+            console.log(`[OIDC DEBUG] ${req.method} ${req.url} - Cookies: ${req.headers.cookie || 'NONE'}`);
+
             forceHeaders(req);
             if (req.raw) forceHeaders(req.raw);
 
