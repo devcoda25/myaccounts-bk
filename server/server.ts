@@ -106,6 +106,15 @@ export async function bootstrap() {
             forceHeaders(req);
             if (req.raw) forceHeaders(req.raw);
 
+            // [Security] Clear stale/old OIDC cookies to prevent confusion with renamed ones (ev_*)
+            const staleCookies = ['_interaction', '_interaction.sig', '_session', '_session.sig', '_resume', '_resume.sig'];
+            const cookieHeader = req.headers.cookie || '';
+            if (staleCookies.some(name => cookieHeader.includes(name + '='))) {
+                staleCookies.forEach(name => {
+                    res.header('Set-Cookie', `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Lax`);
+                });
+            }
+
             // Let NestJS handle OIDC interaction routes
             if (req.url.startsWith('/oidc/interaction')) {
                 return;
