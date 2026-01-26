@@ -1,45 +1,69 @@
-deploy:
-  needs: test
-  runs-on: ubuntu-latest
-  steps:
-    - name: Deploy to DigitalOcean Droplet
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.DO_HOST }}
-        username: ${{ secrets.DO_USERNAME }}
-        key: ${{ secrets.DO_SSH_KEY }}
-        script_stop: true
-        script: |
-          set -euo pipefail
+name: Deploy Backend
 
-          cd /var/www/myaccounts
+on:
+  push:
+    branches: [ main ]
 
-          # --- Keep your PM2 ecosystem config safe ---
-          if [ -f ecosystem.config.js ]; then
-            cp ecosystem.config.js /tmp/ecosystem.config.js
-          fi
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-          # --- Make repo EXACTLY match origin/main (fixes package-lock drift) ---
-          git fetch origin main
-          git reset --hard origin/main
-          git clean -fd -e ecosystem.config.js
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
-          # Restore ecosystem config (server-specific)
-          if [ -f /tmp/ecosystem.config.js ]; then
-            mv /tmp/ecosystem.config.js ecosystem.config.js
-          fi
+      - run: npm install --legacy-peer-deps
+      - run: npm run test
 
-          # Locally ignore it so it never blocks pulls
-          grep -qxF "ecosystem.config.js" .git/info/exclude || echo "ecosystem.config.js" >> .git/info/exclude
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to DigitalOcean Droplet
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USERNAME }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          script_stop: true
+          script: |
+            set -euo pipefail
 
-          # --- Install deps WITHOUT rewriting package-lock ---
-          npm ci --legacy-peer-deps
+            cd /var/www/myaccounts
 
-          # Prisma generate (you already do this) :contentReference[oaicite:1]{index=1}
-          npx prisma generate
+            # Ensure pm2 exists
+            command -v pm2 >/dev/null 2>&1 || npm i -g pm2
 
-          export NODE_OPTIONS="--max-old-space-size=5096"
-          npm run build
+            # Backup server-specific files (important!)
+            [ -f ecosystem.config.js ] && cp ecosystem.config.js /tmp/ecosystem.config.js
+            [ -f .env ] && cp .env /tmp/myaccounts.env
 
-          # Use ecosystem config to (re)load PM2 apps
-          pm2 startOrReload ecosystem.config.js --update-env
+            # Force repo to match origin/main (fixes package-lock conflicts)
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd -e ecosystem.config.js -e .env -e .env.*
+
+            # Restore server-specific files
+            [ -f /tmp/ecosystem.config.js ] && mv /tmp/ecosystem.config.js ecosystem.config.js
+            [ -f /tmp/myaccounts.env ] && mv /tmp/myaccounts.env .env
+
+            # Ignore ecosystem locally so it never blocks pulls
+            grep -qxF "ecosystem.config.js" .git/info/exclude || echo "ecosystem.config.js" >> .git/info/exclude
+
+            # Install deps without rewriting package-lock.json
+            npm ci --legacy-peer-deps
+
+            npx prisma generate
+
+            export NODE_OPTIONS="--max-old-space-size=5096"
+            npm run build
+
+            # Reload using ecosystem config (recommended)
+            if [ -f ecosystem.config.js ]; then
+              pm2 startOrReload ecosystem.config.js --update-env
+            else
+              pm2 restart api || pm2 start dist/main.js --name api --update-env
+            fi
