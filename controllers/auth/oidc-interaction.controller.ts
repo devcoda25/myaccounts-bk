@@ -35,7 +35,7 @@ export class OidcInteractionController {
 
         try {
             details = await this.provider.interactionDetails(req.raw, res.raw);
-            console.log(`[OIDC DEBUG] Interaction Details loaded for ${uid}. Session ID: ${details.session?.jti || 'NONE'}`);
+            console.log(`[OIDC DEBUG] Interaction Details loaded for ${uid}. Session ID: ${(details as any).session?.jti || 'NONE'}`);
         } catch (err: any) {
             console.error(`[OIDC INTERACTION ERROR] ${uid}: ${err.message}`);
             // [DEBUG] Deep log headers and cookies

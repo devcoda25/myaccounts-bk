@@ -52,7 +52,8 @@ export async function bootstrap() {
             if (isAllowed) {
                 cb(null, true);
             } else {
-                cb(new Error('Not allowed by CORS'), false);
+                // [Optimization] Return false instead of throwing to prevent 500 error on preflight
+                cb(null, false);
             }
         },
         credentials: true,
