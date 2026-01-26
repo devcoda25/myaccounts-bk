@@ -217,7 +217,7 @@ export async function bootstrap() {
     logger.log(`Using Database: ${maskedUrl}`);
 
     const port = process.env.PORT || 3000;
-    const DEPLOY_ID = 'ATOMIC_STABILITY_V3_FINAL';
+    const DEPLOY_ID = 'V4_COOKIE_FIX_ATOMIC';
     logger.log(`[BOOTSTRAP] Deployment Fingerprint: ${DEPLOY_ID}`);
     await app.listen(port, '0.0.0.0');
     logger.log(`Application is running on: ${await app.getUrl()}`);

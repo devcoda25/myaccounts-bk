@@ -29,8 +29,8 @@ import { OidcConfiguration, OidcContext, OidcInteraction } from '../../common/in
                 const isProduction = process.env.NODE_ENV === 'production';
 
                 console.log('================================================');
-                console.log(`[OIDC] INITIALIZING WITH ISSUER: ${issuer}`);
-                console.log(`[OIDC] COOKIE DOMAIN: ${cookieDomain}`);
+                console.log(`[OIDC] INITIALIZING V4 (COOKIE_RENAME) AT ${new Date().toISOString()}`);
+                console.log(`[OIDC] ISSUER: ${issuer}`);
                 console.log(`[OIDC] ENV: ${process.env.NODE_ENV}`);
                 console.log('================================================');
 
