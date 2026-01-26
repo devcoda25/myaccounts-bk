@@ -1,50 +1,45 @@
-name: Deploy Backend
+deploy:
+  needs: test
+  runs-on: ubuntu-latest
+  steps:
+    - name: Deploy to DigitalOcean Droplet
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.DO_HOST }}
+        username: ${{ secrets.DO_USERNAME }}
+        key: ${{ secrets.DO_SSH_KEY }}
+        script_stop: true
+        script: |
+          set -euo pipefail
 
-on:
-  push:
-    branches: [ main ]
+          cd /var/www/myaccounts
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Use Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - run: npm install --legacy-peer-deps
-      # - run: npm run lint # Uncomment if you have linting set up
-      - run: npm run test
+          # --- Keep your PM2 ecosystem config safe ---
+          if [ -f ecosystem.config.js ]; then
+            cp ecosystem.config.js /tmp/ecosystem.config.js
+          fi
 
-  deploy:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy to DigitalOcean Droplet
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USERNAME }}
-          key: ${{ secrets.DO_SSH_KEY }}
-          script: |
-            # Navigate to app directory
-            cd /var/www/myaccounts
-            
-            # Pull latest changes
-            git pull origin main
-            
-            # Install dependencies
-            npm install --legacy-peer-deps
+          # --- Make repo EXACTLY match origin/main (fixes package-lock drift) ---
+          git fetch origin main
+          git reset --hard origin/main
+          git clean -fd -e ecosystem.config.js
 
-             # Generate Prisma Client
-             npx prisma generate
-            
-            
-            # Build not required if just running ts-node, but we are using built dist
-            # Rebuild the application
-            export NODE_OPTIONS="--max-old-space-size=5096"
-            npm run build
-            
-            # Restart PM2 (or start if not running)
-            pm2 restart api || pm2 start dist/main.js --name api --update-env
+          # Restore ecosystem config (server-specific)
+          if [ -f /tmp/ecosystem.config.js ]; then
+            mv /tmp/ecosystem.config.js ecosystem.config.js
+          fi
+
+          # Locally ignore it so it never blocks pulls
+          grep -qxF "ecosystem.config.js" .git/info/exclude || echo "ecosystem.config.js" >> .git/info/exclude
+
+          # --- Install deps WITHOUT rewriting package-lock ---
+          npm ci --legacy-peer-deps
+
+          # Prisma generate (you already do this) :contentReference[oaicite:1]{index=1}
+          npx prisma generate
+
+          export NODE_OPTIONS="--max-old-space-size=5096"
+          npm run build
+
+          # Use ecosystem config to (re)load PM2 apps
+          pm2 startOrReload ecosystem.config.js --update-env
