@@ -23,7 +23,7 @@ import { OidcConfiguration, OidcContext, OidcInteraction } from '../../common/in
                 // 2. Load Keys
                 const signingKey = await KeyManager.getPrivateJWK();
 
-                const envIssuer = process.env.OIDC_ISSUER || 'https://accounts.evzone.app/oidc';
+                const envIssuer = process.env.OIDC_ISSUER || (process.env.NODE_ENV === 'production' ? 'https://accounts.evzone.app/oidc' : 'http://localhost:3000/oidc');
                 const issuer = envIssuer.replace(/\/$/, '');
                 const cookieDomain = process.env.COOKIE_DOMAIN || '.evzone.app';
                 const isProduction = process.env.NODE_ENV === 'production';
@@ -33,6 +33,8 @@ import { OidcConfiguration, OidcContext, OidcInteraction } from '../../common/in
                 console.log(`[OIDC] ISSUER: ${issuer}`);
                 console.log(`[OIDC] ENV: ${process.env.NODE_ENV}`);
                 console.log('================================================');
+
+                const isSecure = issuer.startsWith('https');
 
                 const configuration: OidcConfiguration = {
                     adapter: PrismaOidcAdapter,
@@ -92,12 +94,12 @@ import { OidcConfiguration, OidcContext, OidcInteraction } from '../../common/in
                         short: {
                             path: '/',
                             sameSite: 'lax',
-                            secure: true
+                            secure: isSecure
                         },
                         long: {
                             path: '/',
                             sameSite: 'lax',
-                            secure: true
+                            secure: isSecure
                         },
                     },
                     pkce: { required: () => true }, // Force PKCE

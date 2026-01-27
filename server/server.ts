@@ -79,7 +79,10 @@ export async function bootstrap() {
         if (req.url.startsWith('/oidc')) {
             // [Fix] Namespace Integrity: Strict Production Issuer
             const isProduction = process.env.NODE_ENV === 'production';
-            const envIssuer = isProduction ? 'https://accounts.evzone.app/oidc' : (process.env.OIDC_ISSUER || 'http://localhost:3000/oidc');
+            const envIssuer = process.env.OIDC_ISSUER || (isProduction ? 'https://accounts.evzone.app/oidc' : 'http://localhost:3000/oidc');
+
+            // [DEBUG] Diagnosing Issuer Mismatch
+            console.log(`[OIDC DEBUG] Server Hook - EnvIssuer: ${envIssuer}, Prod: ${isProduction}, Host: ${req.headers.host}`);
 
             const issuerUrl = new URL(envIssuer);
             const targetHost = issuerUrl.host;
@@ -108,22 +111,23 @@ export async function bootstrap() {
             if (req.raw) forceHeaders(req.raw);
 
             // [Security] Force Purge Stale OIDC cookies from all possible domains (host and wildcard)
-            const staleTokens = ['_interaction', '_session', '_resume'];
-            const domains = [undefined, '.evzone.app'];
+            // [Security] Force Purge Stale OIDC cookies from all possible domains (host and wildcard)
+            // const staleTokens = ['_interaction', '_session', '_resume'];
+            // const domains = [undefined, '.evzone.app'];
 
-            staleTokens.forEach(name => {
-                const sigName = `${name}.sig`;
-                domains.forEach(domain => {
-                    const domainAttr = domain ? `; Domain=${domain}` : '';
-                    const baseCookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Lax${domainAttr}`;
-                    const sigCookie = `${sigName}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Lax${domainAttr}`;
+            // staleTokens.forEach(name => {
+            //     const sigName = `${name}.sig`;
+            //     domains.forEach(domain => {
+            //         const domainAttr = domain ? `; Domain=${domain}` : '';
+            //         const baseCookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Lax${domainAttr}`;
+            //         const sigCookie = `${sigName}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Lax${domainAttr}`;
 
-                    // Use res.raw.setHeader to send multiple Set-Cookie headers correctly in Node.js/Fastify
-                    const current = res.raw.getHeader('Set-Cookie');
-                    const existing = Array.isArray(current) ? current : (current ? [String(current)] : []);
-                    res.raw.setHeader('Set-Cookie', [...existing, baseCookie, sigCookie]);
-                });
-            });
+            //         // Use res.raw.setHeader to send multiple Set-Cookie headers correctly in Node.js/Fastify
+            //         const current = res.raw.getHeader('Set-Cookie');
+            //         const existing = Array.isArray(current) ? current : (current ? [String(current)] : []);
+            //         res.raw.setHeader('Set-Cookie', [...existing, baseCookie, sigCookie]);
+            //     });
+            // });
 
             // Let NestJS handle OIDC interaction routes
             if (req.url.startsWith('/oidc/interaction')) {
