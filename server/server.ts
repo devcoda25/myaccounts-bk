@@ -112,11 +112,30 @@ export async function bootstrap() {
                 target.headers['access-control-expose-headers'] = 'Location, Set-Cookie';
             };
 
-            // [DEBUG] Log incoming OIDC request
-            console.log(`[OIDC DEBUG] ${req.method} ${req.url} (In: ${req.headers.host}) - Cookies: ${req.headers.cookie || 'NONE'}`);
+            // [Hyper-Trace] Wrap res.raw to log ALL headers being set (even by Koa)
+            const originalSetHeader = res.raw.setHeader.bind(res.raw);
+            res.raw.setHeader = (name: string, value: any) => {
+                if (name.toLowerCase() === 'set-cookie') {
+                    console.log(`[OIDC HYPER-TRACE] res.raw.setHeader -> ${name}: ${value}`);
+                }
+                return originalSetHeader(name, value);
+            };
 
             forceHeaders(req);
-            if (req.raw) forceHeaders(req.raw);
+            if (req.raw) {
+                forceHeaders(req.raw);
+                // Also wrap the raw Node.js request's raw response if present
+                const rawRes = (req.raw as any).res;
+                if (rawRes) {
+                    const originalRawSetHeader = rawRes.setHeader.bind(rawRes);
+                    rawRes.setHeader = (name: string, value: any) => {
+                        if (name.toLowerCase() === 'set-cookie') {
+                            console.log(`[OIDC HYPER-TRACE] rawRes.setHeader -> ${name}: ${value}`);
+                        }
+                        return originalRawSetHeader(name, value);
+                    };
+                }
+            }
 
             // [DEBUG] Log Forced Headers
             const traceHeaders = (req.raw || req).headers;
