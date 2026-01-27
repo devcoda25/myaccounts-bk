@@ -112,11 +112,21 @@ export async function bootstrap() {
                 target.headers['access-control-expose-headers'] = 'Location, Set-Cookie';
             };
 
-            // [Hyper-Trace] Wrap res.raw to log ALL headers being set (even by Koa)
+            // [Hyper-Trace & Path Fix] Wrap res.raw to log and CORRECT all cookie paths
             const originalSetHeader = res.raw.setHeader.bind(res.raw);
             res.raw.setHeader = (name: string, value: any) => {
                 if (name.toLowerCase() === 'set-cookie') {
-                    console.log(`[OIDC HYPER-TRACE] res.raw.setHeader -> ${name}: ${value}`);
+                    // [Nuclear Fix] Force ALL cookies to Path=/ to avoid prefix/proxy path mismatches
+                    // especially fixing the _resume cookie path mismatch (e.g. /auth/UID vs /oidc/auth/UID)
+                    let correctedValue = value;
+                    const pathRegex = /path=[^;]*/gi;
+                    if (Array.isArray(value)) {
+                        correctedValue = value.map(c => c.replace(pathRegex, 'Path=/'));
+                    } else if (typeof value === 'string') {
+                        correctedValue = value.replace(pathRegex, 'Path=/');
+                    }
+                    console.log(`[OIDC HYPER-TRACE] res.raw.setHeader -> ${name}: ${correctedValue}`);
+                    return originalSetHeader(name, correctedValue);
                 }
                 return originalSetHeader(name, value);
             };
@@ -130,7 +140,15 @@ export async function bootstrap() {
                     const originalRawSetHeader = rawRes.setHeader.bind(rawRes);
                     rawRes.setHeader = (name: string, value: any) => {
                         if (name.toLowerCase() === 'set-cookie') {
-                            console.log(`[OIDC HYPER-TRACE] rawRes.setHeader -> ${name}: ${value}`);
+                            let correctedValue = value;
+                            const pathRegex = /path=[^;]*/gi;
+                            if (Array.isArray(value)) {
+                                correctedValue = value.map(c => c.replace(pathRegex, 'Path=/'));
+                            } else if (typeof value === 'string') {
+                                correctedValue = value.replace(pathRegex, 'Path=/');
+                            }
+                            console.log(`[OIDC HYPER-TRACE] rawRes.setHeader (Path-Fixed) -> ${name}: ${correctedValue}`);
+                            return originalRawSetHeader(name, correctedValue);
                         }
                         return originalRawSetHeader(name, value);
                     };
