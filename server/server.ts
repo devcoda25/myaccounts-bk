@@ -96,19 +96,29 @@ export async function bootstrap() {
 
             // [Fix] Header Spoofing: Required for internal absolute URL generation.
             const forceHeaders = (target: any) => {
+                if (!target || !target.headers) return;
                 target.headers.host = targetHost;
                 target.headers['x-forwarded-host'] = targetHost;
                 target.headers['x-forwarded-proto'] = targetProto;
-                // Important: Signal prefix explicitly even if path is preserved
                 target.headers['x-forwarded-prefix'] = '/oidc';
                 target.headers['x-forwarded-port'] = (targetProto === 'https') ? '443' : (issuerUrl.port || '80');
+
+                // [OIDC Support] Inform provider that we are definitely on a secure connection if target is https
+                if (targetProto === 'https') {
+                    // This often helps oidc-provider (and koa-proxies) recognize HTTPS even if proxy trust is tricky
+                    target.headers['x-forwarded-proto'] = 'https';
+                }
             };
 
             // [DEBUG] Log incoming OIDC request
-            console.log(`[OIDC DEBUG] ${req.method} ${req.url} - Cookies: ${req.headers.cookie || 'NONE'}`);
+            console.log(`[OIDC DEBUG] ${req.method} ${req.url} (Raw Host: ${req.headers.host}) - Cookies: ${req.headers.cookie || 'NONE'}`);
 
             forceHeaders(req);
             if (req.raw) forceHeaders(req.raw);
+
+            // [DEBUG] Log Forced Headers
+            const traceHeaders = (req.raw || req).headers;
+            console.log(`[OIDC TRACE] Final Headers -> Host: ${traceHeaders.host}, X-F-Host: ${traceHeaders['x-forwarded-host']}, X-F-Proto: ${traceHeaders['x-forwarded-proto']}`);
 
             // [Security] Force Purge Stale OIDC cookies from all possible domains (host and wildcard)
             // [Security] Force Purge Stale OIDC cookies from all possible domains (host and wildcard)
