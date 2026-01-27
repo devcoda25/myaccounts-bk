@@ -120,7 +120,7 @@ export async function bootstrap() {
 
             // [DEBUG] Log Forced Headers
             const traceHeaders = (req.raw || req).headers;
-            console.log(`[OIDC TRACE] Final Headers -> Host: ${traceHeaders.host}, X-F-Host: ${traceHeaders['x-forwarded-host']}, X-F-Proto: ${traceHeaders['x-forwarded-proto']}`);
+            console.log(`[OIDC TRACE] Final Headers -> Host: ${traceHeaders.host}, X-F-Proto: ${traceHeaders['x-forwarded-proto']}, X-F-Prefix: ${traceHeaders['x-forwarded-prefix']}`);
 
             // [Security] Force Purge Stale OIDC cookies from all possible domains (host and wildcard)
             // [Security] Force Purge Stale OIDC cookies from all possible domains (host and wildcard)
@@ -187,7 +187,7 @@ export async function bootstrap() {
 
             if (setCookie) {
                 const cookies = Array.isArray(setCookie) ? setCookie : [String(setCookie)];
-                cookies.forEach(c => console.log(`[OIDC TRACE] Response SET-COOKIE: ${c}`));
+                cookies.forEach(c => console.log(`[OIDC TRACE] RESPONSE SET-COOKIE: ${c}`));
             }
         }
         return payload;
