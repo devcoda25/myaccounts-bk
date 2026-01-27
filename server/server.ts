@@ -177,11 +177,15 @@ export async function bootstrap() {
                 console.log(`[OIDC TRACE] REDIRECT ${req.method} ${req.url} -> ${location} (Status: ${status})`);
             } else if (status >= 400) {
                 console.warn(`[OIDC TRACE] ERROR ${req.method} ${req.url} -> Status: ${status}`);
+                // [DEBUG] Log payload if error
+                if (payload && String(payload).length < 2000) {
+                    console.log(`[OIDC TRACE] Error Payload: ${payload}`);
+                }
             }
 
             if (setCookie) {
                 const cookies = Array.isArray(setCookie) ? setCookie : [String(setCookie)];
-                cookies.forEach(c => console.log(`[OIDC TRACE] Response SET-COOKIE: ${c.split(';')[0]}...`));
+                cookies.forEach(c => console.log(`[OIDC TRACE] Response SET-COOKIE: ${c}`));
             }
         }
         return payload;

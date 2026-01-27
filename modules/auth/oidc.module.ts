@@ -95,15 +95,14 @@ import { OidcConfiguration, OidcContext, OidcInteraction } from '../../common/in
                             path: '/',
                             domain: cookieDomain,
                             sameSite: 'lax',
-                            // [Fix] Dynamic Secure Check: Allow cookies on HTTP if not behind trusted proxy (e.g. direct localhost)
-                            // oidc-provider allows a function (ctx) => boolean
-                            secure: (ctx) => ctx.secure || (process.env.NODE_ENV !== 'production')
+                            // [Fix] Force Secure: true in production, regardless of ctx.secure detection (SSL terminated at proxy)
+                            secure: isProduction
                         },
                         long: {
                             path: '/',
                             domain: cookieDomain,
                             sameSite: 'lax',
-                            secure: (ctx) => ctx.secure || (process.env.NODE_ENV !== 'production')
+                            secure: isProduction
                         },
                     },
                     pkce: { required: () => true }, // Force PKCE
