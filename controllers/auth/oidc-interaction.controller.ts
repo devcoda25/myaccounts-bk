@@ -35,9 +35,10 @@ export class OidcInteractionController {
 
         try {
             details = await this.provider.interactionDetails(req.raw, res.raw);
+            const session = details.session as any;
             console.log(`[OIDC DEBUG] Interaction Details keys: ${Object.keys(details).join(', ')}`);
-            console.log(`[OIDC DEBUG] Interaction UID: ${details.uid}, Session ID: ${details.session?.jti || 'NONE'}`);
-            if (!details.session?.jti) {
+            console.log(`[OIDC DEBUG] Interaction UID: ${details.uid}, Session ID: ${session?.jti || 'NONE'}`);
+            if (!session?.jti) {
                 console.warn(`[OIDC WARNING] Interaction started without a session linkage! This will likely cause redemption to fail.`);
             }
         } catch (err: any) {
