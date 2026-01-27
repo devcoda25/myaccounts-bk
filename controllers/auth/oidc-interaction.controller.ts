@@ -38,6 +38,7 @@ export class OidcInteractionController {
             const session = details.session as any;
             console.log(`[OIDC DEBUG] Interaction Details keys: ${Object.keys(details).join(', ')}`);
             console.log(`[OIDC DEBUG] Interaction UID: ${details.uid}, Session ID: ${session?.jti || 'NONE'}`);
+            console.log(`[OIDC DEBUG] Interaction ReturnTo: ${(details as any).returnTo}`);
             if (!session?.jti) {
                 console.warn(`[OIDC WARNING] Interaction started without a session linkage! This will likely cause redemption to fail.`);
             }

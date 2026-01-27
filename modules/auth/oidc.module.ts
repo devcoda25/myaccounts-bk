@@ -93,14 +93,17 @@ import { OidcConfiguration, OidcContext, OidcInteraction } from '../../common/in
                         },
                         short: {
                             path: '/',
-                            domain: cookieDomain,
+                            // [Fix] Remove explicit domain to allow Host-only cookies. 
+                            // This prevents browsers from rejecting cookies due to wildcard mismatches 
+                            // and ensures the _session cookie binds strictly to the issuer host.
+                            domain: undefined,
                             sameSite: 'lax',
-                            // [Fix] Force Secure: true in production, regardless of ctx.secure detection (SSL terminated at proxy)
+                            // [Fix] Force Secure: true in production for strict browser compliance
                             secure: isProduction
                         },
                         long: {
                             path: '/',
-                            domain: cookieDomain,
+                            domain: undefined,
                             sameSite: 'lax',
                             secure: isProduction
                         },

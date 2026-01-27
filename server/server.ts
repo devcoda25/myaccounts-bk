@@ -103,15 +103,17 @@ export async function bootstrap() {
                 target.headers['x-forwarded-prefix'] = '/oidc';
                 target.headers['x-forwarded-port'] = (targetProto === 'https') ? '443' : (issuerUrl.port || '80');
 
-                // [OIDC Support] Inform provider that we are definitely on a secure connection if target is https
                 if (targetProto === 'https') {
-                    // This often helps oidc-provider (and koa-proxies) recognize HTTPS even if proxy trust is tricky
                     target.headers['x-forwarded-proto'] = 'https';
                 }
+
+                // [Fix] Expose Location header so fetch code can read the redirect target
+                // Also expose Set-Cookie for debugging and modern browser compliance in cross-origin scenarios
+                target.headers['access-control-expose-headers'] = 'Location, Set-Cookie';
             };
 
             // [DEBUG] Log incoming OIDC request
-            console.log(`[OIDC DEBUG] ${req.method} ${req.url} (Raw Host: ${req.headers.host}) - Cookies: ${req.headers.cookie || 'NONE'}`);
+            console.log(`[OIDC DEBUG] ${req.method} ${req.url} (In: ${req.headers.host}) - Cookies: ${req.headers.cookie || 'NONE'}`);
 
             forceHeaders(req);
             if (req.raw) forceHeaders(req.raw);
