@@ -87,19 +87,23 @@ import { OidcConfiguration, OidcContext, OidcInteraction } from '../../common/in
                     cookies: {
                         keys: [process.env.COOKIE_SECRET || 'changeme_min_32_chars_random_string_required'],
                         names: {
-                            session: 'ev_session',
-                            interaction: 'ev_interaction',
-                            resume: 'ev_resume',
+                            session: '_session',
+                            interaction: '_interaction',
+                            resume: '_resume',
                         },
                         short: {
                             path: '/',
+                            domain: cookieDomain,
                             sameSite: 'lax',
-                            secure: isSecure
+                            // [Fix] Dynamic Secure Check: Allow cookies on HTTP if not behind trusted proxy (e.g. direct localhost)
+                            // oidc-provider allows a function (ctx) => boolean
+                            secure: (ctx) => ctx.secure || (process.env.NODE_ENV !== 'production')
                         },
                         long: {
                             path: '/',
+                            domain: cookieDomain,
                             sameSite: 'lax',
-                            secure: isSecure
+                            secure: (ctx) => ctx.secure || (process.env.NODE_ENV !== 'production')
                         },
                     },
                     pkce: { required: () => true }, // Force PKCE

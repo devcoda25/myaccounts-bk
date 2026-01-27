@@ -48,8 +48,8 @@ export interface OidcConfiguration {
             state?: string;
             [key: string]: string | undefined;
         };
-        short?: { domain?: string; sameSite?: string; secure?: boolean; path?: string };
-        long?: { domain?: string; sameSite?: string; secure?: boolean; path?: string };
+        short?: { domain?: string; sameSite?: string; secure?: boolean | ((ctx: any) => boolean); path?: string };
+        long?: { domain?: string; sameSite?: string; secure?: boolean | ((ctx: any) => boolean); path?: string };
     };
     jwks?: {
         keys: any[];
