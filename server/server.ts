@@ -74,15 +74,12 @@ export async function bootstrap() {
     // [OIDC] Mount Provider on /oidc namespace
     const oidc = app.get(OIDC_PROVIDER); // OIDC_PROVIDER is symbol
     const oidcCallback = oidc.callback();
-    // [OIDC Fortress] Persistent OIDC Stability Hook (Atomic Stability Patch)
+    // [OIDC Fortress] Persistent OIDC Stability Hook (Surgical Alignment Phase 14)
     fastify.addHook('onRequest', async (req, res) => {
         if (req.url.startsWith('/oidc')) {
             // [Fix] Namespace Integrity: Strict Production Issuer
             const isProduction = process.env.NODE_ENV === 'production';
             const envIssuer = process.env.OIDC_ISSUER || (isProduction ? 'https://accounts.evzone.app/oidc' : 'http://localhost:3000/oidc');
-
-            // [DEBUG] Diagnosing Issuer Mismatch
-            console.log(`[OIDC DEBUG] Server Hook - EnvIssuer: ${envIssuer}, Prod: ${isProduction}, Host: ${req.headers.host}`);
 
             const issuerUrl = new URL(envIssuer);
             const targetHost = issuerUrl.host;
@@ -100,8 +97,9 @@ export async function bootstrap() {
                 target.headers.host = targetHost;
                 target.headers['x-forwarded-host'] = targetHost;
                 target.headers['x-forwarded-proto'] = targetProto;
-                // [Phase 12] Remove manual X-Forwarded-Prefix. 
-                // We will stop stripping the prefix on ingress, so the provider see it natively.
+                // [Phase 14] Restore X-Forwarded-Prefix. 
+                // This is used by the provider to generate absolute URLs (like the one in .well-known)
+                target.headers['x-forwarded-prefix'] = '/oidc';
                 target.headers['x-forwarded-port'] = (targetProto === 'https') ? '443' : (issuerUrl.port || '80');
 
                 if (targetProto === 'https') {
@@ -109,22 +107,47 @@ export async function bootstrap() {
                 }
 
                 // [Fix] Expose Location header so fetch code can read the redirect target
-                // Also expose Set-Cookie for debugging and modern browser compliance in cross-origin scenarios
                 target.headers['access-control-expose-headers'] = 'Location, Set-Cookie';
             };
 
-            // [Hyper-Trace & Path Fix] Wrap res.raw to log and CORRECT all cookie paths
+            // [Surgical Alignment] Wrap res.raw to fix redirects and cookie paths
             const originalSetHeader = res.raw.setHeader.bind(res.raw);
             res.raw.setHeader = (name: string, value: any) => {
                 const lowerName = name.toLowerCase();
 
-                // [Phase 12] Removed Nuclear Location Alignment.
-                // By natively aligning the issuer and NOT stripping the prefix,
-                // the provider will generate the correct prefixed URLs itself.
+                // [Phase 14] Surgical Location Alignment
+                // We MUST prepend /oidc to BACKEND redirects (resumption, auth codes)
+                // but we MUST NOT prepend it to FRONTEND redirects (sign-in, consent pages).
+                if (lowerName === 'location' && typeof value === 'string') {
+                    const prefix = '/oidc';
+
+                    // 1. Is it a relative redirect?
+                    if (value.startsWith('/') && !value.startsWith(`${prefix}/`)) {
+                        // 2. Is it a frontend route? (Leave these alone!)
+                        const isFrontend = value.startsWith('/auth/sign-in') || value.startsWith('/auth/consent');
+
+                        // 3. If not frontend, it's likely a backend OIDC path (e.g. /auth/UID, /interaction/UID)
+                        if (!isFrontend) {
+                            const originalValue = value;
+                            value = `${prefix}${value}`;
+                            console.log(`[OIDC SURGICAL] HIJACKED BACKEND REDIRECT: ${originalValue} -> ${value}`);
+                        } else {
+                            console.log(`[OIDC SURGICAL] BYPASSED FRONTEND REDIRECT: ${value}`);
+                        }
+                    }
+                    // 4. Absolute Redirects for our domain that are missing the prefix
+                    else if (value.includes(targetHost) && !value.includes(`${targetHost}${prefix}/`)) {
+                        const isFrontend = value.includes('/auth/sign-in') || value.includes('/auth/consent');
+                        if (!isFrontend) {
+                            const originalValue = value;
+                            value = value.replace(`${targetHost}/`, `${targetHost}${prefix}/`);
+                            console.log(`[OIDC SURGICAL] HIJACKED ABSOLUTE REDIRECT: ${originalValue} -> ${value}`);
+                        }
+                    }
+                }
 
                 if (lowerName === 'set-cookie') {
-                    // [Nuclear Fix] Force ALL cookies to Path=/ to avoid prefix/proxy path mismatches
-                    // especially fixing the _resume cookie path mismatch (e.g. /auth/UID vs /oidc/auth/UID)
+                    // Force ALL cookies to Path=/ to ensure cross-namespace visibility
                     let correctedValue = value;
                     const pathRegex = /path=[^;]*/gi;
                     if (Array.isArray(value)) {
@@ -132,7 +155,6 @@ export async function bootstrap() {
                     } else if (typeof value === 'string') {
                         correctedValue = value.replace(pathRegex, 'Path=/');
                     }
-                    console.log(`[OIDC HYPER-TRACE] res.raw.setHeader -> ${name}: ${correctedValue}`);
                     return originalSetHeader(name, correctedValue);
                 }
                 return originalSetHeader(name, value);
@@ -141,40 +163,19 @@ export async function bootstrap() {
             forceHeaders(req);
             if (req.raw) {
                 forceHeaders(req.raw);
-                // Also wrap the raw Node.js request's raw response if present
-                const rawRes = (req.raw as any).res;
-                if (rawRes) {
-                    const originalRawSetHeader = rawRes.setHeader.bind(rawRes);
-                    rawRes.setHeader = (name: string, value: any) => {
-                        if (name.toLowerCase() === 'set-cookie') {
-                            let correctedValue = value;
-                            const pathRegex = /path=[^;]*/gi;
-                            if (Array.isArray(value)) {
-                                correctedValue = value.map(c => c.replace(pathRegex, 'Path=/'));
-                            } else if (typeof value === 'string') {
-                                correctedValue = value.replace(pathRegex, 'Path=/');
-                            }
-                            console.log(`[OIDC HYPER-TRACE] rawRes.setHeader (Path-Fixed) -> ${name}: ${correctedValue}`);
-                            return originalRawSetHeader(name, correctedValue);
-                        }
-                        return originalRawSetHeader(name, value);
-                    };
-                }
             }
-
-            // [DEBUG] Log Forced Headers
-            const traceHeaders = (req.raw || req).headers;
-            console.log(`[OIDC TRACE] Final Headers -> Host: ${traceHeaders.host}, X-F-Proto: ${traceHeaders['x-forwarded-proto']}, X-F-Prefix: ${traceHeaders['x-forwarded-prefix']}`);
 
             // Let NestJS handle OIDC interaction routes
             if (req.url.startsWith('/oidc/interaction')) {
                 return;
             }
 
-            // [Phase 12] Native Path Alignment
-            // We NO LONGER strip '/oidc'. By leaving the prefix, the provider correctly
-            // matches routes and generates external resumption URLs with the prefix,
-            // which ensures Nginx correctly proxies them to the backend.
+            // [Phase 14] Restore Prefix Stripping
+            // Required because the provider's router does not match paths containing the prefix.
+            if (req.url.startsWith('/oidc')) {
+                const newUrl = req.url.replace('/oidc', '') || '/';
+                if (req.raw) req.raw.url = newUrl;
+            }
 
             // [Fix] Pass to oidc-provider (Wait for the callback to finish)
             return new Promise<void>((resolve, reject) => {
@@ -192,21 +193,8 @@ export async function bootstrap() {
         if (isOidc) {
             const status = reply.statusCode;
             const location = reply.getHeader('location');
-            const setCookie = reply.getHeader('set-cookie');
-
             if (status >= 300 && status < 400) {
                 console.log(`[OIDC TRACE] REDIRECT ${req.method} ${req.url} -> ${location} (Status: ${status})`);
-            } else if (status >= 400) {
-                console.warn(`[OIDC TRACE] ERROR ${req.method} ${req.url} -> Status: ${status}`);
-                // [DEBUG] Log payload if error
-                if (payload && String(payload).length < 2000) {
-                    console.log(`[OIDC TRACE] Error Payload: ${payload}`);
-                }
-            }
-
-            if (setCookie) {
-                const cookies = Array.isArray(setCookie) ? setCookie : [String(setCookie)];
-                cookies.forEach(c => console.log(`[OIDC TRACE] RESPONSE SET-COOKIE: ${c}`));
             }
         }
         return payload;
@@ -240,14 +228,12 @@ export async function bootstrap() {
     });
 
     // [Scalability] Conditional Static Files
-    // In production, files should be served via CDN/Object Storage
     if (!isProduction) {
         await app.register(fastifyStatic, {
             root: join(process.cwd(), 'uploads'),
             prefix: '/uploads/',
             decorateReply: false,
             setHeaders: (res) => {
-                // [Security] Rule B: Prevent Stored XSS via Uploads
                 res.setHeader('X-Content-Type-Options', 'nosniff');
                 res.setHeader('Content-Disposition', 'attachment');
             }
@@ -258,7 +244,7 @@ export async function bootstrap() {
     app.useGlobalPipes(new ValidationPipe({
         whitelist: true,
         transform: true,
-        forbidNonWhitelisted: true, // [Security] Rule C: Prevent Mass Assignment
+        forbidNonWhitelisted: true,
         transformOptions: {
             enableImplicitConversion: true,
         },
@@ -275,17 +261,7 @@ export async function bootstrap() {
     });
 
     const logger = new Logger('Bootstrap');
-    logger.log('Bootstrap phase starting...');
-
-    // DEBUG: Print DB URL info
-    const dbUrl = process.env.DATABASE_URL || 'NOT SET';
-    // Mask password
-    const maskedUrl = dbUrl.replace(/:([^:@]+)@/, ':***@');
-    logger.log(`Using Database: ${maskedUrl}`);
-
     const port = process.env.PORT || 3000;
-    const DEPLOY_ID = 'V4_COOKIE_FIX_ATOMIC';
-    logger.log(`[BOOTSTRAP] Deployment Fingerprint: ${DEPLOY_ID}`);
     await app.listen(port, '0.0.0.0');
     logger.log(`Application is running on: ${await app.getUrl()}`);
 }
