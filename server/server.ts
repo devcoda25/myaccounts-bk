@@ -100,7 +100,8 @@ export async function bootstrap() {
                 target.headers.host = targetHost;
                 target.headers['x-forwarded-host'] = targetHost;
                 target.headers['x-forwarded-proto'] = targetProto;
-                target.headers['x-forwarded-prefix'] = '/oidc';
+                // [Fix] Remove manual X-Forwarded-Prefix. Since we no longer strip the prefix,
+                // the provider will see it natively in the URL and handle depth correctly.
                 target.headers['x-forwarded-port'] = (targetProto === 'https') ? '443' : (issuerUrl.port || '80');
 
                 if (targetProto === 'https') {
@@ -183,16 +184,10 @@ export async function bootstrap() {
                 return;
             }
 
-            // [Fix] Namespace Integrity: Correct Internal Routing
-            // oidc-provider's internal router expects paths relative to its mount point.
-            // We MUST strip '/oidc' from the URL for the router to match.
-            // However, we MUST set 'x-forwarded-prefix' so it knows how to generate external URLs.
-
-            // Safe Stripping: Only mutate req.raw.url (Node.js request), never Fastify's req.url (read-only).
-            if (req.url.startsWith('/oidc')) {
-                const newUrl = req.url.replace('/oidc', '') || '/';
-                if (req.raw) req.raw.url = newUrl;
-            }
+            // [Fix] Native Path Alignment
+            // We NO LONGER strip '/oidc'. By leaving the prefix, the provider correctly
+            // matches routes and generates external resumption URLs with the prefix,
+            // which ensures Nginx correctly proxies them to the backend.
 
             // [Fix] Pass to oidc-provider (Wait for the callback to finish)
             return new Promise<void>((resolve, reject) => {
