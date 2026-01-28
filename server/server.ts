@@ -94,11 +94,10 @@ export async function bootstrap() {
             // [Fix] Header Spoofing: Required for internal absolute URL generation.
             const forceHeaders = (target: any) => {
                 if (!target || !target.headers) return;
-                target.headers.host = targetHost;
+                // Use lowercase keys for maximum compatibility with Node.js/Fastify
+                target.headers['host'] = targetHost;
                 target.headers['x-forwarded-host'] = targetHost;
                 target.headers['x-forwarded-proto'] = targetProto;
-                // [Phase 14] Restore X-Forwarded-Prefix. 
-                // This is used by the provider to generate absolute URLs (like the one in .well-known)
                 target.headers['x-forwarded-prefix'] = '/oidc';
                 target.headers['x-forwarded-port'] = (targetProto === 'https') ? '443' : (issuerUrl.port || '80');
 
@@ -165,17 +164,26 @@ export async function bootstrap() {
                 forceHeaders(req.raw);
             }
 
-            // [Phase 14] Restore Prefix Stripping
-            // Required because the provider's router does not match paths containing the prefix.
-            if (req.url.startsWith('/oidc')) {
-                const newUrl = req.url.replace('/oidc', '') || '/';
-                if (req.raw) req.raw.url = newUrl;
-            }
+            // [Phase 15] Surgical Dispatch Logic
+            // Capture original URL for dispatch decision.
+            // We MUST check for interactions BEFORE stripping/mutating the raw URL.
+            const originalUrl = req.url;
 
-            // Let NestJS handle OIDC interaction routes
-            if (req.url.startsWith('/oidc/interaction')) {
+            // 1. Interaction Routes -> Handled by NestJS (OidcInteractionController)
+            // Controller is mounted at /oidc/interaction.
+            if (originalUrl.startsWith('/oidc/interaction')) {
+                console.log(`[OIDC] Dispatching Interaction to NestJS: ${originalUrl}`);
                 return;
             }
+
+            // 2. Protocol Routes (.well-known, /auth, /token) -> Handled by oidc-provider
+            // Provider requires the prefix to be stripped from the incoming request.
+            const strippedUrl = originalUrl.replace('/oidc', '') || '/';
+            if (req.raw) {
+                req.raw.url = strippedUrl;
+            }
+
+            console.log(`[OIDC] Dispatching Protocol Route to Provider: ${originalUrl} -> ${strippedUrl}`);
 
             // [Fix] Pass to oidc-provider (Wait for the callback to finish)
             return new Promise<void>((resolve, reject) => {
