@@ -159,6 +159,13 @@ export class OidcInteractionController {
             // ✅ CRITICAL: Must return the response to send the redirect
             return await this.provider.interactionFinished(req.raw, res.raw, interactionResult, { mergeWithLastSubmission: false });
         } catch (err: any) {
+            // [Enhanced Error Logging]
+            console.error(`[OIDC ERROR] interactionFinished failed for UID ${uid}:`);
+            console.error(`[OIDC ERROR] Error Name: ${err.name}`);
+            console.error(`[OIDC ERROR] Error Message: ${err.message}`);
+            console.error(`[OIDC ERROR] Error Stack: ${err.stack}`);
+            console.error(`[OIDC ERROR] Error Details: ${JSON.stringify(err, null, 2)}`);
+
             // [Fix] Handle Stale Sessions (e.g. server restart)
             // If interaction is not found or invalid, restart the flow
             if (err.message === 'invalid_request' || err.name === 'SessionNotFound') {
