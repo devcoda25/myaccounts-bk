@@ -216,6 +216,108 @@ import { OidcConfiguration, OidcContext, OidcInteraction } from '../../common/in
 
                 const oidc = new Provider(issuer, configuration);
 
+                // [Phase 24] Redesign OIDC End Session Confirmation
+                // Intercept the default basic UI and inject the premium EVzone theme.
+                (oidc as any).use(async (ctx: any, next: any) => {
+                    const originalRender = ctx.render ? ctx.render.bind(ctx) : null;
+                    ctx.render = async (template: string, locals: any) => {
+                        if (template === 'end_session_confirm') {
+                            ctx.type = 'html';
+                            ctx.body = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>Sign Out Confirmation | EVzone</title>
+    <style>
+        :root { --ev-green: #03cd8c; --ev-orange: #f77f00; }
+        body { 
+            margin: 0; padding: 20px; 
+            font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+            background: radial-gradient(1200px 600px at 12% 6%, rgba(3,205,140,0.18), transparent 52%), linear-gradient(180deg, #FFFFFF 0%, #F4FFFB 60%, #ECFFF7 100%);
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            box-sizing: border-box;
+        }
+        @media (prefers-color-scheme: dark) {
+            body { 
+                background: radial-gradient(1200px 600px at 12% 6%, rgba(3,205,140,0.22), transparent 52%), linear-gradient(180deg, #04110D 0%, #07110F 60%, #07110F 100%); 
+                color: #E9FFF7; 
+            }
+        }
+        .card { 
+            background: rgba(255, 255, 255, 0.4); 
+            backdrop-filter: blur(20px); 
+            border: 1px solid rgba(0,0,0,0.08);
+            border-radius: 32px; padding: 48px; 
+            max-width: 480px; width: 100%; box-shadow: 0 32px 64px rgba(0,0,0,0.06);
+            text-align: center;
+            animation: fadeIn 0.4s ease-out;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+        @media (prefers-color-scheme: dark) { 
+            .card { background: rgba(11, 26, 23, 0.6); border-color: rgba(233, 255, 247, 0.1); } 
+        }
+        .icon-box {
+            width: 72px; height: 72px; border-radius: 24px;
+            background: rgba(3, 205, 140, 0.1); color: var(--ev-green);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 32px;
+        }
+        h1 { margin: 0 0 12px; font-weight: 900; font-size: 28px; letter-spacing: -0.8px; }
+        p { margin: 0 0 40px; opacity: 0.7; font-size: 16px; line-height: 1.6; }
+        .btns { display: flex; flex-direction: column; gap: 14px; }
+        button { 
+            border: none; border-radius: 16px; padding: 16px; cursor: pointer;
+            font-weight: 800; font-size: 16px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 100%;
+        }
+        .btn-primary { 
+            background: var(--ev-orange); color: white; 
+            box-shadow: 0 16px 32px rgba(247, 127, 0, 0.25);
+        }
+        .btn-primary:hover { background: #e07300; transform: translateY(-2px); box-shadow: 0 20px 40px rgba(247, 127, 0, 0.3); }
+        .btn-primary:active { transform: translateY(0); }
+        .btn-secondary { 
+            background: transparent; color: var(--ev-orange); 
+            border: 2px solid rgba(247, 127, 0, 0.4);
+            margin-top: 4px;
+        }
+        .btn-secondary:hover { background: rgba(247, 127, 0, 0.08); border-color: var(--ev-orange); }
+        .footer { margin-top: 40px; font-size: 12px; opacity: 0.5; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon-box">
+             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+             </svg>
+        </div>
+        <h1>Sign Out?</h1>
+        <p>You are about to end your secure session on <b>accounts.evzone.app</b>. Do you want to continue?</p>
+        <form method="post" action="${locals.action}">
+            <input type="hidden" name="xsrf" value="${locals.xsrf}">
+            <input type="hidden" name="logout" value="yes">
+            <div class="btns">
+                <button type="submit" class="btn-primary">Yes, sign me out</button>
+                <button type="button" class="btn-secondary" onclick="window.history.back()">No, keep me signed in</button>
+            </div>
+        </form>
+        <div class="footer">© ${new Date().getFullYear()} EVzone Group</div>
+    </div>
+</body>
+</html>`;
+                            return;
+                        }
+                        return originalRender.call(ctx, template, locals);
+                    };
+                    await next();
+                });
+
                 // Proxy check if behind ingress
                 oidc.proxy = true;
 
