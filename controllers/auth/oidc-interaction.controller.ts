@@ -156,8 +156,16 @@ export class OidcInteractionController {
         try {
             console.log(`[OIDC] Interaction ${uid} finished for user ${user.id}. Redirecting...`);
             console.log(`[OIDC DEBUG] Interaction Cookies: ${req.raw.headers.cookie || 'NONE'}`);
+            console.log(`[OIDC DEBUG] About to call interactionFinished with result:`, JSON.stringify(interactionResult));
+
             // ✅ CRITICAL: Must return the response to send the redirect
-            return await this.provider.interactionFinished(req.raw, res.raw, interactionResult, { mergeWithLastSubmission: false });
+            const result = await this.provider.interactionFinished(req.raw, res.raw, interactionResult, { mergeWithLastSubmission: false });
+
+            console.log(`[OIDC DEBUG] interactionFinished succeeded! Result type: ${typeof result}`);
+            console.log(`[OIDC DEBUG] Response status: ${res.raw.statusCode}`);
+            console.log(`[OIDC DEBUG] Response headers:`, JSON.stringify(res.raw.getHeaders()));
+
+            return result;
         } catch (err: any) {
             // [Enhanced Error Logging]
             console.error(`[OIDC ERROR] interactionFinished failed for UID ${uid}:`);
