@@ -118,12 +118,22 @@ export async function bootstrap() {
                 const lowerName = name.toLowerCase();
 
                 // [Fix] Nuclear Location Alignment: Force prefix into redirects
+                // This is the CRITICAL fix for the circular loop.
                 if (lowerName === 'location' && typeof value === 'string') {
-                    // If the provider tries to redirect to /auth, /interaction, etc. without prefix
-                    if (value.startsWith('/') && !value.startsWith('/oidc/') && !value.startsWith('/oidc?')) {
+                    const host = 'accounts.evzone.app';
+                    const prefix = '/oidc';
+
+                    if (value.startsWith('/') && !value.startsWith(`${prefix}/`) && !value.startsWith(`${prefix}?`)) {
+                        // Handle relative redirects
                         const originalValue = value;
-                        value = `/oidc${value}`;
-                        console.log(`[OIDC] REWRITING REDIRECT: ${originalValue} -> ${value}`);
+                        value = `${prefix}${value}`;
+                        console.log(`[OIDC] REWRITING RELATIVE REDIRECT: ${originalValue} -> ${value}`);
+                    } else if (value.includes(host) && !value.includes(`${host}${prefix}/`) && !value.includes(`${host}${prefix}?`)) {
+                        // Handle absolute redirects for our domain
+                        const originalValue = value;
+                        // Replace 'host/' with 'host/oidc/' to inject the prefix
+                        value = value.replace(`${host}/`, `${host}${prefix}/`);
+                        console.log(`[OIDC] REWRITING ABSOLUTE REDIRECT: ${originalValue} -> ${value}`);
                     }
                 }
 
