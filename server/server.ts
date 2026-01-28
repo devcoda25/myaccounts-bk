@@ -100,7 +100,8 @@ export async function bootstrap() {
                 target.headers.host = targetHost;
                 target.headers['x-forwarded-host'] = targetHost;
                 target.headers['x-forwarded-proto'] = targetProto;
-                target.headers['x-forwarded-prefix'] = '/oidc';
+                // [Phase 12] Remove manual X-Forwarded-Prefix. 
+                // We will stop stripping the prefix on ingress, so the provider see it natively.
                 target.headers['x-forwarded-port'] = (targetProto === 'https') ? '443' : (issuerUrl.port || '80');
 
                 if (targetProto === 'https') {
@@ -117,25 +118,9 @@ export async function bootstrap() {
             res.raw.setHeader = (name: string, value: any) => {
                 const lowerName = name.toLowerCase();
 
-                // [Fix] Nuclear Location Alignment: Force prefix into redirects
-                // This is the CRITICAL fix for the circular loop.
-                if (lowerName === 'location' && typeof value === 'string') {
-                    const host = 'accounts.evzone.app';
-                    const prefix = '/oidc';
-
-                    if (value.startsWith('/') && !value.startsWith(`${prefix}/`) && !value.startsWith(`${prefix}?`)) {
-                        // Handle relative redirects
-                        const originalValue = value;
-                        value = `${prefix}${value}`;
-                        console.log(`[OIDC] REWRITING RELATIVE REDIRECT: ${originalValue} -> ${value}`);
-                    } else if (value.includes(host) && !value.includes(`${host}${prefix}/`) && !value.includes(`${host}${prefix}?`)) {
-                        // Handle absolute redirects for our domain
-                        const originalValue = value;
-                        // Replace 'host/' with 'host/oidc/' to inject the prefix
-                        value = value.replace(`${host}/`, `${host}${prefix}/`);
-                        console.log(`[OIDC] REWRITING ABSOLUTE REDIRECT: ${originalValue} -> ${value}`);
-                    }
-                }
+                // [Phase 12] Removed Nuclear Location Alignment.
+                // By natively aligning the issuer and NOT stripping the prefix,
+                // the provider will generate the correct prefixed URLs itself.
 
                 if (lowerName === 'set-cookie') {
                     // [Nuclear Fix] Force ALL cookies to Path=/ to avoid prefix/proxy path mismatches
@@ -181,41 +166,15 @@ export async function bootstrap() {
             const traceHeaders = (req.raw || req).headers;
             console.log(`[OIDC TRACE] Final Headers -> Host: ${traceHeaders.host}, X-F-Proto: ${traceHeaders['x-forwarded-proto']}, X-F-Prefix: ${traceHeaders['x-forwarded-prefix']}`);
 
-            // [Security] Force Purge Stale OIDC cookies from all possible domains (host and wildcard)
-            // [Security] Force Purge Stale OIDC cookies from all possible domains (host and wildcard)
-            // const staleTokens = ['_interaction', '_session', '_resume'];
-            // const domains = [undefined, '.evzone.app'];
-
-            // staleTokens.forEach(name => {
-            //     const sigName = `${name}.sig`;
-            //     domains.forEach(domain => {
-            //         const domainAttr = domain ? `; Domain=${domain}` : '';
-            //         const baseCookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Lax${domainAttr}`;
-            //         const sigCookie = `${sigName}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; Secure; SameSite=Lax${domainAttr}`;
-
-            //         // Use res.raw.setHeader to send multiple Set-Cookie headers correctly in Node.js/Fastify
-            //         const current = res.raw.getHeader('Set-Cookie');
-            //         const existing = Array.isArray(current) ? current : (current ? [String(current)] : []);
-            //         res.raw.setHeader('Set-Cookie', [...existing, baseCookie, sigCookie]);
-            //     });
-            // });
-
             // Let NestJS handle OIDC interaction routes
             if (req.url.startsWith('/oidc/interaction')) {
                 return;
             }
 
-            // [Fix] Namespace Integrity: Correct Internal Routing
-            // oidc-provider's internal router expects paths relative to its mount point.
-            // We MUST strip '/oidc' from the URL for the router to match.
-            // However, we MUST set 'x-forwarded-prefix' in headers (handled in forceHeaders)
-            // and we intercept redirects above to inject the prefix back for Nginx.
-
-            // Safe Stripping: Only mutate req.raw.url (Node.js request), never Fastify's req.url (read-only).
-            if (req.url.startsWith('/oidc')) {
-                const newUrl = req.url.replace('/oidc', '') || '/';
-                if (req.raw) req.raw.url = newUrl;
-            }
+            // [Phase 12] Native Path Alignment
+            // We NO LONGER strip '/oidc'. By leaving the prefix, the provider correctly
+            // matches routes and generates external resumption URLs with the prefix,
+            // which ensures Nginx correctly proxies them to the backend.
 
             // [Fix] Pass to oidc-provider (Wait for the callback to finish)
             return new Promise<void>((resolve, reject) => {
@@ -330,5 +289,3 @@ export async function bootstrap() {
     await app.listen(port, '0.0.0.0');
     logger.log(`Application is running on: ${await app.getUrl()}`);
 }
-
-// bootstrap(); // Removed to prevent double-execution when imported by main.ts
