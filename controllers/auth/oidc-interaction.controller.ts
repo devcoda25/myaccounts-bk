@@ -36,12 +36,17 @@ export class OidcInteractionController {
         try {
             details = await this.provider.interactionDetails(req.raw, res.raw);
             const session = details.session as any;
-            console.log(`[OIDC DEBUG] Interaction Details keys: ${Object.keys(details).join(', ')}`);
-            console.log(`[OIDC DEBUG] Interaction UID: ${details.uid}, Session ID: ${session?.jti || 'NONE'}`);
-            console.log(`[OIDC DEBUG] Interaction ReturnTo: ${(details as any).returnTo}`);
-            if (!session?.jti) {
+            console.log(`[OIDC DEBUG] Interaction UID: ${details.uid}`);
+            console.log(`[OIDC DEBUG] Session Found: ${!!session}`);
+            if (session) {
+                console.log(`[OIDC DEBUG] Session Object Keys: ${Object.keys(session).join(', ')}`);
+                console.log(`[OIDC DEBUG] Session ID (jti): ${session.jti || 'NONE'}`);
+                console.log(`[OIDC DEBUG] Session ID (accountId): ${session.accountId || 'NONE'}`);
+                console.log(`[OIDC DEBUG] Raw Session:`, JSON.stringify(session, null, 2));
+            } else {
                 console.warn(`[OIDC WARNING] Interaction started without a session linkage! This will likely cause redemption to fail.`);
             }
+            console.log(`[OIDC DEBUG] Interaction ReturnTo: ${(details as any).returnTo}`);
         } catch (err: any) {
             console.error(`[OIDC INTERACTION ERROR] ${uid}: ${err.message}`);
             // [DEBUG] Deep log headers and cookies

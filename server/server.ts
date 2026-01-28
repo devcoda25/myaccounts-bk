@@ -154,6 +154,7 @@ export async function bootstrap() {
                     } else if (typeof value === 'string') {
                         correctedValue = value.replace(pathRegex, 'Path=/');
                     }
+                    console.log(`[OIDC MEGA-TRACE] OUTGOING Set-Cookie:`, correctedValue);
                     return originalSetHeader(name, correctedValue);
                 }
                 return originalSetHeader(name, value);
@@ -163,6 +164,9 @@ export async function bootstrap() {
             if (req.raw) {
                 forceHeaders(req.raw);
             }
+
+            // [OIDC MEGA-TRACE] Log all incoming cookies for this OIDC request
+            console.log(`[OIDC MEGA-TRACE] INCOMING Cookie (${req.url}):`, req.raw.headers.cookie || 'NONE');
 
             // [Phase 15] Surgical Dispatch Logic
             // Capture original URL for dispatch decision.
