@@ -115,7 +115,7 @@ export async function bootstrap() {
 
                     // Logic: If it's a frontend route or an OIDC callback, DO NOT HIJACK.
                     // This prevents the loop where /auth/callback gets turned into /oidc/auth/callback
-                    const isFrontendRoute = value.includes('/auth/sign-in') || value.includes('/auth/consent');
+                    const isFrontendRoute = value.includes('/auth/sign-in') || value.includes('/auth/consent') || value.includes('/auth/signed-out');
                     const isCallback = value.includes('/auth/callback');
                     const isAlreadyPrefixed = value.startsWith(prefix) || value.includes(`${targetHost}${prefix}`);
 

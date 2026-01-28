@@ -30,3 +30,4 @@ certs/
 test/coverage/
 coverage/
 junit.xml
+scripts

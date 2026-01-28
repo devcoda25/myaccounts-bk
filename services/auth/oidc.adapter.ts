@@ -57,6 +57,7 @@ export class PrismaOidcAdapter implements Provider.Adapter {
                 client_id: client.clientId,
                 client_secret: client.clientSecretHash || undefined, // Pass hash, verified by custom logic
                 redirect_uris: client.redirectUris,
+                post_logout_redirect_uris: client.post_logout_redirect_uris,
                 grant_types: client.grantTypes,
                 response_types: ['code'], // Simplify for now
                 token_endpoint_auth_method: client.isPublic ? 'none' : 'client_secret_post', // Default to post/basic
