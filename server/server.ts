@@ -165,16 +165,16 @@ export async function bootstrap() {
                 forceHeaders(req.raw);
             }
 
-            // Let NestJS handle OIDC interaction routes
-            if (req.url.startsWith('/oidc/interaction')) {
-                return;
-            }
-
             // [Phase 14] Restore Prefix Stripping
             // Required because the provider's router does not match paths containing the prefix.
             if (req.url.startsWith('/oidc')) {
                 const newUrl = req.url.replace('/oidc', '') || '/';
                 if (req.raw) req.raw.url = newUrl;
+            }
+
+            // Let NestJS handle OIDC interaction routes
+            if (req.url.startsWith('/oidc/interaction')) {
+                return;
             }
 
             // [Fix] Pass to oidc-provider (Wait for the callback to finish)
