@@ -94,11 +94,14 @@ export class PrismaOidcAdapter implements Provider.Adapter {
     }
 
     async findByUid(uid: string): Promise<Provider.AdapterPayload | undefined> {
-        const doc = await PrismaOidcAdapter.prisma.oidcPayload.findUnique({
+        const doc = await PrismaOidcAdapter.prisma.oidcPayload.findFirst({
             where: { uid },
         });
 
+        console.log(`[OIDC ADAPTER] FindByUid UID: ${uid} -> ${doc ? 'FOUND' : 'NOT FOUND'}`);
+
         if (!doc || (doc.expiresAt && doc.expiresAt < new Date())) {
+            if (doc) console.warn(`[OIDC ADAPTER] UID EXPIRED: ${doc.id}`);
             return undefined;
         }
 

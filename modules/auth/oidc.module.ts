@@ -183,6 +183,13 @@ import { OidcConfiguration, OidcContext, OidcInteraction } from '../../common/in
                             },
                         };
                     },
+                    // [Observability] Log actual error details for "server_error"
+                    renderError(ctx: any, out: any, error: any) {
+                        console.error(`[OIDC SERVER ERROR] ${error.name}: ${error.message}`);
+                        console.error(`[OIDC SERVER ERROR] Stack:`, error.stack);
+                        ctx.type = 'html';
+                        ctx.body = `<h1>Something went wrong</h1><p>${error.message}</p><p>Check server logs for trace.</p>`;
+                    },
                 };
 
                 const oidc = new Provider(issuer, configuration);

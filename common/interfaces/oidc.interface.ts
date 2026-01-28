@@ -59,4 +59,6 @@ export interface OidcConfiguration {
     clientBasedCORS?: (ctx: OidcContext, origin: string, client: unknown) => boolean;
     findAccount?: (ctx: OidcContext, id: string) => Promise<any>;
     claims?: Record<string, string[]>;
+    renderError?: (ctx: any, out: any, error: any) => void | Promise<void>;
+    [key: string]: any;
 }

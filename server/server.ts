@@ -58,26 +58,23 @@ export async function bootstrap() {
         },
         credentials: true,
         allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-user-id', 'x-api-key'],
+        // [Fix] Ensure Location and Set-Cookie are exposed to the frontend for OIDC resumption and debugging
+        exposedHeaders: ['Location', 'Set-Cookie'],
     });
-
-    // [Fix] Enable Form Body Parsing (x-www-form-urlencoded) for OIDC interactions
-    // await app.register(formbody); // [REMOVED] NestJS registers this automatically, causing FST_ERR_CTP_ALREADY_PRESENT if we do it here.
 
     // [OIDC] Enable Express-style middleware (required for oidc-provider)
     const fastify = app.getHttpAdapter().getInstance();
-    // Check if 'use' decorator already exists (to avoid FST_ERR_DEC_ALREADY_PRESENT)
     if (!fastify.use) {
         await app.register(middie);
     }
 
-    // [OIDC] Mount Provider (Exclude /api to prevent hijacking)
     // [OIDC] Mount Provider on /oidc namespace
-    const oidc = app.get(OIDC_PROVIDER); // OIDC_PROVIDER is symbol
+    const oidc = app.get(OIDC_PROVIDER);
     const oidcCallback = oidc.callback();
-    // [OIDC Fortress] Persistent OIDC Stability Hook (Surgical Alignment Phase 14)
+
+    // [OIDC Fortress] Persistent OIDC Stability Hook (Phase 18 Holistic Fix)
     fastify.addHook('onRequest', async (req, res) => {
         if (req.url.startsWith('/oidc')) {
-            // [Fix] Namespace Integrity: Strict Production Issuer
             const isProduction = process.env.NODE_ENV === 'production';
             const envIssuer = process.env.OIDC_ISSUER || (isProduction ? 'https://accounts.evzone.app/oidc' : 'http://localhost:3000/oidc');
 
@@ -85,16 +82,15 @@ export async function bootstrap() {
             const targetHost = issuerUrl.host;
             const targetProto = issuerUrl.protocol.replace(':', '');
 
-            // [Fix] Host Enforcement: Immediate 302 redirect.
+            // [Fix] Host Enforcement
             const currentHost = req.headers.host;
             if (currentHost && currentHost !== targetHost && currentHost !== '127.0.0.1' && !currentHost.startsWith('127.0.0.1:')) {
                 return res.code(302).redirect(`${targetProto}://${targetHost}${req.url}`);
             }
 
-            // [Fix] Header Spoofing: Required for internal absolute URL generation.
+            // [Fix] Header Spoofing
             const forceHeaders = (target: any) => {
                 if (!target || !target.headers) return;
-                // Use lowercase keys for maximum compatibility with Node.js/Fastify
                 target.headers['host'] = targetHost;
                 target.headers['x-forwarded-host'] = targetHost;
                 target.headers['x-forwarded-proto'] = targetProto;
@@ -104,9 +100,6 @@ export async function bootstrap() {
                 if (targetProto === 'https') {
                     target.headers['x-forwarded-proto'] = 'https';
                 }
-
-                // [Fix] Expose Location header so fetch code can read the redirect target
-                target.headers['access-control-expose-headers'] = 'Location, Set-Cookie';
             };
 
             // [Surgical Alignment] Wrap res.raw to fix redirects and cookie paths
@@ -114,39 +107,37 @@ export async function bootstrap() {
             res.raw.setHeader = (name: string, value: any) => {
                 const lowerName = name.toLowerCase();
 
-                // [Phase 14] Surgical Location Alignment
+                // [Phase 18] Defensive Location Alignment
                 // We MUST prepend /oidc to BACKEND redirects (resumption, auth codes)
-                // but we MUST NOT prepend it to FRONTEND redirects (sign-in, consent pages).
+                // but we MUST NOT prepend it to FRONTEND routes or CALLBACKS.
                 if (lowerName === 'location' && typeof value === 'string') {
                     const prefix = '/oidc';
 
-                    // 1. Is it a relative redirect?
-                    if (value.startsWith('/') && !value.startsWith(`${prefix}/`)) {
-                        // 2. Is it a frontend route? (Leave these alone!)
-                        const isFrontend = value.startsWith('/auth/sign-in') || value.startsWith('/auth/consent');
+                    // Logic: If it's a frontend route or an OIDC callback, DO NOT HIJACK.
+                    // This prevents the loop where /auth/callback gets turned into /oidc/auth/callback
+                    const isFrontendRoute = value.includes('/auth/sign-in') || value.includes('/auth/consent');
+                    const isCallback = value.includes('/auth/callback');
+                    const isAlreadyPrefixed = value.startsWith(prefix) || value.includes(`${targetHost}${prefix}`);
 
-                        // 3. If not frontend, it's likely a backend OIDC path (e.g. /auth/UID, /interaction/UID)
-                        if (!isFrontend) {
+                    if (!isFrontendRoute && !isCallback && !isAlreadyPrefixed) {
+                        // Hijack relative redirects
+                        if (value.startsWith('/') && !value.startsWith(`${prefix}/`)) {
                             const originalValue = value;
                             value = `${prefix}${value}`;
-                            console.log(`[OIDC SURGICAL] HIJACKED BACKEND REDIRECT: ${originalValue} -> ${value}`);
-                        } else {
-                            console.log(`[OIDC SURGICAL] BYPASSED FRONTEND REDIRECT: ${value}`);
+                            console.log(`[OIDC PHASE 18] Hijacked Relative: ${originalValue} -> ${value}`);
                         }
-                    }
-                    // 4. Absolute Redirects for our domain that are missing the prefix
-                    else if (value.includes(targetHost) && !value.includes(`${targetHost}${prefix}/`)) {
-                        const isFrontend = value.includes('/auth/sign-in') || value.includes('/auth/consent');
-                        if (!isFrontend) {
+                        // Hijack absolute redirects for our domain
+                        else if (value.includes(targetHost) && !value.includes(`${targetHost}${prefix}/`)) {
                             const originalValue = value;
                             value = value.replace(`${targetHost}/`, `${targetHost}${prefix}/`);
-                            console.log(`[OIDC SURGICAL] HIJACKED ABSOLUTE REDIRECT: ${originalValue} -> ${value}`);
+                            console.log(`[OIDC PHASE 18] Hijacked Absolute: ${originalValue} -> ${value}`);
                         }
+                    } else {
+                        console.log(`[OIDC PHASE 18] Safe Bypass: ${value}`);
                     }
                 }
 
                 if (lowerName === 'set-cookie') {
-                    // Force ALL cookies to Path=/ to ensure cross-namespace visibility
                     let correctedValue = value;
                     const pathRegex = /path=[^;]*/gi;
                     if (Array.isArray(value)) {
@@ -165,23 +156,19 @@ export async function bootstrap() {
                 forceHeaders(req.raw);
             }
 
-            // [OIDC MEGA-TRACE] Log all incoming cookies for this OIDC request
+            // [OIDC MEGA-TRACE] Incoming Context
             console.log(`[OIDC MEGA-TRACE] INCOMING Cookie (${req.url}):`, req.raw.headers.cookie || 'NONE');
 
             // [Phase 15] Surgical Dispatch Logic
-            // Capture original URL for dispatch decision.
-            // We MUST check for interactions BEFORE stripping/mutating the raw URL.
             const originalUrl = req.url;
 
-            // 1. Interaction Routes -> Handled by NestJS (OidcInteractionController)
-            // Controller is mounted at /oidc/interaction.
+            // 1. Interaction Routes -> hand back to NestJS
             if (originalUrl.startsWith('/oidc/interaction')) {
                 console.log(`[OIDC] Dispatching Interaction to NestJS: ${originalUrl}`);
                 return;
             }
 
-            // 2. Protocol Routes (.well-known, /auth, /token) -> Handled by oidc-provider
-            // Provider requires the prefix to be stripped from the incoming request.
+            // 2. Protocol Routes -> Strip prefix for Provider
             const strippedUrl = originalUrl.replace('/oidc', '') || '/';
             if (req.raw) {
                 req.raw.url = strippedUrl;
@@ -189,7 +176,6 @@ export async function bootstrap() {
 
             console.log(`[OIDC] Dispatching Protocol Route to Provider: ${originalUrl} -> ${strippedUrl}`);
 
-            // [Fix] Pass to oidc-provider (Wait for the callback to finish)
             return new Promise<void>((resolve, reject) => {
                 oidcCallback(req.raw, res.raw, (err: any) => {
                     if (err) return reject(err);
@@ -199,7 +185,6 @@ export async function bootstrap() {
         }
     });
 
-    // [DEBUG] Intensive OIDC Traceability Hook
     fastify.addHook('onSend', async (req, reply, payload) => {
         const isOidc = req.url.startsWith('/oidc') || req.url.startsWith('/auth');
         if (isOidc) {
@@ -212,16 +197,15 @@ export async function bootstrap() {
         return payload;
     });
 
-    // [Security] Helmet for Security Headers & CSP
+    // Helmet configuration
     const trustedDomains = (process.env.CSP_DOMAINS || '').split(',').map(d => d.trim()).filter(Boolean);
-
     await app.register(helmet, {
         contentSecurityPolicy: {
             directives: {
                 defaultSrc: ["'self'"],
-                scriptSrc: ["'self'", ...trustedDomains], // Allow analytics/scripts
-                imgSrc: ["'self'", 'data:', 'https:', ...trustedDomains], // Allow CDN images
-                connectSrc: ["'self'", ...trustedDomains], // Allow API calls
+                scriptSrc: ["'self'", ...trustedDomains],
+                imgSrc: ["'self'", 'data:', 'https:', ...trustedDomains],
+                connectSrc: ["'self'", ...trustedDomains],
                 objectSrc: ["'none'"],
                 upgradeInsecureRequests: [],
             },
@@ -229,40 +213,27 @@ export async function bootstrap() {
     });
 
     await app.register(cookie, {
-        secret: config.COOKIE_SECRET, // Typed from Zod
+        secret: config.COOKIE_SECRET,
     });
 
-    // Register Multipart
     await app.register(multipart, {
-        limits: {
-            fileSize: 5 * 1024 * 1024, // 5MB
-        },
+        limits: { fileSize: 5 * 1024 * 1024 },
     });
 
-    // [Scalability] Conditional Static Files
     if (!isProduction) {
         await app.register(fastifyStatic, {
             root: join(process.cwd(), 'uploads'),
             prefix: '/uploads/',
             decorateReply: false,
-            setHeaders: (res) => {
-                res.setHeader('X-Content-Type-Options', 'nosniff');
-                res.setHeader('Content-Disposition', 'attachment');
-            }
         });
     }
 
-    // [Security] Validation Strictness
     app.useGlobalPipes(new ValidationPipe({
         whitelist: true,
         transform: true,
         forbidNonWhitelisted: true,
-        transformOptions: {
-            enableImplicitConversion: true,
-        },
     }));
 
-    // Global Prefix for API
     app.setGlobalPrefix('api/v1', {
         exclude: [
             { path: 'oidc/jwks', method: RequestMethod.GET },
@@ -272,8 +243,7 @@ export async function bootstrap() {
         ],
     });
 
-    const logger = new Logger('Bootstrap');
     const port = process.env.PORT || 3000;
     await app.listen(port, '0.0.0.0');
-    logger.log(`Application is running on: ${await app.getUrl()}`);
+    Logger.log(`Application is running on: ${await app.getUrl()}`, 'Bootstrap');
 }

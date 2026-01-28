@@ -489,7 +489,7 @@ model OidcPayload {
   payload   Json
   grantId   String?
   userCode  String?
-  uid       String?  @unique
+  uid       String?
   expiresAt DateTime?
   consumedAt DateTime?
   createdAt DateTime @default(now())
@@ -497,6 +497,7 @@ model OidcPayload {
   
   @@index([type])
   @@index([grantId])
+  @@index([uid])
 }
 
 model SecurityReport {
