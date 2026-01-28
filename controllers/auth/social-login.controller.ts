@@ -4,6 +4,9 @@ import { AuthRequest } from '../../common/interfaces/auth-request.interface';
 import { SocialAuthService } from '../../services/auth/social-auth.service';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { SocialLoginDto } from '../../common/dto/auth/social-login.dto';
+import { Inject } from '@nestjs/common';
+import Provider from 'oidc-provider';
+import { OIDC_PROVIDER } from '../../modules/auth/oidc.constants';
 
 import { LocationService } from '../../services/users/location.service';
 import { UserManagementService } from '../../services/users/user-management.service';
@@ -11,6 +14,7 @@ import { UserManagementService } from '../../services/users/user-management.serv
 @Controller('auth')
 export class SocialLoginController {
     constructor(
+        @Inject(OIDC_PROVIDER) private provider: Provider,
         private socialAuthService: SocialAuthService,
         private locationService: LocationService,
         private userManagementService: UserManagementService
@@ -38,6 +42,18 @@ export class SocialLoginController {
         }
 
         this.setCookie(res, result.access_token);
+
+        // [Phase 25] Finish OIDC Interaction if UID is present
+        if (body.uid) {
+            console.log(`[SocialLogin] Finishing OIDC Interaction ${body.uid} for user ${result.user.id}`);
+            const interactionResult = {
+                login: { accountId: result.user.id },
+            };
+            // interactionFinished will set headers for redirection. 
+            // Since we are returning the response, NestJS/Fastify will send it.
+            return await this.provider.interactionFinished(req.raw, res.raw, interactionResult, { mergeWithLastSubmission: false });
+        }
+
         return result;
     }
 
@@ -63,6 +79,16 @@ export class SocialLoginController {
         }
 
         this.setCookie(res, result.access_token);
+
+        // [Phase 25] Finish OIDC Interaction if UID is present
+        if (body.uid) {
+            console.log(`[SocialLogin] Finishing OIDC Interaction ${body.uid} for Apple user ${result.user.id}`);
+            const interactionResult = {
+                login: { accountId: result.user.id },
+            };
+            return await this.provider.interactionFinished(req.raw, res.raw, interactionResult, { mergeWithLastSubmission: false });
+        }
+
         return result;
     }
 
