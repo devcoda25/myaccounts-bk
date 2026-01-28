@@ -184,15 +184,9 @@ export async function bootstrap() {
             }
 
             // [Fix] Namespace Integrity: Correct Internal Routing
-            // oidc-provider's internal router expects paths relative to its mount point.
-            // We MUST strip '/oidc' from the URL for the router to match.
-            // However, we MUST set 'x-forwarded-prefix' so it knows how to generate external URLs.
-
-            // Safe Stripping: Only mutate req.raw.url (Node.js request), never Fastify's req.url (read-only).
-            if (req.url.startsWith('/oidc')) {
-                const newUrl = req.url.replace('/oidc', '') || '/';
-                if (req.raw) req.raw.url = newUrl;
-            }
+            // We removed the '/oidc' stripping logic here because the provider is 
+            // configured with the '/oidc' issuer. By leaving the prefix, the 
+            // provider correctly identifies its internal routes.
 
             // [Fix] Pass to oidc-provider (Wait for the callback to finish)
             return new Promise<void>((resolve, reject) => {

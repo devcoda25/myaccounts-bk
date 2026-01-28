@@ -32,6 +32,7 @@ export interface OidcInteraction {
 
 export interface OidcConfiguration {
     adapter?: any;
+    proxy?: boolean;
     clients?: any[];
     formats?: Record<string, string>;
     features?: Record<string, { enabled: boolean;[key: string]: unknown }>;

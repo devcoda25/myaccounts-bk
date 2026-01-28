@@ -38,6 +38,7 @@ import { OidcConfiguration, OidcContext, OidcInteraction } from '../../common/in
 
                 const configuration: OidcConfiguration = {
                     adapter: PrismaOidcAdapter,
+                    proxy: true, // [Fix] Trust X-Forwarded-* headers for absolute URL generation
                     formats: {
                         AccessToken: 'jwt',
                     },
