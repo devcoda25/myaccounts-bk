@@ -29,16 +29,25 @@ export class UserFindRepository {
     }
 
     async findOneById(id: string, options: { includeContacts?: boolean; includeCredentials?: boolean; includeSessions?: boolean; includeAuditLogs?: boolean; includeOrgs?: boolean } = {}): Promise<UserWithProfile | null> {
-        return (this.prisma as any).user.findUnique({
-            where: { id },
-            include: {
-                contacts: options.includeContacts,
-                credentials: options.includeCredentials,
-                sessions: options.includeSessions ? { orderBy: { createdAt: 'desc' }, take: 20 } : false,
-                auditLogs: options.includeAuditLogs ? { orderBy: { createdAt: 'desc' }, take: 50 } : false,
-                orgMemberships: options.includeOrgs ? { include: { organization: true } } : false
+        try {
+            return await (this.prisma as any).user.findUnique({
+                where: { id },
+                include: {
+                    contacts: options.includeContacts,
+                    credentials: options.includeCredentials,
+                    sessions: options.includeSessions ? { orderBy: { createdAt: 'desc' }, take: 20 } : false,
+                    auditLogs: options.includeAuditLogs ? { orderBy: { createdAt: 'desc' }, take: 50 } : false,
+                    orgMemberships: options.includeOrgs ? { include: { organization: true } } : false
+                }
+            });
+        } catch (err: any) {
+            // [Defense] Fallback for missing tables during migration
+            if (err.message?.includes('does not exist') || err.code === 'P2021') {
+                console.warn(`[PRISMA ADAPTER] Falling back to basic user lookup for ${id} (Missing table crash prevented)`);
+                return this.prisma.user.findUnique({ where: { id } }) as any;
             }
-        });
+            throw err;
+        }
     }
 
     async findAll(params: {
