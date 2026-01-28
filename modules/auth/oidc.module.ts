@@ -141,47 +141,69 @@ import { OidcConfiguration, OidcContext, OidcInteraction } from '../../common/in
                         }
                     },
                     async findAccount(ctx: OidcContext, id: string) {
-                        const user = await prisma.user.findUnique({
-                            where: { id },
-                            include: {
-                                appMemberships: true,
-                                orgMemberships: {
-                                    include: {
-                                        organization: true
+                        try {
+                            const user = await prisma.user.findUnique({
+                                where: { id },
+                                include: {
+                                    appMemberships: true,
+                                    orgMemberships: {
+                                        include: {
+                                            organization: true
+                                        }
                                     }
                                 }
-                            }
-                        });
+                            });
 
-                        if (!user) return undefined;
+                            if (!user) return undefined;
 
-                        return {
-                            accountId: id,
-                            async claims() {
-                                return {
-                                    sub: id,
-                                    email: user.email,
-                                    email_verified: user.emailVerified,
-                                    name: user.firstName ? `${user.firstName} ${user.otherNames || ''}`.trim() : user.email,
-                                    given_name: user.firstName,
-                                    family_name: user.otherNames,
-                                    picture: user.avatarUrl,
-                                    // Custom EVzone Claims: App-specific role
-                                    app_role: user.role === 'SUPER_ADMIN'
-                                        ? 'SUPER_APP_ADMIN'
-                                        : (ctx.oidc?.client?.clientId)
-                                            ? user.appMemberships.find((m: any) => m.clientId === ctx.oidc.client?.clientId)?.role || 'USER'
-                                            : 'USER',
-                                    global_role: user.role, // SUPER_ADMIN, ADMIN, USER
-                                    // Organizations for Corporate Pay
-                                    orgs: user.orgMemberships.map((m: any) => ({
-                                        id: m.orgId,
-                                        name: m.organization?.name,
-                                        role: m.role,
-                                    }))
-                                };
-                            },
-                        };
+                            return {
+                                accountId: id,
+                                async claims() {
+                                    return {
+                                        sub: id,
+                                        email: user.email,
+                                        email_verified: user.emailVerified,
+                                        name: user.firstName ? `${user.firstName} ${user.otherNames || ''}`.trim() : user.email,
+                                        given_name: user.firstName,
+                                        family_name: user.otherNames,
+                                        picture: user.avatarUrl,
+                                        // Custom EVzone Claims: App-specific role
+                                        app_role: user.role === 'SUPER_ADMIN'
+                                            ? 'SUPER_APP_ADMIN'
+                                            : (ctx.oidc?.client?.clientId)
+                                                ? user.appMemberships.find((m: any) => m.clientId === ctx.oidc.client?.clientId)?.role || 'USER'
+                                                : 'USER',
+                                        global_role: user.role, // SUPER_ADMIN, ADMIN, USER
+                                        // Organizations for Corporate Pay
+                                        orgs: user.orgMemberships.map((m: any) => ({
+                                            id: m.orgId,
+                                            name: m.organization?.name,
+                                            role: m.role,
+                                        }))
+                                    };
+                                },
+                            };
+                        } catch (err: any) {
+                            console.warn(`[OIDC WARNING] Rich Account Lookup failed (likely missing DB tables): ${err.message}`);
+                            // Fallback to basic lookup to allow login to proceed
+                            const basicUser = await prisma.user.findUnique({ where: { id } });
+                            if (!basicUser) return undefined;
+
+                            return {
+                                accountId: id,
+                                async claims() {
+                                    return {
+                                        sub: id,
+                                        email: basicUser.email,
+                                        email_verified: basicUser.emailVerified,
+                                        name: basicUser.firstName ? `${basicUser.firstName} ${basicUser.otherNames || ''}`.trim() : basicUser.email,
+                                        app_role: basicUser.role === 'SUPER_ADMIN' ? 'SUPER_APP_ADMIN' : 'USER',
+                                        global_role: basicUser.role,
+                                        orgs: []
+                                    };
+                                }
+                            };
+                        }
                     },
                     // [Observability] Log actual error details for "server_error"
                     renderError(ctx: any, out: any, error: any) {
