@@ -3,6 +3,7 @@ import { UsersModule } from '../users/users.module';
 import { LoginService } from '../../services/auth/login.service';
 import { VerificationService } from '../../services/auth/verification.service';
 import { PasswordService } from '../../services/auth/password.service';
+import { SessionManagementService } from '../../services/auth/session-management.service';
 
 import { SocialAuthService } from '../../services/auth/social-auth.service';
 import { LoginController } from '../../controllers/auth/login.controller';
@@ -13,7 +14,7 @@ import { ChangePasswordController } from '../../controllers/auth/change-password
 
 import { VerifyPhoneController } from '../../controllers/auth/verify-phone.controller';
 import { SocialLoginController } from '../../controllers/auth/social-login.controller';
-import { SessionsController } from '../../controllers/auth/sessions.controller';
+import { SessionsController, OidcLogoutController } from '../../controllers/auth/sessions.controller';
 import { OAuthClientRepository } from '../../repos/users/oauth-client.repository';
 import { UserCredentialRepository } from '../../repos/users/user-credential.repository';
 import { SessionRepository } from '../../repos/auth/session.repository';
@@ -30,6 +31,7 @@ import { SubmailProvider } from '../../services/notifications/email-providers/su
         LoginService,
         VerificationService,
         PasswordService,
+        SessionManagementService,
 
         SocialAuthService,
         SmsService,
@@ -51,7 +53,8 @@ import { SubmailProvider } from '../../services/notifications/email-providers/su
         ChangePasswordController,
         SocialLoginController,
         VerifyPhoneController,
-        SessionsController
+        SessionsController,
+        OidcLogoutController
     ],
     exports: [LoginService, VerificationService, PasswordService, SocialAuthService],
 })

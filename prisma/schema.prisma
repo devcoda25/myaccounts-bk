@@ -77,6 +77,8 @@ model UserContact {
   updatedAt  DateTime  @updatedAt
   lastUsedAt DateTime?
 
+  @@index([userId])
+  @@index([type, value])
   @@map("user_contacts")
 }
 
@@ -220,6 +222,10 @@ model Session {
   createdAt  DateTime @default(now())
   lastUsedAt DateTime @default(now())
 
+  @@index([userId])
+  @@index([clientId])
+  @@index([expiresAt])
+  @@index([userId, clientId])
   @@map("sessions")
 }
 
@@ -235,6 +241,9 @@ model AuthCode {
 
   createdAt DateTime @default(now())
 
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([used])
   @@map("auth_codes")
 }
 
@@ -247,6 +256,8 @@ model VerificationRequest {
   attempts   Int      @default(0)
   createdAt  DateTime @default(now())
 
+  @@index([identifier, type])
+  @@index([expiresAt])
   @@unique([identifier, type, token])
   @@map("verification_requests")
 }
@@ -298,6 +309,10 @@ model AuditLog {
 
   createdAt DateTime @default(now())
 
+  @@index([userId])
+  @@index([action])
+  @@index([severity])
+  @@index([createdAt])
   @@map("audit_logs")
 }
 

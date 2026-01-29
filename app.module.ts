@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_FILTER } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { PrismaModule } from './prisma-lib/prisma.module';
@@ -22,6 +22,7 @@ import { PrivacyModule } from './modules/privacy/privacy.module';
 import { OrgsModule } from './modules/orgs/orgs.module';
 
 import { EdgeGuard } from './middleware/edge-guard.middleware';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 
 // Redis Storage
 import { ThrottlerStorageRedisService } from 'nestjs-throttler-storage-redis';
@@ -81,6 +82,10 @@ const env = validateEnv(process.env);
         {
             provide: APP_GUARD,
             useClass: ThrottlerGuard,
+        },
+        {
+            provide: APP_FILTER,
+            useClass: GlobalExceptionFilter,
         },
     ],
 })

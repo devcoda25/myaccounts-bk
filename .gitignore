@@ -30,4 +30,10 @@ certs/
 test/coverage/
 coverage/
 junit.xml
-scripts
+scripts 
+NGINX_BACKEND_FIXED.conf
+NGINX_FRONTEND_FIXED.conf
+PRE_FLIGHT_AUDIT_REPORT.md
+VERIFICATION_CHECKLIST.md
+WALLET_USER_SYNC_DESIGN.md
+

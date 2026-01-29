@@ -73,4 +73,33 @@ export class AuthCacheService {
             this.logger.error(`Redis Error (revokeSession): ${(error as Error).message}`);
         }
     }
+
+    /**
+     * Rate Limiting Methods for MFA
+     */
+    async incr(key: string): Promise<number> {
+        try {
+            return await this.redis.incr(key);
+        } catch (error) {
+            this.logger.error(`Redis Error (incr): ${(error as Error).message}`);
+            return 0;
+        }
+    }
+
+    async expire(key: string, seconds: number): Promise<void> {
+        try {
+            await this.redis.expire(key, seconds);
+        } catch (error) {
+            this.logger.error(`Redis Error (expire): ${(error as Error).message}`);
+        }
+    }
+
+    async ttl(key: string): Promise<number> {
+        try {
+            return await this.redis.ttl(key);
+        } catch (error) {
+            this.logger.error(`Redis Error (ttl): ${(error as Error).message}`);
+            return -1;
+        }
+    }
 }

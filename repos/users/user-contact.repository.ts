@@ -38,4 +38,18 @@ export class UserContactRepository {
             data
         });
     }
+
+    /**
+     * Verify ownership of a contact
+     * @param contactId - The contact ID to verify
+     * @param userId - The user ID who should own the contact
+     * @returns true if contact belongs to user, false otherwise
+     */
+    async belongsToUser(contactId: string, userId: string): Promise<boolean> {
+        const contact = await this.prisma.userContact.findUnique({
+            where: { id: contactId },
+            select: { userId: true }
+        });
+        return contact?.userId === userId;
+    }
 }

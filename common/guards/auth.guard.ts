@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, Logger } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, ForbiddenException, Logger } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { jwtVerify } from 'jose';
@@ -40,7 +40,16 @@ export class AuthGuard implements CanActivate {
             const { payload } = await jwtVerify(token, publicKey, {
                 algorithms: ['ES256'],
                 clockTolerance: 30, // [Fix] Allow 30s clock skew
+                // [Security] Validate audience - tokens are issued for specific clients
+                audience: process.env.JWT_AUDIENCE || 'evzone-myaccounts',
             });
+
+            // [Security] Validate issuer
+            const expectedIssuer = process.env.JWT_ISSUER || 'https://accounts.evzone.app';
+            if (payload.iss !== expectedIssuer) {
+                this.logger.warn(`Invalid issuer: ${payload.iss} != ${expectedIssuer}`);
+                throw new UnauthorizedException('Invalid token issuer');
+            }
 
             // [Security] Rule E: Session Revocation Check
             if (payload.jti) {

@@ -1,4 +1,4 @@
-import { Injectable, ConflictException, Logger } from '@nestjs/common';
+import { Injectable, ConflictException, Logger, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { UserCreateRepository } from '../../repos/users/user-create.repository';
 import { UserUpdateRepository } from '../../repos/users/user-update.repository';
@@ -116,7 +116,11 @@ export class UserManagementService {
     }
 
     async removeContact(userId: string, contactId: string) {
-        // Should verify ownership
+        // [Security] Verify ownership before deletion
+        const belongsToUser = await this.userContactRepo.belongsToUser(contactId, userId);
+        if (!belongsToUser) {
+            throw new ForbiddenException('You do not have permission to delete this contact');
+        }
         return this.userContactRepo.delete(contactId);
     }
 
@@ -128,6 +132,11 @@ export class UserManagementService {
     }
 
     async updateContact(userId: string, contactId: string, data: { label?: string; capabilities?: Prisma.InputJsonValue }) {
+        // [Security] Verify ownership before update
+        const belongsToUser = await this.userContactRepo.belongsToUser(contactId, userId);
+        if (!belongsToUser) {
+            throw new ForbiddenException('You do not have permission to update this contact');
+        }
         return this.userContactRepo.update(contactId, data);
     }
 
