@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, UnauthorizedException, Inject, forwardRef } from '@nestjs/common';
+import { Injectable, BadRequestException, UnauthorizedException, Inject, forwardRef, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../../prisma-lib/prisma.service';
 import { Prisma } from '@prisma/client';
 import { VerificationService } from './verification.service';
@@ -7,16 +7,60 @@ import * as QRCode from 'qrcode';
 import * as argon2 from 'argon2';
 import { createCipheriv, createDecipheriv, randomBytes } from 'crypto';
 
+/**
+ * Entropy configuration for recovery codes
+ * Using crypto.randomBytes ensures cryptographically secure random values
+ */
+const RECOVERY_CODE_BYTES = 4; // 4 bytes = 8 hex chars per segment
+const RECOVERY_CODE_SEGMENTS = 2; // Two segments per code (XXXX-XXXX)
+const RECOVERY_CODE_COUNT = 10; // Number of recovery codes to generate
+
+/**
+ * Encryption key must be exactly 32 bytes (256 bits) for AES-256-GCM
+ * This is a critical security requirement
+ */
+const ENCRYPTION_KEY_ENV_VAR = 'ENCRYPTION_KEY';
+
+/**
+ * Validates that the encryption key meets security requirements
+ * @param key - The encryption key to validate
+ * @returns true if valid, throws error if not
+ */
+function validateEncryptionKey(key: string | undefined): string {
+    if (!key) {
+        throw new InternalServerErrorException(
+            `Critical Security Error: ${ENCRYPTION_KEY_ENV_VAR} environment variable is not set. ` +
+            `MFA encryption cannot function without a valid 32-byte key. ` +
+            `Please set this variable in your environment configuration.`
+        );
+    }
+
+    const keyBuffer = Buffer.from(key);
+    if (keyBuffer.length !== 32) {
+        throw new InternalServerErrorException(
+            `Critical Security Error: ${ENCRYPTION_KEY_ENV_VAR} must be exactly 32 bytes (256 bits). ` +
+            `Current length: ${keyBuffer.length} bytes. ` +
+            `Regenerate your encryption key to ensure cryptographic security.`
+        );
+    }
+
+    return key;
+}
+
 @Injectable()
 export class MfaService {
-    // In production, this key should be in environment variables (32 chars for AES-256)
-    private encryptionKey = process.env.ENCRYPTION_KEY || '12345678901234567890123456789012';
-    private ivLength = 16;
+    // Encryption key is validated on service initialization to fail-fast if missing
+    private readonly encryptionKey: string;
+    private readonly ivLength = 16;
+    private readonly authTagLength = 16;
 
     constructor(
         private prisma: PrismaService,
         private verificationService: VerificationService
-    ) { }
+    ) {
+        // Validate and set encryption key during construction (fail-fast)
+        this.encryptionKey = validateEncryptionKey(process.env[ENCRYPTION_KEY_ENV_VAR]);
+    }
 
     async getStatus(userId: string) {
         const user = await this.prisma.user.findUnique({ where: { id: userId } });
@@ -69,18 +113,6 @@ export class MfaService {
         if (method === 'authenticator' && secret) {
             updateData.twoFactorSecret = this.encrypt(secret);
         }
-
-        // If SMS, we might want to store the verified phone for 2FA use
-        // For now, assuming user's main phone or a specific 2FA phone field.
-        // Assuming current schema supports guardianChannels or similar, updating capabilities/channels:
-        /*
-        await this.prisma.user.update({
-            where: { id: userId },
-            data: {
-                guardianChannels: { ...existing, SMS: true } // This would need existing data fetch
-            }
-        });
-        */
 
         await this.prisma.user.update({
             where: { id: userId },
@@ -138,8 +170,7 @@ export class MfaService {
         // Find appropriate contact
         let contact;
         if (channel === 'email') {
-            contact = user.contacts.find(c => c.type === 'EMAIL' && c.verified); // Default to verified email
-            // Prefer settings if possible (TODO)
+            contact = user.contacts.find(c => c.type === 'EMAIL' && c.verified);
         } else {
             contact = user.contacts.find(c => {
                 if (c.type !== 'PHONE' || !c.verified) return false;
@@ -163,10 +194,6 @@ export class MfaService {
             if (!valid) throw new BadRequestException('Invalid TOTP code');
             return { success: true };
         } else {
-            // For Email/SMS, we verify using VerificationService.
-            // We need the identifier. We have to look it up again or ask client to send it.
-            // Client might NOT want to send identifier for privacy/UX (just "Verify SMS").
-            // So we look up the USER's contact again.
             const user = await this.prisma.user.findUnique({
                 where: { id: userId },
                 include: { contacts: true }
@@ -186,7 +213,6 @@ export class MfaService {
             if (!contact) throw new BadRequestException(`No contact found for ${channel}`);
 
             const type = channel === 'email' ? 'EMAIL_VERIFY' : 'PHONE_VERIFY';
-            // We use verifyCode (which returns record or null)
             const record = await this.verificationService.verifyCode(contact.value, code, type);
             if (!record) throw new BadRequestException('Invalid or expired code');
 
@@ -197,14 +223,34 @@ export class MfaService {
 
     // --- Helpers ---
 
-    private async generateAndHashRecoveryCodes() {
-        const codes = Array.from({ length: 10 }, () =>
-            Math.random().toString(36).substring(2, 6) + '-' + Math.random().toString(36).substring(2, 6).toUpperCase()
-        );
+    /**
+     * Generates cryptographically secure recovery codes using crypto.randomBytes
+     * Format: XXXX-XXXX (8 hex chars per code)
+     * Uses crypto.randomBytes for proper entropy (CSPRNG)
+     */
+    private async generateAndHashRecoveryCodes(): Promise<{ codes: string[]; hashedCodes: string[] }> {
+        // Generate recovery codes with proper entropy
+        const codes: string[] = [];
+        for (let i = 0; i < RECOVERY_CODE_COUNT; i++) {
+            // Generate 8 hex characters per segment using crypto.randomBytes
+            const segment1 = randomBytes(RECOVERY_CODE_BYTES).toString('hex').toUpperCase();
+            const segment2 = randomBytes(RECOVERY_CODE_BYTES).toString('hex').toUpperCase();
+            codes.push(`${segment1}-${segment2}`);
+        }
+
+        // Hash all codes for secure storage
         const hashedCodes = await Promise.all(codes.map(c => argon2.hash(c)));
         return { codes, hashedCodes };
     }
 
+    /**
+     * Encrypts sensitive data using AES-256-GCM
+     * AES-256-GCM provides both confidentiality and authenticity
+     * Format: iv:encrypted:authTag (hex encoded)
+     * 
+     * @param text - Plain text to encrypt
+     * @returns Hex-encoded ciphertext with IV and auth tag
+     */
     private encrypt(text: string): string {
         try {
             const iv = randomBytes(this.ivLength);
@@ -216,19 +262,34 @@ export class MfaService {
             return iv.toString('hex') + ':' + encrypted + ':' + tag.toString('hex');
         } catch (e) {
             console.error('Encryption failed', e);
-            throw new Error('Encryption failed');
+            throw new InternalServerErrorException('Encryption failed');
         }
     }
 
+    /**
+     * Decrypts AES-256-GCM encrypted data
+     * Validates the auth tag to ensure data integrity
+     * 
+     * @param text - Hex-encoded ciphertext (iv:encrypted:tag)
+     * @returns Decrypted plain text
+     */
     private decrypt(text: string): string {
         try {
             const parts = text.split(':');
-            // Check if it looks encrypted (3 parts). If not, maybe it's legacy plain text.
-            if (parts.length !== 3) return text;
+            // Check if it looks encrypted (3 parts)
+            if (parts.length !== 3) {
+                // Legacy format or invalid - do not fallback to plain text for security
+                throw new BadRequestException('Invalid encrypted data format');
+            }
 
             const iv = Buffer.from(parts[0], 'hex');
             const encrypted = parts[1];
             const tag = Buffer.from(parts[2], 'hex');
+
+            // Validate lengths
+            if (iv.length !== this.ivLength || tag.length !== this.authTagLength) {
+                throw new BadRequestException('Invalid encryption parameters');
+            }
 
             const decipher = createDecipheriv('aes-256-gcm', Buffer.from(this.encryptionKey), iv);
             decipher.setAuthTag(tag);
@@ -238,7 +299,7 @@ export class MfaService {
             return decrypted;
         } catch (e) {
             console.error('Decryption failed', e);
-            return text; // Fallback to returning raw text if decryption fails (might be unencrypted)
+            throw new BadRequestException('Failed to decrypt secret');
         }
     }
 }

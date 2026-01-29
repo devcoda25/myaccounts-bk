@@ -9,6 +9,15 @@ import Provider from 'oidc-provider';
 // We'll trust that we can import the Prisma Service or instance, 
 // OR simpler: Use a global/static reference set during Module initialization.
 
+/**
+ * Custom OIDC Adapter implementation for EVzone My Accounts
+ * Implements Provider.Adapter interface with strict typing
+ * 
+ * Features:
+ * - JWT-based stateless session management for most operations
+ * - Persistent storage for authorization codes, refresh tokens, and consents
+ * - Support for both public (PKCE-only) and confidential clients
+ */
 export class PrismaOidcAdapter implements Provider.Adapter {
     private type: string;
     private static prisma: PrismaClient;
@@ -53,6 +62,15 @@ export class PrismaOidcAdapter implements Provider.Adapter {
             const client = await PrismaOidcAdapter.prisma.oAuthClient.findUnique({ where: { clientId: id } });
             if (!client) return undefined;
 
+            /**
+             * OAuth 2.1 Token Endpoint Authentication Methods:
+             * - 'client_secret_basic': Credentials in Authorization header (recommended)
+             * - 'client_secret_post': Credentials in request body
+             * - 'none': No authentication (public clients with PKCE)
+             * 
+             * We use client_secret_basic as the default for confidential clients
+             * as it's the most widely supported and secure method per OAuth 2.1
+             */
             return {
                 client_id: client.clientId,
                 client_secret: client.clientSecretHash || undefined, // Pass hash, verified by custom logic
@@ -60,11 +78,9 @@ export class PrismaOidcAdapter implements Provider.Adapter {
                 post_logout_redirect_uris: client.post_logout_redirect_uris,
                 grant_types: client.grantTypes,
                 response_types: ['code'], // Simplify for now
-                token_endpoint_auth_method: client.isPublic ? 'none' : 'client_secret_post', // Default to post/basic
+                token_endpoint_auth_method: client.isPublic ? 'none' : 'client_secret_basic',
                 // @ts-ignore
                 id_token_signed_response_alg: client.id_token_signed_response_alg,
-                // Allow both basic and post if not public?
-                // For now, let's say 'client_secret_basic' is default for backend.
             } as unknown as Provider.AdapterPayload;
         }
 
