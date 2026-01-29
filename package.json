@@ -33,6 +33,7 @@
         "@nestjs/swagger": "^8.1.0",
         "@nestjs/throttler": "^6.5.0",
         "@prisma/client": "^6.2.1",
+        "@sendgrid/mail": "^8.1.6",
         "@simplewebauthn/server": "^13.2.2",
         "@types/bcrypt": "^6.0.0",
         "@types/nodemailer": "^7.0.4",
