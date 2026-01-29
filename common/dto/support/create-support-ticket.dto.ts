@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional, IsString, IsEnum } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsEnum, MaxLength } from 'class-validator';
 
 export enum SupportCategory {
     BILLING = 'Billing',
@@ -10,10 +10,12 @@ export enum SupportCategory {
 export class CreateSupportTicketDto {
     @IsString()
     @IsNotEmpty()
+    @MaxLength(200)
     subject: string;
 
     @IsString()
     @IsNotEmpty()
+    @MaxLength(5000)
     description: string;
 
     @IsEnum(SupportCategory)
@@ -21,5 +23,5 @@ export class CreateSupportTicketDto {
     category: SupportCategory;
 
     @IsOptional()
-    metadata?: any;
+    metadata?: Record<string, unknown>;
 }

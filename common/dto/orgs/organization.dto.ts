@@ -1,12 +1,19 @@
-import { IsString, IsOptional, IsEmail, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsEmail, IsBoolean, MaxLength, MinLength, Matches, IsNotEmpty } from 'class-validator';
 import { Prisma } from '@prisma/client';
 
 export class CreateOrgDto {
     @IsString()
+    @IsNotEmpty()
+    @MinLength(1)
+    @MaxLength(255)
+    @Matches(/^[\p{L}\p{N}\s\-_&'.]+$/u, {
+        message: 'Organization name contains invalid characters'
+    })
     name: string;
 
     @IsOptional()
     @IsString()
+    @MaxLength(100)
     country?: string;
 }
 
