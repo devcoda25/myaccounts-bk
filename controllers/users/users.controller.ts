@@ -10,7 +10,6 @@ import { extname, join } from 'path';
 import { AuthRequest } from '../../common/interfaces/auth-request.interface';
 import { CreateUserDto } from '../../common/dto/auth/create-user.dto';
 import { UpdateUserDto } from '../../common/dto/auth/update-user.dto';
-import { SubmitKycDto } from '../../common/dto/kyc/kyc.dto';
 import { StorageService } from '../../modules/storage/storage.service';
 import { randomBytes } from 'crypto';
 
