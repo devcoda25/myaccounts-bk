@@ -19,6 +19,6 @@ import { SubmailProvider } from '../../services/notifications/email-providers/su
         EmailJsProvider,
         SubmailProvider
     ],
-    exports: [NotificationsService, EmailService],
+    exports: [NotificationsService, EmailService, SendGridProvider, ZohoProvider, EmailJsProvider, SubmailProvider],
 })
 export class NotificationsModule { }
