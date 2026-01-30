@@ -24,6 +24,7 @@ import { WhatsappService } from '../../services/notifications/whatsapp.service';
 import { ZohoProvider } from '../../services/notifications/email-providers/zoho.provider';
 import { EmailJsProvider } from '../../services/notifications/email-providers/emailjs.provider';
 import { SubmailProvider } from '../../services/notifications/email-providers/submail.provider';
+import { SendGridProvider } from '../../services/notifications/email-providers/sendgrid.provider';
 
 @Module({
     imports: [forwardRef(() => UsersModule)],
@@ -40,6 +41,7 @@ import { SubmailProvider } from '../../services/notifications/email-providers/su
         ZohoProvider,
         EmailJsProvider,
         SubmailProvider,
+        SendGridProvider,
         OAuthClientRepository,
         UserCredentialRepository,
         SessionRepository
