@@ -88,10 +88,7 @@ export class PrismaOidcAdapter implements Provider.Adapter {
             where: { id: this.key(id) },
         });
 
-        console.log(`[OIDC ADAPTER] Find ${this.type} ID: ${this.key(id)} -> ${doc ? 'FOUND' : 'NOT FOUND'}`);
-
         if (!doc || (doc.expiresAt && doc.expiresAt < new Date())) {
-            if (doc) console.warn(`[OIDC ADAPTER] ${this.type} EXPIRED: ${doc.id}`);
             return undefined;
         }
 
@@ -115,10 +112,7 @@ export class PrismaOidcAdapter implements Provider.Adapter {
             where: { uid },
         });
 
-        console.log(`[OIDC ADAPTER] FindByUid UID: ${uid} -> ${doc ? 'FOUND' : 'NOT FOUND'}`);
-
         if (!doc || (doc.expiresAt && doc.expiresAt < new Date())) {
-            if (doc) console.warn(`[OIDC ADAPTER] UID EXPIRED: ${doc.id}`);
             return undefined;
         }
 

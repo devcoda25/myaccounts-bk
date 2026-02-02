@@ -19,8 +19,6 @@ export class VerificationService {
     ) { }
 
     async requestVerification(identifier: string, type: 'EMAIL_VERIFY' | 'PASSWORD_RESET' | 'PHONE_VERIFY' | 'OTP_SIGNIN', deliveryMethod?: string) {
-        console.log(`[VerificationService] Requesting verification for ${identifier} via ${deliveryMethod}`);
-
         // SECURE GENERATION: crypto.randomInt
         const code = crypto.randomInt(100000, 1000000).toString();
 

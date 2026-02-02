@@ -45,7 +45,6 @@ export class SocialLoginController {
 
         // [Phase 25] Finish OIDC Interaction if UID is present
         if (body.uid) {
-            console.log(`[SocialLogin] Finishing OIDC Interaction ${body.uid} for user ${result.user.id}`);
             const interactionResult = {
                 login: { accountId: result.user.id },
             };
@@ -82,7 +81,6 @@ export class SocialLoginController {
 
         // [Phase 25] Finish OIDC Interaction if UID is present
         if (body.uid) {
-            console.log(`[SocialLogin] Finishing OIDC Interaction ${body.uid} for Apple user ${result.user.id}`);
             const interactionResult = {
                 login: { accountId: result.user.id },
             };

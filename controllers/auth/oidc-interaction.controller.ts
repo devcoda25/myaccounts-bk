@@ -35,24 +35,8 @@ export class OidcInteractionController {
 
         try {
             details = await this.provider.interactionDetails(req.raw, res.raw);
-            const session = details.session as any;
-            console.log(`[OIDC DEBUG] Interaction UID: ${details.uid}`);
-            console.log(`[OIDC DEBUG] Session Found: ${!!session}`);
-            if (session) {
-                console.log(`[OIDC DEBUG] Session Object Keys: ${Object.keys(session).join(', ')}`);
-                console.log(`[OIDC DEBUG] Session ID (jti): ${session.jti || 'NONE'}`);
-                console.log(`[OIDC DEBUG] Session ID (accountId): ${session.accountId || 'NONE'}`);
-                console.log(`[OIDC DEBUG] Raw Session:`, JSON.stringify(session, null, 2));
-            } else {
-                console.warn(`[OIDC WARNING] Interaction started without a session linkage! This will likely cause redemption to fail.`);
-            }
-            console.log(`[OIDC DEBUG] Interaction ReturnTo: ${(details as any).returnTo}`);
         } catch (err: any) {
             console.error(`[OIDC INTERACTION ERROR] ${uid}: ${err.message}`);
-            // [DEBUG] Deep log headers and cookies
-            console.error('[OIDC DEBUG] Headers:', JSON.stringify(req.raw.headers, null, 2));
-            console.error('[OIDC DEBUG] RAW Cookies:', req.raw.headers.cookie || 'NONE');
-
             // Redirect to login with specific error message
             const signinUrl = `${frontendUrl}/auth/sign-in?interaction_error=${encodeURIComponent(err.message || 'session_expired')}`;
             return res.code(302).redirect(signinUrl);
@@ -145,7 +129,6 @@ export class OidcInteractionController {
         const { email, password } = result.data;
 
         // Validate User
-        console.log(`[OIDC] Login attempt for interaction ${uid}, email: ${email}`);
         const user = await this.loginService.validateUser(email, password);
         if (!user) {
             console.warn(`[OIDC] Invalid credentials for ${email}`);
@@ -159,25 +142,10 @@ export class OidcInteractionController {
 
         // This commits the interaction and redirects the User Agent back to the Authorization Endpoint
         try {
-            console.log(`[OIDC] Interaction ${uid} finished for user ${user.id}. Redirecting...`);
-            console.log(`[OIDC DEBUG] Interaction Cookies: ${req.raw.headers.cookie || 'NONE'}`);
-            console.log(`[OIDC DEBUG] About to call interactionFinished with result:`, JSON.stringify(interactionResult));
-
-            // ✅ CRITICAL: Must return the response to send the redirect
-            const result = await this.provider.interactionFinished(req.raw, res.raw, interactionResult, { mergeWithLastSubmission: false });
-
-            console.log(`[OIDC DEBUG] interactionFinished succeeded! Result type: ${typeof result}`);
-            console.log(`[OIDC DEBUG] Response status: ${res.raw.statusCode}`);
-            console.log(`[OIDC DEBUG] Response headers:`, JSON.stringify(res.raw.getHeaders()));
-
-            return result;
+            await this.provider.interactionFinished(req.raw, res.raw, interactionResult, { mergeWithLastSubmission: false });
+            return;
         } catch (err: any) {
-            // [Enhanced Error Logging]
-            console.error(`[OIDC ERROR] interactionFinished failed for UID ${uid}:`);
-            console.error(`[OIDC ERROR] Error Name: ${err.name}`);
-            console.error(`[OIDC ERROR] Error Message: ${err.message}`);
-            console.error(`[OIDC ERROR] Error Stack: ${err.stack}`);
-            console.error(`[OIDC ERROR] Error Details: ${JSON.stringify(err, null, 2)}`);
+            console.error(`[OIDC ERROR] interactionFinished failed for UID ${uid}: ${err.message}`);
 
             // [Fix] Handle Stale Sessions (e.g. server restart)
             // If interaction is not found or invalid, restart the flow

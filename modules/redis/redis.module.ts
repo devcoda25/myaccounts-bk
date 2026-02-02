@@ -14,10 +14,6 @@ const redisProvider: Provider = {
             console.error('Redis Error:', err);
         });
 
-        redis.on('connect', () => {
-            console.log('Redis Connected');
-        });
-
         return redis;
     },
 };

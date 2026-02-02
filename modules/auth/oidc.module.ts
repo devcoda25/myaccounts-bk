@@ -31,12 +31,6 @@ import { RedisModule, REDIS_CLIENT } from '../redis/redis.module';
                 const cookieDomain = process.env.COOKIE_DOMAIN || '.evzone.app';
                 const isProduction = process.env.NODE_ENV === 'production';
 
-                console.log('================================================');
-                console.log(`[OIDC] INITIALIZING V4 (COOKIE_RENAME) AT ${new Date().toISOString()}`);
-                console.log(`[OIDC] ISSUER: ${issuer}`);
-                console.log(`[OIDC] ENV: ${process.env.NODE_ENV}`);
-                console.log('================================================');
-
                 const isSecure = issuer.startsWith('https');
 
                 const configuration: OidcConfiguration = {
@@ -54,8 +48,7 @@ import { RedisModule, REDIS_CLIENT } from '../redis/redis.module';
                                 try {
                                     const data = await cacheRedis.get(`oidc:cache:${key}`);
                                     return data ? JSON.parse(data) : undefined;
-                                } catch (err) {
-                                    console.warn('[OIDC Cache] Redis get error:', err);
+                                } catch {
                                     return undefined;
                                 }
                             },
@@ -63,15 +56,15 @@ import { RedisModule, REDIS_CLIENT } from '../redis/redis.module';
                                 try {
                                     const ttl = options?.exp !== undefined ? Math.floor((options.exp - Date.now()) / 1000) : 3600;
                                     await cacheRedis.set(`oidc:cache:${key}`, JSON.stringify(value), 'EX', ttl);
-                                } catch (err) {
-                                    console.warn('[OIDC Cache] Redis set error:', err);
+                                } catch {
+                                    // Silently fail cache writes
                                 }
                             },
                             async destroy(key: string) {
                                 try {
                                     await cacheRedis.del(`oidc:cache:${key}`);
-                                } catch (err) {
-                                    console.warn('[OIDC Cache] Redis delete error:', err);
+                                } catch {
+                                    // Silently fail cache deletes
                                 }
                             },
                         };
@@ -217,8 +210,7 @@ import { RedisModule, REDIS_CLIENT } from '../redis/redis.module';
                                     };
                                 },
                             };
-                        } catch (err: any) {
-                            console.warn(`[OIDC WARNING] Rich Account Lookup failed (likely missing DB tables): ${err.message}`);
+                        } catch {
                             // Fallback to basic lookup to allow login to proceed
                             const basicUser = await prisma.user.findUnique({ where: { id } });
                             if (!basicUser) return undefined;
@@ -241,8 +233,6 @@ import { RedisModule, REDIS_CLIENT } from '../redis/redis.module';
                     },
                     // [Observability] Log actual error details for "server_error"
                     renderError(ctx: any, out: any, error: any) {
-                        console.error(`[OIDC SERVER ERROR] ${error.name}: ${error.message}`);
-                        console.error(`[OIDC SERVER ERROR] Stack:`, error.stack);
                         ctx.type = 'html';
                         ctx.body = `<h1>Something went wrong</h1><p>${error.message}</p><p>Check server logs for trace.</p>`;
                     },

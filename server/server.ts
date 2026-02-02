@@ -122,18 +122,12 @@ export async function bootstrap() {
                     if (!isFrontendRoute && !isCallback && !isAlreadyPrefixed) {
                         // Hijack relative redirects
                         if (value.startsWith('/') && !value.startsWith(`${prefix}/`)) {
-                            const originalValue = value;
                             value = `${prefix}${value}`;
-                            console.log(`[OIDC PHASE 18] Hijacked Relative: ${originalValue} -> ${value}`);
                         }
                         // Hijack absolute redirects for our domain
                         else if (value.includes(targetHost) && !value.includes(`${targetHost}${prefix}/`)) {
-                            const originalValue = value;
                             value = value.replace(`${targetHost}/`, `${targetHost}${prefix}/`);
-                            console.log(`[OIDC PHASE 18] Hijacked Absolute: ${originalValue} -> ${value}`);
                         }
-                    } else {
-                        console.log(`[OIDC PHASE 18] Safe Bypass: ${value}`);
                     }
                 }
 
@@ -145,7 +139,6 @@ export async function bootstrap() {
                     } else if (typeof value === 'string') {
                         correctedValue = value.replace(pathRegex, 'Path=/');
                     }
-                    console.log(`[OIDC MEGA-TRACE] OUTGOING Set-Cookie:`, correctedValue);
                     return originalSetHeader(name, correctedValue);
                 }
                 return originalSetHeader(name, value);
@@ -156,15 +149,11 @@ export async function bootstrap() {
                 forceHeaders(req.raw);
             }
 
-            // [OIDC MEGA-TRACE] Incoming Context
-            console.log(`[OIDC MEGA-TRACE] INCOMING Cookie (${req.url}):`, req.raw.headers.cookie || 'NONE');
-
             // [Phase 15] Surgical Dispatch Logic
             const originalUrl = req.url;
 
             // 1. Interaction Routes -> hand back to NestJS
             if (originalUrl.startsWith('/oidc/interaction')) {
-                console.log(`[OIDC] Dispatching Interaction to NestJS: ${originalUrl}`);
                 return;
             }
 
@@ -173,8 +162,6 @@ export async function bootstrap() {
             if (req.raw) {
                 req.raw.url = strippedUrl;
             }
-
-            console.log(`[OIDC] Dispatching Protocol Route to Provider: ${originalUrl} -> ${strippedUrl}`);
 
             return new Promise<void>((resolve, reject) => {
                 oidcCallback(req.raw, res.raw, (err: any) => {
@@ -190,9 +177,6 @@ export async function bootstrap() {
         if (isOidc) {
             const status = reply.statusCode;
             const location = reply.getHeader('location');
-            if (status >= 300 && status < 400) {
-                console.log(`[OIDC TRACE] REDIRECT ${req.method} ${req.url} -> ${location} (Status: ${status})`);
-            }
         }
         return payload;
     });
