@@ -1,17 +1,33 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, Req, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, BadRequestException, UnauthorizedException, Req } from '@nestjs/common';
 import { UserManagementService } from '../../services/users/user-management.service';
 import { UserQueryService } from '../../services/users/user-query.service';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { FastifyRequest } from 'fastify';
-import { extname, join } from 'path';
 import { AuthRequest } from '../../common/interfaces/auth-request.interface';
 import { CreateUserDto } from '../../common/dto/auth/create-user.dto';
 import { UpdateUserDto } from '../../common/dto/auth/update-user.dto';
 import { StorageService } from '../../modules/storage/storage.service';
 import { randomBytes } from 'crypto';
+import { fileTypeFromBuffer } from 'file-type';
+
+// Maximum search query length to prevent DoS
+const MAX_QUERY_LENGTH = 200;
+const MAX_SKIP = 10000;
+const MAX_TAKE = 100;
+
+// Promisify file type detection for async/await usage
+const detectFileType = async (buffer: Buffer) => {
+    try {
+        const result = await fileTypeFromBuffer(buffer);
+        return result || null;
+    } catch (error) {
+        return null;
+    }
+};
 
 @Controller('users')
 @UseGuards(AuthGuard, RolesGuard)
@@ -39,36 +55,39 @@ export class UsersController {
 
     @Post('me/avatar')
     async uploadAvatar(@CurrentUser() user: AuthRequest['user'], @Req() req: FastifyRequest) {
-        const parts = req.files();
+        // Use Fastify's file handling - parts() returns async iterator
+        const parts = req.parts();
         let avatarUrl = '';
 
-        // [Security] Rule B: Magic Byte Validation
-        // Dynamic import for ESM module
-        const { fileTypeFromBuffer } = await eval('import("file-type")');
-
         for await (const part of parts) {
-            // Buffer the stream to validate content
-            // Note: server.ts limits to 5MB, so memory buffering is acceptable
-            const fileBuffer = await part.toBuffer();
+            if (part.type === 'file') {
+                const fileBuffer = await part.toBuffer();
 
-            const type = await fileTypeFromBuffer(fileBuffer);
+                // [Security] Magic Byte Validation
+                const type = await detectFileType(fileBuffer);
 
-            // Allowlist
-            const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
-            if (!type || !allowedMimes.includes(type.mime)) {
-                throw new UnauthorizedException('Invalid file type. Only JPEG, PNG, and WebP are allowed.');
+                // Allowlist - only image types
+                const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+                if (!type || !allowedMimes.includes(type.mime)) {
+                    throw new UnauthorizedException('Invalid file type. Only JPEG, PNG, and WebP are allowed.');
+                }
+
+                const fileExtName = `.${type.ext}`;
+                const randomName = randomBytes(8).toString('hex');
+                const filename = `avatar-${user.id}-${randomName}${fileExtName}`;
+                const key = `avatars/${user.id}/${filename}`;
+
+                // Upload to S3/Spaces
+                await this.storageService.upload(key, fileBuffer, type.mime, true);
+
+                // Use Public CDN URL
+                avatarUrl = this.storageService.getPublicUrl(key);
+                break; // Only process first file
             }
+        }
 
-            const fileExtName = `.${type.ext}`;
-            const randomName = randomBytes(8).toString('hex');
-            const filename = `avatar-${user.id}-${randomName}${fileExtName}`;
-            const key = `avatars/${user.id}/${filename}`;
-
-            // Upload to S3/Spaces
-            await this.storageService.upload(key, fileBuffer, type.mime, true); // Public read for avatars
-
-            // Use Public CDN URL
-            avatarUrl = this.storageService.getPublicUrl(key);
+        if (!avatarUrl) {
+            throw new UnauthorizedException('No file uploaded');
         }
 
         if (avatarUrl) {
@@ -121,19 +140,42 @@ export class UsersController {
 
     @Get()
     @Roles('ADMIN', 'SUPER_ADMIN')
+    @UseGuards(ThrottlerGuard)
     async findAll(
-        @Query('skip') skip?: number,
-        @Query('take') take?: number,
+        @Query('skip') skip?: string,
+        @Query('take') take?: string,
         @Query('query') query?: string,
         @Query('role') role?: string,
         @Query('status') status?: string
     ) {
+        // [Security] Validate and sanitize input parameters
+        const skipNum = skip ? parseInt(skip, 10) : 0;
+        const takeNum = take ? parseInt(take, 10) : 20;
+
+        if (isNaN(skipNum) || skipNum < 0 || skipNum > MAX_SKIP) {
+            throw new BadRequestException(`Invalid skip parameter. Must be 0-${MAX_SKIP}`);
+        }
+        if (isNaN(takeNum) || takeNum < 1 || takeNum > MAX_TAKE) {
+            throw new BadRequestException(`Invalid take parameter. Must be 1-${MAX_TAKE}`);
+        }
+
+        // [Security] Sanitize and validate search query
+        const sanitizedQuery = query?.slice(0, MAX_QUERY_LENGTH).trim() || undefined;
+
+        // Validate role filter
+        const validRoles = ['SUPER_ADMIN', 'ADMIN', 'USER', 'All'];
+        const sanitizedRole = (role && validRoles.includes(role)) ? role : undefined;
+
+        // Validate status filter
+        const validStatuses = ['Active', 'Disabled', 'Locked', 'All'];
+        const sanitizedStatus = (status && validStatuses.includes(status)) ? status : undefined;
+
         return this.userQueryService.findAll({
-            skip: skip ? Number(skip) : undefined,
-            take: take ? Number(take) : undefined,
-            query,
-            role,
-            status
+            skip: skipNum,
+            take: takeNum,
+            query: sanitizedQuery,
+            role: sanitizedRole,
+            status: sanitizedStatus
         });
     }
 

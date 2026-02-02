@@ -57,6 +57,10 @@ model User {
   supportTickets  SupportTicket[]
   orgMemberships  OrgMembership[] // Relation to Orgs
 
+  // [Scalability] Indexes for 1M+ user performance
+  @@index([phoneNumber])
+  @@index([createdAt])
+  @@index([role, createdAt]) // For admin user listing with role filtering
   @@index([lastLocation], type: Gin)
   @@map("users")
 }

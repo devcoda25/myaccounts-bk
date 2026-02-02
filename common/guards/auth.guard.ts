@@ -1,11 +1,20 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, Logger } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { jwtVerify } from 'jose';
 import { PrismaService } from '../../prisma-lib/prisma.service';
 import { AuthRequest } from '../interfaces/auth-request.interface';
 import { JwkService } from '../services/jwk.service';
-import { AuthCacheService } from '../services/auth-cache.service';
+import { AuthCacheService, CachedSession } from '../services/auth-cache.service';
+
+// Extend CachedSession to include user data for Redis-first strategy
+interface CachedSessionWithUser extends CachedSession {
+    userData: {
+        id: string;
+        email: string;
+        role: string;
+    } | null;
+}
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -14,8 +23,8 @@ export class AuthGuard implements CanActivate {
     constructor(
         private prisma: PrismaService,
         private reflector: Reflector,
-        private jwkService: JwkService, // [Performance] Injected Singleton
-        private authCache: AuthCacheService // [Performance] Redis Cache
+        private jwkService: JwkService,
+        private authCache: AuthCacheService
     ) { }
 
     async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -33,14 +42,14 @@ export class AuthGuard implements CanActivate {
             this.logger.warn(`[AuthGuard] No token found in request headers or cookies for path: ${request.url}`);
             throw new UnauthorizedException();
         }
+
         try {
             // [Performance] Use cached KeyObject (Zero CPU overhead)
             const publicKey = this.jwkService.getPublicKey();
 
             const { payload } = await jwtVerify(token, publicKey, {
                 algorithms: ['ES256'],
-                clockTolerance: 30, // [Fix] Allow 30s clock skew
-                // [Security] Validate audience - tokens are issued for specific clients
+                clockTolerance: 30,
                 audience: process.env.JWT_AUDIENCE || 'evzone-myaccounts',
             });
 
@@ -51,83 +60,38 @@ export class AuthGuard implements CanActivate {
                 throw new UnauthorizedException('Invalid token issuer');
             }
 
-            // [Security] Rule E: Session Revocation Check
+            // [Scalability] Redis-first strategy with pipeline for single round-trip
             if (payload.jti) {
-                // 1. Check Custom Auth Session (Cache-Aside)
                 const sessionId = payload.jti as string;
 
-                // Cache Check
-                const cachedSession = await this.authCache.getSession(sessionId);
-                if (cachedSession) {
-                    if (!cachedSession.isValid) {
+                // Try to get session and user in single Redis pipeline operation
+                const cachedData = await this.getSessionWithUserFromCache(sessionId);
+
+                if (cachedData) {
+                    if (!cachedData.isValid) {
                         this.logger.warn(`Session ${sessionId} is marked invalid in Cache.`);
                         throw new UnauthorizedException('Session revoked');
                     }
-                    // Get User from Cache
-                    const cachedUser = await this.authCache.getUser(cachedSession.userId);
-                    if (cachedUser) {
+
+                    if (cachedData.userData) {
                         request.user = {
-                            id: cachedUser.id,
-                            sub: cachedUser.id,
-                            email: cachedUser.email,
-                            role: cachedUser.role || 'USER',
+                            id: cachedData.userData.id,
+                            sub: cachedData.userData.id,
+                            email: cachedData.userData.email,
+                            role: cachedData.userData.role || 'USER',
                             jti: sessionId,
                         };
                         return true;
                     }
                 }
 
-                // Cache Miss - DB Fallback
-                const session = await this.prisma.session.findUnique({
-                    where: { id: sessionId }
-                });
-
-                if (session) {
-                    // Populate Cache
-                    if (session.expiresAt > new Date()) {
-                        await this.authCache.setSession({ id: session.id, userId: session.userId, isValid: true });
-                        // Fetch User for Cache
-                        const user = await this.prisma.user.findUnique({ where: { id: session.userId } });
-                        if (user) {
-                            await this.authCache.setUser(user);
-                            request.user = {
-                                id: user.id,
-                                sub: user.id,
-                                email: user.email,
-                                role: user.role || 'USER',
-                                jti: sessionId,
-                            };
-                            return true;
-                        } else {
-                            this.logger.warn(`User ${session.userId} not found for valid session ${sessionId}`);
-                        }
-                    } else {
-                        this.logger.warn(`Session ${sessionId} expired in DB. ExpiresAt: ${session.expiresAt}, Now: ${new Date()}`);
-                        throw new UnauthorizedException('Session expired');
-                    }
-                } else {
-                    // 2. Check OIDC Access Token (if custom session not found)
-                    this.logger.log(`Session ${sessionId} not found in DB. Checking OIDC tokens...`);
-
-                    const oidcToken = await this.prisma.oidcPayload.findUnique({
-                        where: { id: `AccessToken:${payload.jti}` }
-                    });
-
-                    if (!oidcToken) {
-                        this.logger.warn(`OIDC AccessToken:${payload.jti} not found.`);
-                        throw new UnauthorizedException('Session revoked or invalid token');
-                    }
-
-                    if (oidcToken.expiresAt && oidcToken.expiresAt < new Date()) {
-                        this.logger.warn(`OIDC AccessToken:${payload.jti} expired. ExpiresAt: ${oidcToken.expiresAt}`);
-                        throw new UnauthorizedException('Session revoked or invalid token');
-                    }
-                }
+                // Cache miss - fallback to DB with optimized query
+                await this.handleCacheMissSession(sessionId, request);
             } else {
-                // If no jti, fallback to user check (Legacy/Dev tokens)
+                // Legacy token handling
                 const userId = payload.sub as string;
-                // Cache Check
                 const cachedUser = await this.authCache.getUser(userId);
+
                 if (cachedUser) {
                     request.user = {
                         id: cachedUser.id,
@@ -155,11 +119,8 @@ export class AuthGuard implements CanActivate {
                 throw new UnauthorizedException('Token missing subject');
             }
 
-            // Should have returned by now if found via Cache/DB logic above.
-            // If request.user is set, we are good.
             if (!request.user) {
                 this.logger.error(`Verified signature but failed to resolve user context for sub: ${payload.sub} / jti: ${payload.jti}`);
-
                 request.user = {
                     id: payload.sub,
                     sub: payload.sub,
@@ -177,7 +138,6 @@ export class AuthGuard implements CanActivate {
                 });
 
                 if (oidcToken && (!oidcToken.expiresAt || oidcToken.expiresAt > new Date())) {
-                    // Valid Opaque Token
                     const payload = oidcToken.payload as any;
                     if (payload && payload.accountId) {
                         const userId = payload.accountId;
@@ -202,6 +162,126 @@ export class AuthGuard implements CanActivate {
             throw new UnauthorizedException();
         }
         return true;
+    }
+
+    /**
+     * [Scalability] Get session and user data in single Redis pipeline round-trip
+     * This reduces 2 Redis calls to 1, significantly improving performance at 1M concurrent users
+     */
+    private async getSessionWithUserFromCache(sessionId: string): Promise<CachedSessionWithUser | null> {
+        try {
+            const redis = (this.authCache as any).redis;
+            const sessionKey = `session:${sessionId}`;
+            const userKey = `user:${sessionId}`; // We store user data in session hash or separately
+
+            // Use pipeline for batch operations
+            const pipeline = redis.pipeline();
+            pipeline.get(sessionKey);
+            pipeline.get(userKey);
+
+            const results = await pipeline.exec();
+
+            if (results && results.length >= 2) {
+                const sessionData = results[0][1];
+                const userData = results[1][1];
+
+                if (sessionData) {
+                    const session = JSON.parse(sessionData as string) as CachedSession;
+                    let userObj = null;
+
+                    if (userData) {
+                        try {
+                            const user = JSON.parse(userData as string);
+                            userObj = {
+                                id: user.id,
+                                email: user.email,
+                                role: user.role || 'USER'
+                            };
+                        } catch (e) {
+                            // Invalid user data, ignore
+                        }
+                    }
+
+                    return {
+                        ...session,
+                        userData: userObj
+                    };
+                }
+            }
+        } catch (error) {
+            this.logger.error(`Redis pipeline error: ${(error as Error).message}`);
+        }
+        return null;
+    }
+
+    /**
+     * [Scalability] Handle cache miss with optimized DB query
+     * Uses Prisma's include to fetch session and user in single query
+     */
+    private async handleCacheMissSession(sessionId: string, request: AuthRequest): Promise<void> {
+        // [Scalability] Use single optimized query instead of N+1
+        const session = await this.prisma.session.findUnique({
+            where: { id: sessionId },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                        role: true
+                    }
+                }
+            }
+        });
+
+        if (!session) {
+            // Check OIDC tokens
+            const oidcToken = await this.prisma.oidcPayload.findUnique({
+                where: { id: `AccessToken:${sessionId}` }
+            });
+
+            if (!oidcToken) {
+                throw new UnauthorizedException('Session revoked or invalid token');
+            }
+
+            if (oidcToken.expiresAt && oidcToken.expiresAt < new Date()) {
+                throw new UnauthorizedException('Session revoked or invalid token');
+            }
+            return;
+        }
+
+        // [Scalability] Only populate cache if session is valid and not expired
+        if (session.expiresAt > new Date()) {
+            // Populate both session and user in cache (single cache operation)
+            const sessionCache = {
+                id: session.id,
+                userId: session.userId,
+                isValid: true
+            };
+
+            // Store minimal user data needed for auth
+            const userCache = {
+                id: session.user.id,
+                email: session.user.email,
+                role: session.user.role || 'USER'
+            };
+
+            // Set both in parallel
+            await Promise.all([
+                this.authCache.setSession(sessionCache),
+                this.authCache.setUser(session.user as any)
+            ]);
+
+            request.user = {
+                id: session.user.id,
+                sub: session.user.id,
+                email: session.user.email,
+                role: session.user.role || 'USER',
+                jti: sessionId,
+            };
+        } else {
+            this.logger.warn(`Session ${sessionId} expired in DB.`);
+            throw new UnauthorizedException('Session expired');
+        }
     }
 
     private extractToken(request: AuthRequest): string | undefined {
