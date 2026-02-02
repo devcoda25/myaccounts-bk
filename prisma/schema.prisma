@@ -494,6 +494,7 @@ model Notification {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, createdAt])
   @@map("notifications")
 }
 
@@ -513,6 +514,7 @@ model OidcPayload {
   @@index([type])
   @@index([grantId])
   @@index([uid])
+  @@index([userCode])
 }
 
 model SecurityReport {
