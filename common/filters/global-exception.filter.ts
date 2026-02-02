@@ -40,7 +40,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             this.logger.warn(`Client error: ${status} - ${sanitizedMessage}`);
         }
 
-        response.status(status).json({
+        response.status(status);
+        response.json({
             statusCode: status,
             error: error,
             message: sanitizedMessage,
