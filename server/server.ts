@@ -24,6 +24,9 @@ import { validateEnv } from '../utils/env.validation';
 import { FastifyRegisterOptions } from 'fastify';
 
 export async function bootstrap() {
+    // [Cleanup] Suppress library warnings
+    process.env.KAFKAJS_NO_PARTITIONER_WARNING = '1';
+    
     await KeyManager.init();
 
     // [Security] Strict Env Validation & Typed Config

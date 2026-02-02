@@ -28,10 +28,10 @@ export class KeyManager {
         if (process.env.NODE_ENV === 'production' && !this.privateKey) {
             console.warn('CRITICAL WARNING: JWT Signing Keys missing in Production (JWT_PRIVATE_KEY). Falling back to filesystem keys. THIS IS NOT RECOMMENDED FOR PRODUCTION.');
             // We proceed to filesystem logic below
+        } else {
+            // Development / Fallback Logic
+            console.warn('WARNING: Using filesystem keys. Do not use in Production.');
         }
-
-        // Development / Fallback Logic
-        console.warn('WARNING: Using filesystem keys. Do not use in Production.');
 
         if (!fs.existsSync(KEYS_PATH)) {
             fs.mkdirSync(KEYS_PATH);
@@ -41,7 +41,9 @@ export class KeyManager {
         const privPath = path.join(KEYS_PATH, 'private.pem'); // We'll store JWK format for simplicity in this MVP
 
         if (!fs.existsSync(privPath)) {
-            console.log('Generating new ES256 keys...');
+            if (process.env.NODE_ENV !== 'production') {
+                console.log('Generating new ES256 keys...');
+            }
             const { privateKey, publicKey } = await generateKeyPair('ES256');
 
             this.privateKey = privateKey;
