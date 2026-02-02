@@ -24,7 +24,12 @@ export class UsersController {
 
     @Get('me')
     async getProfile(@CurrentUser() user: AuthRequest['user']) {
-        return this.userQueryService.findById(user.id, { fullProfile: true });
+        // [Performance] Exclude heavy relations (auditLogs, sessions) for profile load
+        return this.userQueryService.findById(user.id, {
+            fullProfile: true,
+            includeAuditLogs: false,
+            includeSessions: false
+        });
     }
 
     @Patch('me')
