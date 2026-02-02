@@ -7,15 +7,18 @@ import { AuthModule } from './auth.module';
 import { OidcInteractionController } from '../../controllers/auth/oidc-interaction.controller';
 import { OIDC_PROVIDER } from './oidc.constants';
 import { OidcConfiguration, OidcContext, OidcInteraction } from '../../common/interfaces/oidc.interface';
+import { Redis } from 'ioredis';
+import { validateEnv } from '../../utils/env.validation';
+import { RedisModule, REDIS_CLIENT } from '../redis/redis.module';
 
 @Global()
 @Module({
-    imports: [AuthModule],
+    imports: [AuthModule, RedisModule],
     controllers: [OidcInteractionController],
     providers: [
         {
             provide: OIDC_PROVIDER,
-            useFactory: async () => {
+            useFactory: async (redis: Redis) => {
                 // 1. Initialize Adapter with Prisma
                 const prisma = new PrismaClient();
                 PrismaOidcAdapter.setPrisma(prisma);
@@ -41,6 +44,37 @@ import { OidcConfiguration, OidcContext, OidcInteraction } from '../../common/in
                     proxy: true, // [Fix] Trust X-Forwarded-* headers for absolute URL generation
                     formats: {
                         AccessToken: 'jwt',
+                    },
+                    // [FIX] Use Redis for caching to avoid "Using filesystem keys" warning
+                    cache: (ctx: any) => {
+                        // Create a namespaced Redis client for OIDC cache
+                        const cacheRedis = redis.duplicate();
+                        return {
+                            async get(key: string) {
+                                try {
+                                    const data = await cacheRedis.get(`oidc:cache:${key}`);
+                                    return data ? JSON.parse(data) : undefined;
+                                } catch (err) {
+                                    console.warn('[OIDC Cache] Redis get error:', err);
+                                    return undefined;
+                                }
+                            },
+                            async set(key: string, value: any, options: any) {
+                                try {
+                                    const ttl = options?.exp !== undefined ? Math.floor((options.exp - Date.now()) / 1000) : 3600;
+                                    await cacheRedis.set(`oidc:cache:${key}`, JSON.stringify(value), 'EX', ttl);
+                                } catch (err) {
+                                    console.warn('[OIDC Cache] Redis set error:', err);
+                                }
+                            },
+                            async destroy(key: string) {
+                                try {
+                                    await cacheRedis.del(`oidc:cache:${key}`);
+                                } catch (err) {
+                                    console.warn('[OIDC Cache] Redis delete error:', err);
+                                }
+                            },
+                        };
                     },
                     features: {
                         // devInteractions: { enabled: true }, // [CHANGED] Enable interactions but handled by us via routes?
