@@ -1,5 +1,5 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Logger } from '@nestjs/common';
-import { Response } from 'express';
+import { FastifyReply } from 'fastify';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -7,7 +7,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
     catch(exception: unknown, host: ArgumentsHost) {
         const ctx = host.switchToHttp();
-        const response = ctx.getResponse<Response>();
+        const response = ctx.getResponse<FastifyReply>();
+        const request = ctx.getRequest<{ url?: string }>();
 
         let status = HttpStatus.INTERNAL_SERVER_ERROR;
         let message = 'Internal server error';
@@ -40,14 +41,15 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             this.logger.warn(`Client error: ${status} - ${sanitizedMessage}`);
         }
 
-        response.status(status);
-        response.json({
+        const errorResponse = {
             statusCode: status,
             error: error,
             message: sanitizedMessage,
             timestamp: new Date().toISOString(),
-            path: ctx.getRequest()?.url || 'unknown',
-        });
+            path: request.url || 'unknown',
+        };
+
+        response.status(status).send(errorResponse);
     }
 
     /**
