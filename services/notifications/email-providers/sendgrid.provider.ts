@@ -1,22 +1,31 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { EmailProvider } from './email-provider.interface';
-import * as sgMail from '@sendgrid/mail';
+import { Client } from '@sendgrid/client';
 
 @Injectable()
 export class SendGridProvider implements EmailProvider {
     name = 'sendgrid';
     private logger = new Logger(SendGridProvider.name);
     private initialized = false;
+    private client: Client;
+    private fromEmail: string;
+    private fromName: string;
 
     constructor() {
-        const apiKey = process.env.SENDGRID_API_KEY;
+        const apiKey = process.env.SENDGRID_API_KEY || '';
 
         if (!apiKey) {
             this.logger.warn('SendGrid API key missing from env. Provider not configured.');
             return;
         }
 
-        sgMail.setApiKey(apiKey);
+        // Initialize the v8 client
+        this.client = new Client();
+        this.client.setApiKey(apiKey);
+
+        this.fromEmail = process.env.MAIL_FROM || 'noreply@evzone.com';
+        this.fromName = process.env.MAIL_FROM_NAME || 'EVzone';
+
         this.initialized = true;
         this.logger.log('SendGrid provider initialized');
     }
@@ -27,21 +36,24 @@ export class SendGridProvider implements EmailProvider {
         }
 
         try {
-            const fromEmail = process.env.MAIL_FROM || 'noreply@evzone.com';
-            const fromName = process.env.MAIL_FROM_NAME || 'EVzone';
-
-            const msg = {
-                to,
-                from: {
-                    email: fromEmail,
-                    name: fromName,
+            const request = {
+                method: 'POST' as const,
+                url: '/v3/mail/send',
+                body: {
+                    personalizations: [{ to: [{ email: to }] }],
+                    from: {
+                        email: this.fromEmail,
+                        name: this.fromName,
+                    },
+                    subject,
+                    content: [
+                        { type: 'text/plain', value: text },
+                        { type: 'text/html', value: html || text },
+                    ],
                 },
-                subject,
-                text,
-                html: html || text,
             };
 
-            const [response] = await sgMail.send(msg);
+            const [response, body] = await this.client.request(request);
 
             // SendGrid returns the message ID in the headers
             const messageId = response.headers['x-message-id'] || response.headers['X-Message-Id'];
@@ -61,16 +73,7 @@ export class SendGridProvider implements EmailProvider {
     }
 
     async checkHealth(): Promise<boolean> {
-        if (!this.initialized) return false;
-
-        try {
-            // SendGrid doesn't have a direct health check endpoint
-            // We can verify by trying to send a test email or checking API key validity
-            const apiKey = process.env.SENDGRID_API_KEY;
-            return !!apiKey && apiKey.length > 0;
-        } catch {
-            return false;
-        }
+        return this.initialized;
     }
 
     /**
@@ -87,26 +90,26 @@ export class SendGridProvider implements EmailProvider {
         }
 
         try {
-            const fromEmail = process.env.MAIL_FROM || 'noreply@evzone.com';
-            const fromName = process.env.MAIL_FROM_NAME || 'EVzone';
-
-            // SendGrid bulk sending using personalizations
-            const personalizations = recipients.map(r => ({
-                to: [{ email: r.email, name: r.name }],
-            }));
-
-            const msg = {
-                personalizations,
-                from: {
-                    email: fromEmail,
-                    name: fromName,
+            const request = {
+                method: 'POST' as const,
+                url: '/v3/mail/send',
+                body: {
+                    personalizations: recipients.map(r => ({
+                        to: [{ email: r.email, name: r.name }],
+                    })),
+                    from: {
+                        email: this.fromEmail,
+                        name: this.fromName,
+                    },
+                    subject,
+                    content: [
+                        { type: 'text/plain', value: text },
+                        { type: 'text/html', value: html || text },
+                    ],
                 },
-                subject,
-                text,
-                html: html || text,
             };
 
-            const [response] = await sgMail.send(msg);
+            const [response, body] = await this.client.request(request);
             const messageId = response.headers['x-message-id'];
 
             this.logger.log(`Bulk send via SendGrid to ${recipients.length} recipients: ${messageId}`);
