@@ -35,10 +35,11 @@ export class OidcInteractionController {
 
         try {
             details = await this.provider.interactionDetails(req.raw, res.raw);
-        } catch (err: any) {
-            console.error(`[OIDC INTERACTION ERROR] ${uid}: ${err.message}`);
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'session_expired';
+            console.error(`[OIDC INTERACTION ERROR] ${uid}: ${errorMessage}`);
             // Redirect to login with specific error message
-            const signinUrl = `${frontendUrl}/auth/sign-in?interaction_error=${encodeURIComponent(err.message || 'session_expired')}`;
+            const signinUrl = `${frontendUrl}/auth/sign-in?interaction_error=${encodeURIComponent(errorMessage)}`;
             return res.code(302).redirect(signinUrl);
         }
         const { prompt, params, session } = details as unknown as OidcInteraction;
@@ -144,13 +145,16 @@ export class OidcInteractionController {
         try {
             await this.provider.interactionFinished(req.raw, res.raw, interactionResult, { mergeWithLastSubmission: false });
             return;
-        } catch (err: any) {
-            console.error(`[OIDC ERROR] interactionFinished failed for UID ${uid}: ${err.message}`);
+        } catch (err: unknown) {
+            const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+            console.error(`[OIDC ERROR] interactionFinished failed for UID ${uid}: ${errorMessage}`);
 
             // [Fix] Handle Stale Sessions (e.g. server restart)
             // If interaction is not found or invalid, restart the flow
-            if (err.message === 'invalid_request' || err.name === 'SessionNotFound') {
-                return res.redirect('/auth/sign-in');
+            if (err instanceof Error) {
+                if (err.message === 'invalid_request' || err.name === 'SessionNotFound') {
+                    return res.redirect('/auth/sign-in');
+                }
             }
             throw err;
         }

@@ -19,8 +19,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
             const exceptionResponse = exception.getResponse();
 
             if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
-                message = (exceptionResponse as any).message || exception.message;
-                error = (exceptionResponse as any).error || exception.name;
+                const responseObj = exceptionResponse as Record<string, unknown>;
+                message = (responseObj.message as string) || exception.message;
+                error = (responseObj.error as string) || exception.name;
             } else {
                 message = exceptionResponse as string;
             }
@@ -56,7 +57,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
      * Sanitize error messages to prevent information leakage
      * In production, don't expose internal error details to clients
      */
-    private sanitizeMessage(message: any, status: number): string {
+    private sanitizeMessage(message: string | unknown, status: number): string {
         if (status >= 500) {
             // For server errors, return generic message in production
             if (process.env.NODE_ENV === 'production') {

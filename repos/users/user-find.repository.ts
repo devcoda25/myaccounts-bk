@@ -40,11 +40,11 @@ export class UserFindRepository {
                     orgMemberships: options.includeOrgs ? { include: { organization: true } } : false
                 }
             });
-        } catch (err: any) {
+        } catch (err: unknown) {
             // [Defense] Fallback for missing tables during migration
-            if (err.message?.includes('does not exist') || err.code === 'P2021') {
+            if (err instanceof Error && (err.message?.includes('does not exist') || (err as any).code === 'P2021')) {
                 console.warn(`[PRISMA ADAPTER] Falling back to basic user lookup for ${id} (Missing table crash prevented)`);
-                return this.prisma.user.findUnique({ where: { id } }) as any;
+                return this.prisma.user.findUnique({ where: { id } });
             }
             throw err;
         }

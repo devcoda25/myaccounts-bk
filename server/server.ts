@@ -26,7 +26,7 @@ import { FastifyRegisterOptions } from 'fastify';
 export async function bootstrap() {
     // [Cleanup] Suppress library warnings
     process.env.KAFKAJS_NO_PARTITIONER_WARNING = '1';
-    
+
     await KeyManager.init();
 
     // [Security] Strict Env Validation & Typed Config
@@ -167,7 +167,7 @@ export async function bootstrap() {
             }
 
             return new Promise<void>((resolve, reject) => {
-                oidcCallback(req.raw, res.raw, (err: any) => {
+                oidcCallback(req.raw, res.raw, (err: unknown) => {
                     if (err) return reject(err);
                     resolve();
                 });

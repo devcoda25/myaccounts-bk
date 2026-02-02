@@ -64,8 +64,9 @@ export class HealthController {
                 const data = await response.json();
                 if (!data.issuer) oidcStatus = 'Degraded';
             }
-        } catch (e: any) {
-            console.error(`[HEALTH] OIDC Discovery Error: ${e.message}`);
+        } catch (e: unknown) {
+            const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+            console.error(`[HEALTH] OIDC Discovery Error: ${errorMessage}`);
             oidcStatus = 'Degraded';
         }
 
