@@ -49,20 +49,25 @@ export async function bootstrap() {
                 'https://accounts.evzone.app',
                 'https://api.evzone.app'
             ];
-            // Strict logic: Only production requires origin match. Dev allows strictness relaxation IF strictly coded.
             const isAllowed = !origin || allowed.includes(origin) || config.NODE_ENV !== 'production';
 
             if (isAllowed) {
                 cb(null, true);
             } else {
-                // [Optimization] Return false instead of throwing to prevent 500 error on preflight
                 cb(null, false);
             }
         },
         credentials: true,
-        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'x-user-id', 'x-api-key'],
-        // [Fix] Ensure Location and Set-Cookie are exposed to the frontend for OIDC resumption and debugging
-        exposedHeaders: ['Location', 'Set-Cookie'],
+        // [Security] Allow CSRF token header for double-submit cookie pattern
+        allowedHeaders: [
+            'Content-Type',
+            'Authorization',
+            'X-Requested-With',
+            'x-user-id',
+            'x-api-key',
+            'x-csrf-token'
+        ],
+        exposedHeaders: ['Location', 'Set-Cookie', 'x-csrf-token'],
     });
 
     // [OIDC] Enable Express-style middleware (required for oidc-provider)
