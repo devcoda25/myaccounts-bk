@@ -36,6 +36,9 @@ export class UserDeleteRepository {
             // Delete supervised children relationships
             await tx.childProfile.deleteMany({ where: { parentId: userId } });
 
+            // Delete owned household (if user is a household owner)
+            await tx.household.deleteMany({ where: { ownerId: userId } });
+
             // Delete owned clients (OAuth clients)
             await tx.oAuthClient.deleteMany({ where: { ownerId: userId } });
 
