@@ -39,7 +39,7 @@ export class AppsService {
         const { firstParty, consents } = await this.oauthClientRepo.getAppsForUser(userId);
 
         // Map consents to a quick lookup
-        const consentMap = new Map();
+        const consentMap = new Map<string, typeof consents[0]>();
         consents.forEach(c => consentMap.set(c.clientId, c));
 
         // Combine all relevant apps
