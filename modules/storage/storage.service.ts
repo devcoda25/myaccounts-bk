@@ -55,9 +55,7 @@ export class StorageService {
 
     getPublicUrl(key: string): string {
         const config = validateEnv(process.env);
-        // Assuming strict S3 endpoint usage (bucket.endpoint or endpoint/bucket)
-        // DO Spaces style: https://bucket.region.digitaloceanspaces.com/key
-        const endpoint = config.S3_ENDPOINT.replace('https://', '').replace('http://', '');
-        return `https://${this.bucket}.${endpoint}/${key}`;
+        // DO Spaces format: https://bucket.region.digitaloceanspaces.com/key
+        return `${config.S3_ENDPOINT}/${key}`;
     }
 }
