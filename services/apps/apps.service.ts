@@ -70,6 +70,48 @@ export class AppsService {
         });
     }
 
+    async getConnectedApps(userId: string) {
+        // Return only apps that the user has explicitly connected to (has consent)
+        const { firstParty, consents } = await this.oauthClientRepo.getAppsForUser(userId);
+
+        // Build a map of consented client IDs
+        const consentedClientIds = new Set(consents.map(c => c.clientId));
+
+        // Include first-party apps only if user has used them (has consent)
+        // For first-party apps, check if they have been accessed
+        const connectedApps: ClientWithMetadata[] = [];
+
+        // Add first-party apps that have consent
+        firstParty.forEach(app => {
+            if (consentedClientIds.has(app.clientId)) {
+                connectedApps.push(app);
+            }
+        });
+
+        // Add third-party apps that have consent
+        consents.forEach(c => {
+            if (!connectedApps.find(a => a.clientId === c.clientId)) {
+                connectedApps.push(c.client);
+            }
+        });
+
+        // Transform to frontend model
+        return connectedApps.map(app => {
+            // Construct Launch URL (Redirect to Authorize)
+            const redirectUri = app.redirectUris[0] || '';
+            const launchUrl = `/auth/authorize?client_id=${app.clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=openid profile email`;
+
+            return {
+                key: app.clientId,
+                name: app.name,
+                tagline: app.description || 'EVzone Integrated App',
+                status: 'Connected' as const,
+                lastUsedAt: Date.now(), // Placeholder - could use consent.grantedAt
+                launchUrl
+            };
+        });
+    }
+
     async getPermissions(userId: string) {
         const { consents } = await this.oauthClientRepo.getAppsForUser(userId);
         return consents.map(c => ({

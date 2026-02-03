@@ -18,6 +18,11 @@ export class AppsController {
         return this.appsService.getApps(req.user.sub || (req.user as any).id);
     }
 
+    @Get('connected')
+    async getConnectedApps(@Req() req: AuthRequest) {
+        return this.appsService.getConnectedApps(req.user.sub || (req.user as any).id);
+    }
+
     @Get('permissions')
     async getPermissions(@Req() req: AuthRequest) {
         return this.appsService.getPermissions(req.user.sub || (req.user as any).id);
