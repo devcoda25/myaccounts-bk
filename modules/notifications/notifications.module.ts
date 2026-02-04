@@ -4,7 +4,6 @@ import { NotificationsController } from './notifications.controller';
 import { PrismaModule } from '../../prisma-lib/prisma.module';
 import { EmailService } from '../../services/notifications/email.service';
 import { SendGridProvider } from '../../services/notifications/email-providers/sendgrid.provider';
-import { ZohoProvider } from '../../services/notifications/email-providers/zoho.provider';
 import { EmailJsProvider } from '../../services/notifications/email-providers/emailjs.provider';
 import { SubmailProvider } from '../../services/notifications/email-providers/submail.provider';
 
@@ -15,10 +14,9 @@ import { SubmailProvider } from '../../services/notifications/email-providers/su
         NotificationsService,
         EmailService,
         SendGridProvider,
-        ZohoProvider,
         EmailJsProvider,
         SubmailProvider
     ],
-    exports: [NotificationsService, EmailService, SendGridProvider, ZohoProvider, EmailJsProvider, SubmailProvider],
+    exports: [NotificationsService, EmailService, SendGridProvider, EmailJsProvider, SubmailProvider],
 })
 export class NotificationsModule { }

@@ -3,7 +3,6 @@ import * as dns from 'dns';
 import { promisify } from 'util';
 import { EmailProvider } from './email-providers/email-provider.interface';
 import { SendGridProvider } from './email-providers/sendgrid.provider';
-import { ZohoProvider } from './email-providers/zoho.provider';
 import { EmailJsProvider } from './email-providers/emailjs.provider';
 import { SubmailProvider } from './email-providers/submail.provider';
 
@@ -21,12 +20,10 @@ export class EmailService {
 
     constructor(
         private sendGridProvider: SendGridProvider,
-        private zohoProvider: ZohoProvider,
         private emailJsProvider: EmailJsProvider,
         private submailProvider: SubmailProvider
     ) {
         this.providers.set('sendgrid', sendGridProvider);
-        this.providers.set('zohoSMTP', zohoProvider);
         this.providers.set('apiGlobal', emailJsProvider);
         this.providers.set('apiCN', submailProvider);
 
@@ -92,7 +89,7 @@ export class EmailService {
 
     private getRoutingPlan(region: string): string[] {
         const primary = process.env.PROVIDER_PRIMARY || 'sendgrid';
-        const failover1 = process.env.PROVIDER_FAILOVER_1 || 'zohoSMTP';
+        const failover1 = process.env.PROVIDER_FAILOVER_1 || 'apiGlobal';
         const failoverCn = process.env.PROVIDER_FAILOVER_CN || 'apiCN';
 
         if (region === 'CN') {
@@ -120,13 +117,8 @@ export class EmailService {
     }
 
     async checkHealth(): Promise<'Operational' | 'Degraded'> {
-        // Check SendGrid first (primary), then Zoho as fallback
+        // Check SendGrid health (primary provider)
         const sendGridHealth = await this.sendGridProvider.checkHealth();
-        if (sendGridHealth) {
-            return 'Operational';
-        }
-        
-        const zohoHealth = await this.zohoProvider.checkHealth();
-        return zohoHealth ? 'Degraded' : 'Degraded';
+        return sendGridHealth ? 'Operational' : 'Degraded';
     }
 }

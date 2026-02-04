@@ -1,4 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
+import * as dns from 'dns';
+import { promisify } from 'util';
 import { SendResult } from 'africastalking';
 // @ts-ignore
 import AfricasTalking = require('africastalking');
@@ -15,6 +17,8 @@ interface SubmailResponse {
     msg?: string;
     money_account?: string;
 }
+
+const resolveMx = promisify(dns.resolveMx);
 
 @Injectable()
 export class SmsService {
@@ -40,6 +44,9 @@ export class SmsService {
         const twilioToken = process.env.TWILIO_AUTH_TOKEN;
         if (this.twilioSid && twilioToken) {
             this.twilioClient = Twilio(this.twilioSid, twilioToken);
+            this.logger.log('Twilio client initialized successfully');
+        } else {
+            this.logger.warn(`Twilio not configured: SID=${!!this.twilioSid}, Token=${!!twilioToken}`);
         }
 
         if (!this.atApiKey && !this.twilioSid) {
@@ -48,6 +55,16 @@ export class SmsService {
     }
 
     async sendSms(to: string, message: string) {
+        // Detect region for routing
+        const region = await this.detectRegion(to);
+        this.logger.log(`Sending SMS to ${to} (Region: ${region})`);
+
+        if (region === 'CN') {
+            // For Asian countries, use Submail first
+            return this.sendViaSubmail(to, message);
+        }
+
+        // For other regions, try Twilio first, then Africa's Talking, then Submail
         // 1. Try Twilio
         if (this.twilioClient) {
             try {
@@ -60,7 +77,6 @@ export class SmsService {
                 return { success: true, provider: 'twilio', id: result.sid };
             } catch (error) {
                 this.logger.error(`Twilio SMS Failed to ${to}: ${error.message}`);
-                // Fallthrough to next provider
             }
         }
 
@@ -81,6 +97,25 @@ export class SmsService {
 
         // 3. Submail / Simulation
         return this.sendViaSubmail(to, message);
+    }
+
+    private async detectRegion(emailOrPhone: string): Promise<'CN' | 'Global'> {
+        // For phone numbers, check country code
+        // +86 = China, +81 = Japan, +82 = South Korea, +84 = Vietnam, +60 = Malaysia, +62 = Indonesia, +66 = Thailand, +886 = Taiwan
+        const cnCountryCodes = ['+86', '+881', '+882', '+883'];
+        const asianCountryCodes = ['+81', '+82', '+84', '+60', '+62', '+66', '+886'];
+
+        // Check for CN country codes first
+        for (const code of cnCountryCodes) {
+            if (emailOrPhone.startsWith(code)) return 'CN';
+        }
+
+        // Check for other Asian country codes
+        for (const code of asianCountryCodes) {
+            if (emailOrPhone.startsWith(code)) return 'CN';
+        }
+
+        return 'Global';
     }
 
     private async sendViaSubmail(to: string, message: string) {

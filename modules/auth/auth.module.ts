@@ -21,7 +21,6 @@ import { SessionRepository } from '../../repos/auth/session.repository';
 import { SmsService } from '../../services/notifications/sms.service';
 import { EmailService } from '../../services/notifications/email.service';
 import { WhatsappService } from '../../services/notifications/whatsapp.service';
-import { ZohoProvider } from '../../services/notifications/email-providers/zoho.provider';
 import { EmailJsProvider } from '../../services/notifications/email-providers/emailjs.provider';
 import { SubmailProvider } from '../../services/notifications/email-providers/submail.provider';
 import { SendGridProvider } from '../../services/notifications/email-providers/sendgrid.provider';
@@ -38,7 +37,6 @@ import { SendGridProvider } from '../../services/notifications/email-providers/s
         SmsService,
         EmailService,
         WhatsappService,
-        ZohoProvider,
         EmailJsProvider,
         SubmailProvider,
         SendGridProvider,
