@@ -1,3 +1,8 @@
+export interface OidcClient {
+    clientId: string;
+    isPublic: boolean;
+}
+
 export interface OidcContext {
     oidc: {
         client?: {
@@ -55,7 +60,7 @@ export interface OidcConfiguration {
     jwks?: {
         keys: any[];
     };
-    pkce?: { required: () => boolean };
+    pkce?: { required: (ctx: OidcContext, client: OidcClient) => boolean };
     clientBasedCORS?: (ctx: OidcContext, origin: string, client: unknown) => boolean;
     findAccount?: (ctx: OidcContext, id: string) => Promise<any>;
     claims?: Record<string, string[]>;

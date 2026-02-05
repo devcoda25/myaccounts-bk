@@ -9,8 +9,8 @@ export class AdminCreateOAuthClientDto {
     @IsUrl()
     website?: string;
 
-    @IsEnum(['confidential', 'public'])
-    type: 'confidential' | 'public';
+    @IsEnum(['confidential', 'public', 'dual'])
+    type: 'confidential' | 'public' | 'dual';
 
     @IsArray()
     @IsString({ each: true })

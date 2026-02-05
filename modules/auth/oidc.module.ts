@@ -6,7 +6,7 @@ import { KeyManager } from '../../utils/keys';
 import { AuthModule } from './auth.module';
 import { OidcInteractionController } from '../../controllers/auth/oidc-interaction.controller';
 import { OIDC_PROVIDER } from './oidc.constants';
-import { OidcConfiguration, OidcContext, OidcInteraction } from '../../common/interfaces/oidc.interface';
+import { OidcConfiguration, OidcContext, OidcInteraction, OidcClient } from '../../common/interfaces/oidc.interface';
 import { Redis } from 'ioredis';
 import { validateEnv } from '../../utils/env.validation';
 import { RedisModule, REDIS_CLIENT } from '../redis/redis.module';
@@ -136,9 +136,16 @@ import { RedisModule, REDIS_CLIENT } from '../redis/redis.module';
                             secure: isProduction
                         },
                     },
-                    pkce: { required: () => true }, // Force PKCE
+                    pkce: {
+                        // Required for public clients, optional for confidential/dual clients
+                        required: (ctx, client) => {
+                            // Check if client is stored as public
+                            return client?.isPublic === true;
+                        },
+                    },
 
-                    // [CORS] Explicitly allow trusted origins to bypass oidc-provider strictness
+                    // Allow dual-type clients to use both authentication methods
+                    allowBearerTokensInBody: false,
                     clientBasedCORS: (_ctx, origin, _client) => {
                         const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(o => o.trim());
                         const trusted = [

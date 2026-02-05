@@ -77,13 +77,23 @@ export class AdminService {
             Number(query.take) || 20,
             query.query
         );
-        return { apps, total };
+        // Map isPublic to type for frontend compatibility
+        const mappedApps = apps.map(app => ({
+            ...app,
+            // @ts-ignore - type field not in Prisma schema but added for frontend
+            type: app.isPublic ? 'public' : (app.clientSecretHash ? 'dual' : 'confidential')
+        }));
+        return { apps: mappedApps, total };
     }
 
     async getApp(id: string) {
         const app = await this.repo.getOAuthClientById(id);
         if (!app) throw new NotFoundException('App not found');
-        return app;
+        // @ts-ignore - type field not in Prisma schema but added for frontend
+        return {
+            ...app,
+            type: app.isPublic ? 'public' : (app.clientSecretHash ? 'dual' : 'confidential')
+        };
     }
 
     async createApp(dto: AdminCreateOAuthClientDto) {
@@ -91,10 +101,14 @@ export class AdminService {
         let clientSecret: string | null = null;
         let clientSecretHash: string | null = null;
 
-        if (dto.type === 'confidential') {
+        // dual type: has secret for backend, but also allows PKCE for frontend
+        if (dto.type === 'confidential' || dto.type === 'dual') {
             clientSecret = `sk_${crypto.randomBytes(16).toString('hex')}`;
             clientSecretHash = await argon2.hash(clientSecret);
         }
+
+        // dual type: not public, so it can have secrets but still allows PKCE
+        const isPublic = dto.type === 'public';
 
         const app = await this.repo.createOAuthClient({
             clientId,
@@ -103,7 +117,7 @@ export class AdminService {
             clientSecretHash,
             redirectUris: dto.redirectUris,
             isFirstParty: dto.isFirstParty || false,
-            isPublic: dto.type === 'public',
+            isPublic,
             description: dto.description,
             icon: dto.icon,
             color: dto.color
