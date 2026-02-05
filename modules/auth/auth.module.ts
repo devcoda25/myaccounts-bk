@@ -15,6 +15,7 @@ import { ChangePasswordController } from '../../controllers/auth/change-password
 import { VerifyPhoneController } from '../../controllers/auth/verify-phone.controller';
 import { SocialLoginController } from '../../controllers/auth/social-login.controller';
 import { SessionsController, OidcLogoutController } from '../../controllers/auth/sessions.controller';
+import { MfaController } from '../../controllers/auth/mfa.controller';
 import { OAuthClientRepository } from '../../repos/users/oauth-client.repository';
 import { UserCredentialRepository } from '../../repos/users/user-credential.repository';
 import { SessionRepository } from '../../repos/auth/session.repository';
@@ -54,7 +55,8 @@ import { SendGridProvider } from '../../services/notifications/email-providers/s
         SocialLoginController,
         VerifyPhoneController,
         SessionsController,
-        OidcLogoutController
+        OidcLogoutController,
+        MfaController
     ],
     exports: [LoginService, VerificationService, PasswordService, SocialAuthService],
 })
