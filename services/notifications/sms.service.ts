@@ -63,77 +63,29 @@ export class SmsService {
     async sendSms(to: string, message: string) {
         this.logger.log(`[SMS] Incoming request - to: ${to}, message: ${message}`);
 
-        // Detect region for routing
-        const region = await this.detectRegion(to);
-        this.logger.log(`[SMS] Detected region: ${region} for number: ${to}`);
-
         // Check provider availability
-        this.logger.log(`[SMS] Provider status - Twilio: ${!!this.twilioClient}, AT: ${!!this.atClient}`);
+        this.logger.log(`[SMS] Provider status - Twilio: ${!!this.twilioClient}`);
 
-        if (region === 'CN') {
-            // For Asian countries, use Submail first
-            return this.sendViaSubmail(to, message);
-        }
-
-        if (region === 'AFRICA') {
-            // For African countries, use Africa's Talking first
-            if (this.atClient) {
-                try {
-                    const result = await this.atClient.send({
-                        to: [to],
-                        message: message,
-                        from: process.env.AFRICASTALKING_SMS_SENDER
-                    });
-                    this.logger.log(`SMS sent via Africa's Talking to ${to}: ${JSON.stringify(result)}`);
-                    return { success: true, provider: 'africastalking', result };
-                } catch (error) {
-                    this.logger.error(`Africa's Talking SMS Failed to ${to}`, error);
-                    // Fall through to Twilio if AT fails
-                }
-            } else {
-                this.logger.warn(`Africa's Talking not configured for ${to}, will try other providers`);
-            }
-            // Continue to Twilio (no return here)
-        }
-
-        // For other regions, try Twilio first, then Africa's Talking, then Submail
-        // 1. Try Twilio
+        // Use Twilio only (Africa's Talking disabled for simplicity)
         if (this.twilioClient) {
-            this.logger.log(`Attempting Twilio SMS to ${to} from ${process.env.TWILIO_SMS_FROM_NUMBER}`);
+            this.logger.log(`[Twilio] Attempting SMS to ${to} from ${process.env.TWILIO_SMS_FROM_NUMBER}`);
             try {
                 const result = await this.twilioClient.messages.create({
                     body: message,
                     from: process.env.TWILIO_SMS_FROM_NUMBER,
                     to: to
                 });
-                this.logger.log(`SMS sent via Twilio to ${to}: ${result.sid}`);
+                this.logger.log(`[Twilio] SMS sent successfully to ${to}: ${result.sid}`);
                 return { success: true, provider: 'twilio', id: result.sid };
             } catch (error) {
-                this.logger.error(`Twilio SMS Failed to ${to}: ${error.message}`);
-                this.logger.error(`Twilio error details: ${JSON.stringify(error)}`);
-            }
-        } else {
-            this.logger.warn(`Twilio client not available, skipping...`);
-        }
-
-        // 2. Try Africa's Talking
-        if (this.atClient) {
-            try {
-                const result = await this.atClient.send({
-                    to: [to],
-                    message: message,
-                    from: process.env.AFRICASTALKING_SMS_SENDER
-                });
-                this.logger.log(`SMS sent via AT to ${to}: ${JSON.stringify(result)}`);
-                return result;
-            } catch (error) {
-                this.logger.error(`AT SMS Failed to ${to}`, error);
+                this.logger.error(`[Twilio] SMS Failed to ${to}: ${error.message}`);
+                this.logger.error(`[Twilio] Error details: ${JSON.stringify(error)}`);
+                return { success: false, error: error.message };
             }
         }
 
-        // 3. Submail / Simulation
-        this.logger.warn(`[SMS] All providers failed for ${to}, attempting Submail simulation`);
-        return this.sendViaSubmail(to, message);
+        this.logger.error(`[SMS] No SMS provider configured!`);
+        return { success: false, error: 'No SMS provider configured' };
     }
 
     private async detectRegion(emailOrPhone: string): Promise<'CN' | 'AFRICA' | 'Global'> {
@@ -181,7 +133,7 @@ export class SmsService {
         // Check for African country codes first (use Africa's Talking)
         for (const code of africanCountryCodes) {
             if (emailOrPhone.startsWith(code)) {
-                this.logger.log(`Detected African phone number: ${emailOrPhone}, using Africa's Talking`);
+                this.logger.log(`Detected African phone number: ${emailOrPhone}, using Twilio`);
                 return 'AFRICA';
             }
         }
