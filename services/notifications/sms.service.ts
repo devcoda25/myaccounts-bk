@@ -42,11 +42,17 @@ export class SmsService {
         // Twilio
         this.twilioSid = process.env.TWILIO_ACCOUNT_SID || '';
         const twilioToken = process.env.TWILIO_AUTH_TOKEN;
-        if (this.twilioSid && twilioToken) {
-            this.twilioClient = Twilio(this.twilioSid, twilioToken);
-            this.logger.log('Twilio client initialized successfully');
+        const twilioFromNumber = process.env.TWILIO_SMS_FROM_NUMBER || '';
+        this.logger.log(`Twilio configuration check: SID=${!!this.twilioSid}, Token=${!!twilioToken}, FromNumber=${!!twilioFromNumber}`);
+        if (this.twilioSid && twilioToken && twilioFromNumber) {
+            try {
+                this.twilioClient = Twilio(this.twilioSid, twilioToken);
+                this.logger.log('Twilio client initialized successfully');
+            } catch (error) {
+                this.logger.error(`Twilio initialization failed: ${error.message}`);
+            }
         } else {
-            this.logger.warn(`Twilio not configured: SID=${!!this.twilioSid}, Token=${!!twilioToken}`);
+            this.logger.warn(`Twilio not configured properly: SID=${!!this.twilioSid}, Token=${!!twilioToken}, FromNumber=${!!twilioFromNumber}`);
         }
 
         if (!this.atApiKey && !this.twilioSid) {
@@ -58,15 +64,37 @@ export class SmsService {
         // Detect region for routing
         const region = await this.detectRegion(to);
         this.logger.log(`Sending SMS to ${to} (Region: ${region})`);
+        this.logger.log(`Twilio client available: ${!!this.twilioClient}, AT client available: ${!!this.atClient}`);
 
         if (region === 'CN') {
             // For Asian countries, use Submail first
             return this.sendViaSubmail(to, message);
         }
 
+        if (region === 'AFRICA') {
+            // For African countries, use Africa's Talking first
+            if (this.atClient) {
+                try {
+                    const result = await this.atClient.send({
+                        to: [to],
+                        message: message,
+                        from: process.env.AFRICASTALKING_SMS_SENDER
+                    });
+                    this.logger.log(`SMS sent via Africa's Talking to ${to}: ${JSON.stringify(result)}`);
+                    return { success: true, provider: 'africastalking', result };
+                } catch (error) {
+                    this.logger.error(`Africa's Talking SMS Failed to ${to}`, error);
+                    // Fall through to Twilio if AT fails
+                }
+            } else {
+                this.logger.warn(`Africa's Talking not configured for ${to}, falling back to Twilio`);
+            }
+        }
+
         // For other regions, try Twilio first, then Africa's Talking, then Submail
         // 1. Try Twilio
         if (this.twilioClient) {
+            this.logger.log(`Attempting Twilio SMS to ${to} from ${process.env.TWILIO_SMS_FROM_NUMBER}`);
             try {
                 const result = await this.twilioClient.messages.create({
                     body: message,
@@ -77,7 +105,10 @@ export class SmsService {
                 return { success: true, provider: 'twilio', id: result.sid };
             } catch (error) {
                 this.logger.error(`Twilio SMS Failed to ${to}: ${error.message}`);
+                this.logger.error(`Twilio error details: ${JSON.stringify(error)}`);
             }
+        } else {
+            this.logger.warn(`Twilio client not available, skipping...`);
         }
 
         // 2. Try Africa's Talking
@@ -99,13 +130,57 @@ export class SmsService {
         return this.sendViaSubmail(to, message);
     }
 
-    private async detectRegion(emailOrPhone: string): Promise<'CN' | 'Global'> {
+    private async detectRegion(emailOrPhone: string): Promise<'CN' | 'AFRICA' | 'Global'> {
         // For phone numbers, check country code
         // +86 = China, +81 = Japan, +82 = South Korea, +84 = Vietnam, +60 = Malaysia, +62 = Indonesia, +66 = Thailand, +886 = Taiwan
         const cnCountryCodes = ['+86', '+881', '+882', '+883'];
         const asianCountryCodes = ['+81', '+82', '+84', '+60', '+62', '+66', '+886'];
 
-        // Check for CN country codes first
+        // African country codes - use Africa's Talking
+        const africanCountryCodes = [
+            '+256', // Uganda
+            '+254', // Kenya
+            '+255', // Tanzania
+            '+250', // Rwanda
+            '+251', // Ethiopia
+            '+211', // South Sudan
+            '+249', // Sudan
+            '+252', // Somalia
+            '+253', // Djibouti
+            '+269', // Comoros
+            '+230', // Mauritius
+            '+258', // Mozambique
+            '+27',  // South Africa
+            '+233', // Ghana
+            '+225', // Ivory Coast
+            '+221', // Senegal
+            '+223', // Mali
+            '+224', // Guinea
+            '+225', // Burkina Faso
+            '+226', // Niger
+            '+227', // Benin
+            '+228', // Togo
+            '+229', // Benin
+            '+237', // Cameroon
+            '+235', // Chad
+            '+236', // Central African Republic
+            '+241', // Gabon
+            '+242', // Congo
+            '+243', // DRC
+            '+244', // Angola
+            '+245', // Guinea-Bissau
+            '+248', // Seychelles
+        ];
+
+        // Check for African country codes first (use Africa's Talking)
+        for (const code of africanCountryCodes) {
+            if (emailOrPhone.startsWith(code)) {
+                this.logger.log(`Detected African phone number: ${emailOrPhone}, using Africa's Talking`);
+                return 'AFRICA';
+            }
+        }
+
+        // Check for CN country codes
         for (const code of cnCountryCodes) {
             if (emailOrPhone.startsWith(code)) return 'CN';
         }
