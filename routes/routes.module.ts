@@ -9,6 +9,7 @@ import { AdminModule } from '../modules/admin/admin.module';
 
 import { ParentalModule } from '../modules/parental/parental.module';
 import { AppsModule } from '../modules/apps/apps.module';
+import { SecurityModule } from '../modules/security/security.module';
 
 const routes: Routes = [
     {
@@ -23,7 +24,8 @@ const routes: Routes = [
 
     { path: 'debug', module: DebugModule },
     { path: 'parental', module: ParentalModule },
-    { path: 'apps', module: AppsModule }
+    { path: 'apps', module: AppsModule },
+    { path: 'security', module: SecurityModule }
 ];
 
 @Module({
