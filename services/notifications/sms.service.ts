@@ -61,10 +61,14 @@ export class SmsService {
     }
 
     async sendSms(to: string, message: string) {
+        this.logger.log(`[SMS] Incoming request - to: ${to}, message: ${message}`);
+
         // Detect region for routing
         const region = await this.detectRegion(to);
-        this.logger.log(`Sending SMS to ${to} (Region: ${region})`);
-        this.logger.log(`Twilio client available: ${!!this.twilioClient}, AT client available: ${!!this.atClient}`);
+        this.logger.log(`[SMS] Detected region: ${region} for number: ${to}`);
+
+        // Check provider availability
+        this.logger.log(`[SMS] Provider status - Twilio: ${!!this.twilioClient}, AT: ${!!this.atClient}`);
 
         if (region === 'CN') {
             // For Asian countries, use Submail first
@@ -87,8 +91,9 @@ export class SmsService {
                     // Fall through to Twilio if AT fails
                 }
             } else {
-                this.logger.warn(`Africa's Talking not configured for ${to}, falling back to Twilio`);
+                this.logger.warn(`Africa's Talking not configured for ${to}, will try other providers`);
             }
+            // Continue to Twilio (no return here)
         }
 
         // For other regions, try Twilio first, then Africa's Talking, then Submail
@@ -127,6 +132,7 @@ export class SmsService {
         }
 
         // 3. Submail / Simulation
+        this.logger.warn(`[SMS] All providers failed for ${to}, attempting Submail simulation`);
         return this.sendViaSubmail(to, message);
     }
 
