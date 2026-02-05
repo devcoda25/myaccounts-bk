@@ -4,6 +4,7 @@ import { LoginService } from '../../services/auth/login.service';
 import { VerificationService } from '../../services/auth/verification.service';
 import { PasswordService } from '../../services/auth/password.service';
 import { SessionManagementService } from '../../services/auth/session-management.service';
+import { MfaService } from '../../services/auth/mfa.service';
 
 import { SocialAuthService } from '../../services/auth/social-auth.service';
 import { LoginController } from '../../controllers/auth/login.controller';
@@ -33,6 +34,7 @@ import { SendGridProvider } from '../../services/notifications/email-providers/s
         VerificationService,
         PasswordService,
         SessionManagementService,
+        MfaService,
 
         SocialAuthService,
         SmsService,
@@ -58,6 +60,6 @@ import { SendGridProvider } from '../../services/notifications/email-providers/s
         OidcLogoutController,
         MfaController
     ],
-    exports: [LoginService, VerificationService, PasswordService, SocialAuthService],
+    exports: [LoginService, VerificationService, PasswordService, SocialAuthService, MfaService],
 })
 export class AuthModule { }
