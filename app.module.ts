@@ -5,6 +5,7 @@ import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { PrismaModule } from './prisma-lib/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { OidcModule } from './modules/auth/oidc.module';
+import { RouterModule, Routes } from '@nestjs/core';
 
 import { UsersModule } from './modules/users/users.module';
 
@@ -33,9 +34,28 @@ import { StorageModule } from './modules/storage/storage.module';
 import { ConfigModule } from '@nestjs/config';
 
 import { CommonModule } from './common/common.module';
-import { RoutesModule } from './routes/routes.module';
 
 const env = validateEnv(process.env);
+
+// Define routes
+const routes: Routes = [
+    {
+        path: '/',
+        module: OidcModule
+    },
+    { path: 'auth', module: AuthModule },
+    { path: 'users', module: UsersModule },
+    { path: 'admin', module: AdminModule },
+    { path: 'debug', module: DebugModule },
+    { path: 'parental', module: ParentalModule },
+    { path: 'health', module: HealthModule },
+    { path: 'security', module: SecurityModule },
+    { path: 'apps', module: AppsModule },
+    { path: 'notifications', module: NotificationsModule },
+    { path: 'support', module: SupportModule },
+    { path: 'privacy', module: PrivacyModule },
+    { path: 'orgs', module: OrgsModule },
+];
 
 @Module({
     imports: [
@@ -43,7 +63,7 @@ const env = validateEnv(process.env);
             isGlobal: true,
             validate: validateEnv,
         }),
-        CommonModule, // [Architecture] Shared Global Services
+        CommonModule,
         ThrottlerModule.forRoot({
             throttlers: [{
                 ttl: 60000,
@@ -57,23 +77,19 @@ const env = validateEnv(process.env);
         PrometheusModule.register(),
         AuthModule,
         OidcModule,
-
         UsersModule,
-        // WalletModule removed
         OrgsModule,
         AdminModule,
         PrismaModule,
         DebugModule,
-
         ParentalModule,
         HealthModule,
-
         SecurityModule,
         AppsModule,
         NotificationsModule,
         SupportModule,
         PrivacyModule,
-        RoutesModule // <-- Move to end (after all referenced modules)
+        RouterModule.register(routes)
     ],
     controllers: [],
     providers: [
