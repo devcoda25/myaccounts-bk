@@ -37,12 +37,14 @@ import { CommonModule } from './common/common.module';
 
 const env = validateEnv(process.env);
 
-// Define routes with /api/v1 prefix
+// Define routes - OIDC discovery endpoints at root, API routes under /api/v1
 const routes: Routes = [
-    {
-        path: '/api/v1',
-        module: OidcModule
-    },
+    // OIDC endpoints at root (absolute paths)
+    { path: '/.well-known/openid-configuration', module: OidcModule },
+    { path: '/jwks', module: OidcModule },
+
+    // API routes under /api/v1
+    { path: '/api/v1', module: OidcModule },
     { path: '/api/v1/auth', module: AuthModule },
     { path: '/api/v1/users', module: UsersModule },
     { path: '/api/v1/admin', module: AdminModule },
