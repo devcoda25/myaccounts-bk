@@ -27,7 +27,10 @@ export class VerificationService {
 
         // Send via Channel
         if (deliveryMethod === 'sms_code') {
-            await this.smsService.sendSms(identifier, `Your verification code is ${code}`);
+            const smsResult = await this.smsService.sendSms(identifier, `Your verification code is ${code}`);
+            if (!smsResult.success) {
+                throw new BadRequestException(`SMS failed: ${smsResult.error || 'Unknown error'}`);
+            }
         } else if (deliveryMethod === 'whatsapp_code') {
             await this.whatsappService.sendWhatsappCode(identifier, code);
         } else if (deliveryMethod === 'email_code' || deliveryMethod === 'email_link' || !deliveryMethod) {

@@ -40,12 +40,7 @@ export class UsersController {
 
     @Get('me')
     async getProfile(@CurrentUser() user: AuthRequest['user']) {
-        const profile = await this.userQueryService.findById(user.id, { fullProfile: true });
-        console.log(`[Users] /users/me for ${user.id}:`, {
-            hasSessions: Array.isArray(profile?.sessions),
-            sessionCount: profile?.sessions?.length || 0
-        });
-        return profile;
+        return this.userQueryService.findById(user.id, { fullProfile: true });
     }
 
     @Patch('me')
