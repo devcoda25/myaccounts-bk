@@ -3,7 +3,7 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { KeyManager } from '../../utils/keys';
 
 @ApiTags('OIDC Configuration')
-@Controller('jwks')
+@Controller('/oidc/jwks')
 export class JwksController {
     @Get()
     @ApiOperation({ summary: 'Get JSON Web Key Set' })

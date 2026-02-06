@@ -2,7 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 
 @ApiTags('OIDC Configuration')
-@Controller('.well-known/openid-configuration')
+@Controller('/oidc/.well-known/openid-configuration')
 export class OidcConfigController {
     @Get()
     @ApiOperation({ summary: 'Get OIDC Configuration' })
