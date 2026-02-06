@@ -118,12 +118,6 @@ export class OidcInteractionController {
         // Validate Body
         const result = LoginSchema.safeParse(body);
         if (!result.success) {
-            // If API, return 400. If Form, redirect.
-            // Since frontend is SPA calling this API, 400 is fine?
-            // Actually, this endpoint might be called by the frontend code via AJAX.
-            // If it's AJAX, JSON response is preferred.
-            // BUT oidc-provider expects a redirect/interaction finished at the end.
-            // We will call provider.interactionFinished which handles the response (usually a redirect back to auth flow).
             return res.status(400).send({ error: 'Invalid input' });
         }
 
@@ -136,21 +130,31 @@ export class OidcInteractionController {
             return res.status(401).send({ error: 'Invalid credentials' });
         }
 
+        // Get IP and location for session
+        const ip = req.ip || (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '';
+
+        // Create session in database
+        const deviceInfo = {
+            ip,
+            device: req.headers['user-agent'] || 'Unknown',
+            os: 'Unknown',
+            browser: 'Unknown',
+            location: 'Unknown'
+        };
+
+        await this.loginService.generateSessionToken(user, deviceInfo);
+
         // Success - Finish Interaction
         const interactionResult = {
             login: { accountId: user.id },
         };
 
-        // This commits the interaction and redirects the User Agent back to the Authorization Endpoint
         try {
             await this.provider.interactionFinished(req.raw, res.raw, interactionResult, { mergeWithLastSubmission: false });
             return;
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : 'Unknown error';
             console.error(`[OIDC ERROR] interactionFinished failed for UID ${uid}: ${errorMessage}`);
-
-            // [Fix] Handle Stale Sessions (e.g. server restart)
-            // If interaction is not found or invalid, restart the flow
             if (err instanceof Error) {
                 if (err.message === 'invalid_request' || err.name === 'SessionNotFound') {
                     return res.redirect('/auth/sign-in');

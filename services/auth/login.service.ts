@@ -54,6 +54,8 @@ export class LoginService {
             deviceInfo: finalDevice
         });
 
+        console.log(`[Login] Session created: ${session.id} for user ${user.id}`);
+
         // 3. Generate Access Token JWT (Short-lived 15m)
         const privateKey = await KeyManager.getPrivateKey();
         const accessToken = await new jose.SignJWT({
