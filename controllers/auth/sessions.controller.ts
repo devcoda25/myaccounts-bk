@@ -20,7 +20,7 @@ import { User } from '@prisma/client';
  * - GET /oidc/logout: OIDC end_session_endpoint
  */
 
-@Controller('sessions')
+@Controller('auth/sessions')
 @UseGuards(AuthGuard)
 export class SessionsController {
     constructor(
