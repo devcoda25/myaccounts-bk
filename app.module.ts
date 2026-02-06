@@ -57,7 +57,6 @@ const env = validateEnv(process.env);
         PrometheusModule.register(),
         AuthModule,
         OidcModule,
-        RoutesModule, // <-- THIS WAS MISSING!
 
         UsersModule,
         // WalletModule removed
@@ -73,7 +72,8 @@ const env = validateEnv(process.env);
         AppsModule,
         NotificationsModule,
         SupportModule,
-        PrivacyModule
+        PrivacyModule,
+        RoutesModule // <-- Move to end (after all referenced modules)
     ],
     controllers: [],
     providers: [
