@@ -37,24 +37,24 @@ import { CommonModule } from './common/common.module';
 
 const env = validateEnv(process.env);
 
-// Define routes
+// Define routes with /api/v1 prefix
 const routes: Routes = [
     {
-        path: '/',
+        path: '/api/v1',
         module: OidcModule
     },
-    { path: 'auth', module: AuthModule },
-    { path: 'users', module: UsersModule },
-    { path: 'admin', module: AdminModule },
-    { path: 'debug', module: DebugModule },
-    { path: 'parental', module: ParentalModule },
-    { path: 'health', module: HealthModule },
-    { path: 'security', module: SecurityModule },
-    { path: 'apps', module: AppsModule },
-    { path: 'notifications', module: NotificationsModule },
-    { path: 'support', module: SupportModule },
-    { path: 'privacy', module: PrivacyModule },
-    { path: 'orgs', module: OrgsModule },
+    { path: '/api/v1/auth', module: AuthModule },
+    { path: '/api/v1/users', module: UsersModule },
+    { path: '/api/v1/admin', module: AdminModule },
+    { path: '/api/v1/debug', module: DebugModule },
+    { path: '/api/v1/parental', module: ParentalModule },
+    { path: '/api/v1/health', module: HealthModule },
+    { path: '/api/v1/security', module: SecurityModule },
+    { path: '/api/v1/apps', module: AppsModule },
+    { path: '/api/v1/notifications', module: NotificationsModule },
+    { path: '/api/v1/support', module: SupportModule },
+    { path: '/api/v1/privacy', module: PrivacyModule },
+    { path: '/api/v1/orgs', module: OrgsModule },
 ];
 
 @Module({
