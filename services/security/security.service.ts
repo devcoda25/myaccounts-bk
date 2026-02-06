@@ -49,6 +49,22 @@ export class SecurityService {
         return { success: true, message: 'Account locked and sessions revoked.' };
     }
 
+    async logSecurityEvent(userId: string, action: string, ip?: string, details?: Record<string, unknown>) {
+        return this.prisma.auditLog.create({
+            data: {
+                userId,
+                action,
+                severity: 'medium',
+                ipAddress: ip,
+                details: {
+                    ...details,
+                    loggedAt: new Date().toISOString()
+                },
+                actorName: 'User'
+            }
+        });
+    }
+
     async getActivityLogs(userId: string) {
         return this.prisma.auditLog.findMany({
             where: { userId },
