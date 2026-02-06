@@ -61,35 +61,28 @@ export class SmsService {
     }
 
     async sendSms(to: string, message: string) {
-        this.logger.log(`[SMS] Request to send - to: ${to}, message: ${message}`);
-        this.logger.log(`[SMS] ENV check - TWILIO_SID: ${!!process.env.TWILIO_ACCOUNT_SID}, TWILIO_TOKEN: ${!!process.env.TWILIO_AUTH_TOKEN}, TWILIO_FROM: ${!!process.env.TWILIO_SMS_FROM_NUMBER}`);
+        this.logger.log(`[SMS] Attempting to send to: ${to}`);
+        this.logger.log(`[SMS] ENV - TWILIO_SID: ${process.env.TWILIO_ACCOUNT_SID}, TWILIO_TOKEN: ${!!process.env.TWILIO_AUTH_TOKEN}, FROM: ${process.env.TWILIO_SMS_FROM_NUMBER}`);
 
-        // Check provider availability
         if (!this.twilioClient) {
-            this.logger.error(`[SMS] Twilio client not initialized. Check environment variables!`);
-            return { success: false, error: 'Twilio not configured' };
+            this.logger.error(`[SMS] FATAL: Twilio client is NOT initialized! Check env vars.`);
+            return { success: false, error: 'Twilio not configured on server' };
         }
 
-        // Use Twilio only (Africa's Talking disabled for simplicity)
-        if (this.twilioClient) {
-            this.logger.log(`[Twilio] Sending SMS to ${to} from ${process.env.TWILIO_SMS_FROM_NUMBER}`);
-            try {
-                const result = await this.twilioClient.messages.create({
-                    body: message,
-                    from: process.env.TWILIO_SMS_FROM_NUMBER,
-                    to: to
-                });
-                this.logger.log(`[Twilio] SMS sent successfully to ${to}: ${result.sid}`);
-                return { success: true, provider: 'twilio', id: result.sid };
-            } catch (error: any) {
-                this.logger.error(`[Twilio] SMS Failed to ${to}: ${error.message}`);
-                this.logger.error(`[Twilio] Error code: ${error.code}, more info: ${error.moreInfo}`);
-                return { success: false, error: error.message, code: error.code };
-            }
+        this.logger.log(`[SMS] Twilio client ready, sending message...`);
+        try {
+            const result = await this.twilioClient.messages.create({
+                body: message,
+                from: process.env.TWILIO_SMS_FROM_NUMBER,
+                to: to
+            });
+            this.logger.log(`[SMS] SUCCESS via Twilio: ${result.sid}`);
+            return { success: true, provider: 'twilio', id: result.sid };
+        } catch (error: any) {
+            this.logger.error(`[SMS] Twilio error: ${error.message}`);
+            this.logger.error(`[SMS] Error code: ${error.code || 'N/A'}`);
+            return { success: false, error: error.message, code: error.code };
         }
-
-        this.logger.error(`[SMS] No SMS provider configured!`);
-        return { success: false, error: 'No SMS provider configured' };
     }
 
     private async detectRegion(emailOrPhone: string): Promise<'CN' | 'AFRICA' | 'Global'> {
