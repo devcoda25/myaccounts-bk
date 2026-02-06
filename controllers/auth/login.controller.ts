@@ -113,10 +113,12 @@ export class LoginController {
 
     @Post('otp/request')
     async requestOtp(@Body() body: { identifier: string }) {
+        console.log(`[Auth] OTP request for identifier: ${body.identifier}`);
         const user = await this.userManagementService.findOneByIdentifier(body.identifier);
         if (!user) throw new UnauthorizedException('User not found');
 
         const deliveryMethod = body.identifier.includes('@') ? 'email_code' : 'sms_code';
+        console.log(`[Auth] OTP delivery method: ${deliveryMethod}`);
         return this.verificationService.requestVerification(body.identifier, 'OTP_SIGNIN', deliveryMethod);
     }
 

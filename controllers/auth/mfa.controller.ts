@@ -52,9 +52,12 @@ export class MfaController {
 
     @Post('setup/sms/send')
     async sendSmsCode(@Req() req: AuthRequest, @Body() body: { phone: string }) {
+        console.log(`[MFA] SMS send request for user ${req.user.sub}, phone: ${body.phone}`);
         await this.checkMfaRateLimit(req.user.sub, 'setup-sms-send', 3, 60000);
         if (!body.phone) throw new BadRequestException('Phone number required');
-        return this.mfaService.sendSmsCode(req.user.sub, body.phone);
+        const result = await this.mfaService.sendSmsCode(req.user.sub, body.phone);
+        console.log(`[MFA] SMS send result:`, result);
+        return result;
     }
 
     @Post('setup/verify')
