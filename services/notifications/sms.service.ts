@@ -61,14 +61,18 @@ export class SmsService {
     }
 
     async sendSms(to: string, message: string) {
-        this.logger.log(`[SMS] Incoming request - to: ${to}, message: ${message}`);
+        this.logger.log(`[SMS] Request to send - to: ${to}, message: ${message}`);
+        this.logger.log(`[SMS] ENV check - TWILIO_SID: ${!!process.env.TWILIO_ACCOUNT_SID}, TWILIO_TOKEN: ${!!process.env.TWILIO_AUTH_TOKEN}, TWILIO_FROM: ${!!process.env.TWILIO_SMS_FROM_NUMBER}`);
 
         // Check provider availability
-        this.logger.log(`[SMS] Provider status - Twilio: ${!!this.twilioClient}`);
+        if (!this.twilioClient) {
+            this.logger.error(`[SMS] Twilio client not initialized. Check environment variables!`);
+            return { success: false, error: 'Twilio not configured' };
+        }
 
         // Use Twilio only (Africa's Talking disabled for simplicity)
         if (this.twilioClient) {
-            this.logger.log(`[Twilio] Attempting SMS to ${to} from ${process.env.TWILIO_SMS_FROM_NUMBER}`);
+            this.logger.log(`[Twilio] Sending SMS to ${to} from ${process.env.TWILIO_SMS_FROM_NUMBER}`);
             try {
                 const result = await this.twilioClient.messages.create({
                     body: message,
@@ -77,10 +81,10 @@ export class SmsService {
                 });
                 this.logger.log(`[Twilio] SMS sent successfully to ${to}: ${result.sid}`);
                 return { success: true, provider: 'twilio', id: result.sid };
-            } catch (error) {
+            } catch (error: any) {
                 this.logger.error(`[Twilio] SMS Failed to ${to}: ${error.message}`);
-                this.logger.error(`[Twilio] Error details: ${JSON.stringify(error)}`);
-                return { success: false, error: error.message };
+                this.logger.error(`[Twilio] Error code: ${error.code}, more info: ${error.moreInfo}`);
+                return { success: false, error: error.message, code: error.code };
             }
         }
 
