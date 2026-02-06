@@ -18,6 +18,7 @@ export class SessionRepository {
                 refreshTokenHash: data.tokenHash,
                 expiresAt: data.expiresAt,
                 deviceInfo: data.deviceInfo,
+                lastUsedAt: new Date(),
             },
         });
     }
