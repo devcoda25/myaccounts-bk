@@ -4,23 +4,43 @@ on:
   push:
     branches: [ main ]
 
+# Prevent concurrent deployments
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+# Define permissions for security best practices
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
 
-      - run: npm install --legacy-peer-deps
-      - run: npm run test
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Run tests
+        run: npm run test
 
   deploy:
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Deploy to DigitalOcean Droplet
         uses: appleboy/ssh-action@v1.0.3
@@ -41,9 +61,10 @@ jobs:
             [ -f ecosystem.config.js ] && cp ecosystem.config.js /tmp/ecosystem.config.js
             [ -f .env ] && cp .env /tmp/myaccounts.env
 
-            # Force repo to match origin/main (fixes package-lock conflicts)
-            git fetch origin main
-            git reset --hard origin/main
+            # Determine default branch and sync
+            DEFAULT_BRANCH=$(git remote show origin | grep "HEAD branch" | cut -d' ' -f5)
+            git fetch origin "$DEFAULT_BRANCH"
+            git reset --hard "origin/$DEFAULT_BRANCH"
             git clean -fd -e ecosystem.config.js -e .env -e .env.*
 
             # Restore server-specific files
@@ -54,7 +75,7 @@ jobs:
             grep -qxF "ecosystem.config.js" .git/info/exclude || echo "ecosystem.config.js" >> .git/info/exclude
 
             # Install deps without rewriting package-lock.json
-            npm ci --legacy-peer-deps
+            npm ci --legacy-peer-de-deps
 
             npx prisma generate
 
