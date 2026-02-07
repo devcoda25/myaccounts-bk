@@ -75,7 +75,7 @@ jobs:
             grep -qxF "ecosystem.config.js" .git/info/exclude || echo "ecosystem.config.js" >> .git/info/exclude
 
             # Install deps without rewriting package-lock.json
-            npm ci --legacy-peer-de-deps
+            npm ci --legacy-peer-deps
 
             npx prisma generate
 

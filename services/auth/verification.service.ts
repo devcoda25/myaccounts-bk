@@ -26,11 +26,8 @@ export class VerificationService {
         await this.verificationRepo.saveVerification(identifier, code, type);
 
         // Send via Channel
-        console.log(`[Verification] deliveryMethod: ${deliveryMethod}`);
         if (deliveryMethod === 'sms_code') {
-            console.log(`[Verification] SMS code requested for ${identifier}`);
             const smsResult = await this.smsService.sendSms(identifier, `Your verification code is ${code}`);
-            console.log(`[Verification] SMS result:`, smsResult);
             if (!smsResult.success) {
                 throw new BadRequestException(`SMS failed: ${smsResult.error || 'Unknown error'}`);
             }

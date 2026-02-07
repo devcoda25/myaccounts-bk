@@ -61,26 +61,21 @@ export class SmsService {
     }
 
     async sendSms(to: string, message: string) {
-        this.logger.log(`[SMS] Attempting to send to: ${to}`);
-        this.logger.log(`[SMS] ENV - TWILIO_SID: ${process.env.TWILIO_ACCOUNT_SID}, TWILIO_TOKEN: ${!!process.env.TWILIO_AUTH_TOKEN}, FROM: ${process.env.TWILIO_SMS_FROM_NUMBER}`);
-
         if (!this.twilioClient) {
-            this.logger.error(`[SMS] FATAL: Twilio client is NOT initialized! Check env vars.`);
+            this.logger.error('Twilio client not initialized');
             return { success: false, error: 'Twilio not configured on server' };
         }
 
-        this.logger.log(`[SMS] Twilio client ready, sending message...`);
         try {
             const result = await this.twilioClient.messages.create({
                 body: message,
                 from: process.env.TWILIO_SMS_FROM_NUMBER,
                 to: to
             });
-            this.logger.log(`[SMS] SUCCESS via Twilio: ${result.sid}`);
+            this.logger.log(`SMS sent via Twilio: ${result.sid}`);
             return { success: true, provider: 'twilio', id: result.sid };
         } catch (error: any) {
-            this.logger.error(`[SMS] Twilio error: ${error.message}`);
-            this.logger.error(`[SMS] Error code: ${error.code || 'N/A'}`);
+            this.logger.error(`Twilio SMS error: ${error.message}`);
             return { success: false, error: error.message, code: error.code };
         }
     }

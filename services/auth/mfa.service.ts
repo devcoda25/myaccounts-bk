@@ -84,11 +84,8 @@ export class MfaService {
     }
 
     async sendSmsCode(userId: string, phone: string) {
-        console.log(`[MFA] sendSmsCode called for user ${userId}, phone: ${phone}`);
         // Use VerificationService to send code
-        const verificationResult = await this.verificationService.requestVerification(phone, 'PHONE_VERIFY', 'sms_code');
-        console.log(`[MFA] verificationService.requestVerification result:`, verificationResult);
-        return verificationResult;
+        return this.verificationService.requestVerification(phone, 'PHONE_VERIFY', 'sms_code');
     }
 
     async verifyAndEnable(userId: string, token: string, secret?: string, method: 'authenticator' | 'sms' | 'whatsapp' = 'authenticator', phone?: string) {
