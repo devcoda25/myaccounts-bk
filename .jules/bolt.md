@@ -1,0 +1,3 @@
+## 2024-05-18 - [Add Composite Indexes in Prisma]
+**Learning:** Prisma doesn't automatically index foreign keys for PostgreSQL. Also, frequent queries by foreign key (`findMany`) that are then sorted by time (e.g., `findBy({ userId })` and sort by `createdAt`) necessitate composite indexes for optimal performance, rather than single column indices on foreign keys alone.
+**Action:** When adding models or optimizing for typical `findAll` patterns that involve filtering by foreign key and sorting by time, proactively add composite indexes (`@@index([foreignKey, timeColumn])`) to `prisma/schema.prisma`.
