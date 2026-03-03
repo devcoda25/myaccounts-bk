@@ -1,0 +1,3 @@
+## 2024-05-18 - Missing DB Indexes for Core Access Patterns
+**Learning:** Common queries filtering by a foreign key (e.g., `userId`, `childId`) and ordering by a timestamp (e.g., `createdAt`, `at`, `lastUsedAt`) lack composite indexes in the Prisma schema. This happens frequently because Prisma does not automatically index foreign keys in PostgreSQL. If unchecked, this causes slow in-memory sorts and full table scans as tables like `Session`, `Notification`, and `ParentalActivity` grow.
+**Action:** When working on DB scalability, explicitly review and add composite `@@index([foreignKeyId, sortField])` to models that are commonly listed/queried by user, child, or parent ID.
