@@ -1,0 +1,3 @@
+## 2025-02-23 - Database Indexing on Foreign Keys and Timestamp Columns
+**Learning:** This codebase frequently performs queries filtering on a foreign key (like `userId` or `childId`) combined with an `ORDER BY` clause on a timestamp column (like `createdAt`, `lastUsedAt`, or `at`) for pagination or listing recent entries. Prisma and PostgreSQL do not automatically index these combinations, which can lead to expensive in-memory sorts on large tables.
+**Action:** When creating new models or adding new query access patterns, always remember to add composite indexes combining the filtering foreign key and the sorting timestamp column in `schema.prisma` (e.g. `@@index([userId, createdAt])`) to optimize the access path and prevent sorting bottlenecks.
