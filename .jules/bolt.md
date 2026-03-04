@@ -1,0 +1,4 @@
+
+## 2025-03-04 - Missing Composite Indexes for FK + Sort Operations
+**Learning:** The application heavily relies on `findMany` queries that filter by a parent's foreign key (e.g., `userId`, `childId`) and sort by a timestamp (e.g., `createdAt`, `at`, `lastUsedAt`) in descending order. Prisma does not automatically generate composite indexes to optimize these operations, resulting in expensive in-memory sorts for tables like `ParentalActivity`, `ParentalApproval`, `Notification`, `Session`, `SupportTicket`, and `SecurityReport`.
+**Action:** Always check the codebase for `findMany` patterns containing a `where` filter on a foreign key coupled with an `orderBy` on a timestamp, and explicitly add `@@index([fk, timestamp])` in `prisma/schema.prisma` to support these access patterns efficiently.
