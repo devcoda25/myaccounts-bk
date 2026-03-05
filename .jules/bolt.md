@@ -1,0 +1,3 @@
+## 2023-10-27 - Composite Indexes for Foreign Key + Timestamp Sorting
+**Learning:** Prisma doesn't automatically index foreign keys. Moreover, common query patterns like finding records by a `userId` or `childId` and ordering them by `createdAt` or `at` result in slow table scans or in-memory sorts if a composite index is missing. Adding `@@index([foreignKeyId, timestamp])` is critical for scaling these `findMany` queries in Prisma on Postgres.
+**Action:** When creating new models with foreign keys that will be fetched in reverse-chronological order (e.g., activity feeds, lists), explicitly add a composite index on the foreign key and the timestamp field in `schema.prisma`.
