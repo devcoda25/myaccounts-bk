@@ -1,0 +1,3 @@
+## 2024-05-24 - [Database Performance Pattern: Composite Indexes for Access Patterns]
+**Learning:** Prisma with PostgreSQL does not automatically index foreign keys (like `userId` or `childId`). Since a very common access pattern in this codebase involves filtering by a foreign key and sorting by a timestamp (e.g., `orderBy: { at: 'desc' }`), omitting composite indexes on these fields leads to sequential scans and expensive in-memory sorts as tables grow.
+**Action:** When creating new models or optimizing existing ones with relations, always check the query access patterns. Explicitly add composite indexes (e.g., `@@index([foreignKeyId, sortColumnId])`) in `schema.prisma` to optimize performance for filtering + sorting combinations.
