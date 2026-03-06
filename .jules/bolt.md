@@ -1,0 +1,3 @@
+## 2024-05-20 - Missing Composite Indexes for Time-Sorted Queries
+**Learning:** A common query pattern in this codebase involves filtering by a related entity ID (e.g., `userId`, `childId`) and sorting by a timestamp (e.g., `createdAt`, `at`, `lastUsedAt`), which can lead to expensive in-memory sorts or slow queries at scale in PostgreSQL if only single-column indexes are used. Prisma does not automatically index foreign key columns or create these composite indexes.
+**Action:** Always check and explicitly define composite indexes (e.g., `@@index([userId, createdAt])`) in `schema.prisma` for models that are frequently filtered by an owner ID and ordered by time.
