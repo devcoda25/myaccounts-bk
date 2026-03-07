@@ -1,0 +1,3 @@
+## 2024-05-18 - Missing Composite Indexes for Foreign Keys in Prisma/PostgreSQL
+**Learning:** Prisma does not automatically index foreign key columns in PostgreSQL. Furthermore, common access patterns often involve filtering by a foreign key (like `userId` or `childId`) and sorting by a timestamp (like `createdAt`, `at`, or `lastUsedAt`). Without composite indexes covering both the foreign key and the sort column, the database has to perform expensive in-memory sorts for these queries, which becomes a severe bottleneck at scale.
+**Action:** Always explicitly check for and add composite indexes (e.g., `@@index([userId, createdAt])`) in `prisma/schema.prisma` for models that are frequently filtered by a relation ID and sorted by a date/time field.
