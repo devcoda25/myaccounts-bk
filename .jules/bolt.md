@@ -1,0 +1,3 @@
+## 2024-05-24 - [Database Performance] Missing composite indexes for common access patterns
+**Learning:** A common query pattern in this codebase involves filtering by a user-related ID (e.g., `userId`, `childId`) and sorting by a timestamp (e.g., `createdAt`, `at`, `lastUsedAt`), which necessitates composite indexes for optimal performance to prevent expensive in-memory sorts. Prisma does not automatically index foreign key columns in PostgreSQL.
+**Action:** When creating models that are commonly queried by a specific user or entity and sorted by date, always add a composite index like `@@index([userId, createdAt])`.
