@@ -1,0 +1,3 @@
+## 2024-05-24 - [Composite Indexes Missing on Frequently Sorted Relations]
+**Learning:** Found multiple instances where we query a table by a foreign key and sort the results by a date column (e.g. `userId` with `createdAt`, `childId` with `at`, `userId` with `lastUsedAt`), but Prisma schemas lacked these composite indexes, leading to slow sequential scans and in-memory sorts on potentially large datasets. Prisma does not automatically index these relations.
+**Action:** Consistently review `repository.ts` methods that contain `findMany` using `where: { foreignKey }` and `orderBy: { dateColumn }`. Ensure corresponding `@@index([foreignKey, dateColumn])` are explicitly defined in `schema.prisma`.
