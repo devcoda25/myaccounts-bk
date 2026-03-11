@@ -1,0 +1,3 @@
+## 2026-03-11 - Database Composite Indexes for Access Patterns
+**Learning:** Prisma does not automatically index foreign key columns combined with sort fields. Missing composite indexes on common query patterns like `userId` + `createdAt` (for `Notification`, `SecurityReport`, `SupportTicket`), `childId` + `at` (for `ParentalApproval`, `ParentalActivity`), and `userId` + `lastUsedAt` (for `Session`) leads to expensive in-memory sorts in PostgreSQL.
+**Action:** Always check common database access patterns inside Repositories (like `findManyByChildId` which filters by ID and sorts by a timestamp) and manually add explicit `@@index` annotations to `schema.prisma` for these combinations to optimize the query execution plan.
