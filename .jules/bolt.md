@@ -1,0 +1,3 @@
+## 2024-05-24 - Missing compound indexes for foreign keys sorted by timestamp
+**Learning:** Prisma does not automatically create indexes for foreign keys. We observed that several models and their associated repositories frequently queried data by filtering on a foreign key (e.g., `userId`, `childId`) and sorting by a timestamp (e.g., `createdAt`, `at`). Without compound indexes covering both the foreign key and the sort column, the database falls back to expensive in-memory sort operations, acting as a bottleneck as the dataset grows.
+**Action:** When creating models that rely on chronological retrieval via a foreign key (like User or Child), proactively add a compound index (e.g., `@@index([userId, createdAt])`) in `schema.prisma`.
