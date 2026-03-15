@@ -1,0 +1,4 @@
+## 2024-05-18 - Missing Composite Indexes on Common Repositories
+
+**Learning:** There is a common access pattern in the backend involving filtering by a relation ID (e.g. `userId`, `childId`) and sorting by a timestamp field (e.g. `createdAt`, `at`, `lastUsedAt`), like `where: { childId }, orderBy: { at: 'desc' }` in `ParentalApprovalRepository` or `where: { userId }, orderBy: { lastUsedAt: 'desc' }` in `SessionRepository`. Prisma does not automatically index foreign key columns or composite fields, so these queries require explicit composite indexes (e.g. `@@index([userId, createdAt])`) in PostgreSQL.
+**Action:** Always check repository access patterns and add matching composite indexes to `schema.prisma` for models with heavy sorting on relation queries to prevent expensive in-memory sorts.
