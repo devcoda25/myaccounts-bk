@@ -1,0 +1,3 @@
+## 2024-05-24 - Missing Composite Indexes on Prisma Relations
+**Learning:** In this NestJS/Prisma setup, several models (e.g., `ParentalActivity`, `ParentalApproval`, `SecurityReport`, `SupportTicket`) are frequently queried by their foreign keys (`childId` or `userId`) and sorted by timestamps (`at` or `createdAt`). Prisma does not automatically index foreign keys, causing potential sequential scans and expensive in-memory sorts on large datasets.
+**Action:** Always add composite indexes (e.g., `@@index([userId, createdAt])`) to models when there is an established access pattern filtering by relation and sorting by date, to optimize query performance.
