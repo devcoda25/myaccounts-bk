@@ -1,0 +1,3 @@
+## 2024-05-14 - [Database Index Optimization]
+**Learning:** In Prisma with PostgreSQL, B-Tree composite indexes (e.g., `@@index([childId, at])`) natively support common access patterns filtering by foreign keys and sorting by timestamps (e.g. `ORDER BY ... DESC`) without explicit sorting directives needed in the schema. Without these composite indexes, these queries result in expensive in-memory sorts for common queries like `.findMany({ where: { childId }, orderBy: { at: 'desc' } })`.
+**Action:** Always check models that are heavily queried by foreign keys and sorted by dates/timestamps to ensure they have matching composite indexes `@@index([foreignKey, sortColumn])` to prevent database-level slow queries and N+1-like performance degradation on pagination.
