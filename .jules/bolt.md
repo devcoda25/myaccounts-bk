@@ -1,0 +1,3 @@
+## 2024-05-30 - Database Indexing for Filter-Sort Queries
+**Learning:** In the Prisma setup for this Postgres database, several repositories execute `findMany` with `where: { userId: ... }` and `orderBy: { createdAt: 'desc' }` (or similar for `childId` and `at`/`lastUsedAt`). Without a composite index on both the foreign key and the sort column, the database has to do an expensive sort step after filtering.
+**Action:** Added composite indexes (e.g., `@@index([userId, lastUsedAt])`) to affected models (`Session`, `ParentalActivity`, `ParentalApproval`, `SecurityReport`, `SupportTicket`) to natively support these index scans and eliminate in-memory sorting.
