@@ -1,0 +1,3 @@
+## 2024-03-23 - [Database Index Optimization]
+**Learning:** Found multiple models in `prisma/schema.prisma` that are queried by foreign keys and ordered by a timestamp (`childId` and `at` for `ParentalApproval` & `ParentalActivity`, `userId` and `createdAt` for `Notification`, `SecurityReport`, & `SupportTicket`, `userId` and `lastUsedAt` for `Session`), but lack explicit indexes. Prisma doesn't create indexes for foreign keys automatically in PostgreSQL. This causes sequential scans during lookups.
+**Action:** Always add `@@index([foreignKeyId, timestampColumn])` on models that frequently perform filter-and-sort queries to optimize database reads.
