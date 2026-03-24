@@ -1,0 +1,4 @@
+## 2024-03-24 - [Initial Learning]\n**Learning:** Just starting out.\n**Action:** Need to find performance optimization.
+## 2024-03-24 - [Database Query Performance]
+**Learning:** Found multiple repositories (`ParentalActivityRepository`, `ParentalApprovalRepository`, `SupportRepository`) that query for rows using a foreign key (e.g., `userId` or `childId`) and sort by a timestamp (e.g., `createdAt` or `at` descending). Prisma and PostgreSQL do not automatically index foreign keys or composite queries. Without a composite index `@@index([foreignKey, timestamp])`, these queries result in full table scans or expensive in-memory sorts as tables grow.
+**Action:** Always add composite indexes (e.g., `@@index([userId, createdAt])`) on related models to optimize common query access patterns that filter by parent ID and sort by time.
