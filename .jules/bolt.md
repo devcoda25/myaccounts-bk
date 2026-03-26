@@ -1,0 +1,3 @@
+## 2026-03-26 - [Missing Composite Indexes in Prisma for PostgreSQL]
+**Learning:** Common access patterns that involve filtering by a foreign key (e.g., `userId`) and sorting by a timestamp (e.g., `createdAt`) require explicit composite indexes in `schema.prisma` for optimal performance. Prisma does not automatically add indexes for foreign keys in PostgreSQL, and B-Tree composite indexes naturally support `ORDER BY ... DESC` queries.
+**Action:** When creating or analyzing models with these query patterns (like fetching recent activities or approvals), always explicitly add a composite index (e.g., `@@index([userId, createdAt])`) to prevent expensive in-memory sorts and improve query performance.
