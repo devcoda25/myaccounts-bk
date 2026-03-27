@@ -1,0 +1,3 @@
+## 2025-03-27 - Composite Indexing for Parental Features
+**Learning:** Common queries in the parental module (e.g., fetching activities and approvals) filter by `childId` and order by `at` descending. This access pattern can cause expensive in-memory sorts if a composite index covering both fields isn't present, even if B-tree single indexes exist.
+**Action:** When creating models that log chronological activity for an entity, always explicitly add a composite `@@index([entityId, timestamp])` in `prisma/schema.prisma` to naturally support `ORDER BY ... DESC` without an explicit sort directive in schema.
