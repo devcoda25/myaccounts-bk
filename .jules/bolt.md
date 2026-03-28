@@ -1,0 +1,3 @@
+## 2026-03-28 - [Database Optimizations]
+**Learning:** Common filtering patterns combined with temporal sorting (e.g., filter by `userId`, sort by `createdAt` DESC) often require explicit composite indexes (e.g., `@@index([userId, createdAt])`) in Prisma + PostgreSQL. Without these, B-Tree indexes may not efficiently avoid full table scans and in-memory sorts. Prisma does not automatically index foreign key fields either, making explicit composite indexes crucial for these typical access patterns.
+**Action:** When a query filters by a foreign key (e.g. `userId` or `childId`) and sorts by a timestamp, always add a composite index covering both fields in the Prisma schema to avoid sequential scans and expensive sorting operations.
