@@ -1,0 +1,3 @@
+## 2025-03-08 - [Missing Composite Indexes]
+**Learning:** Found several models (`Notification`, `SecurityReport`, `SupportTicket`, `Session`) that are commonly queried by a foreign key (`userId`) and sorted by a timestamp (`createdAt` or `lastUsedAt`), but lack composite indexes. Without a composite index on `[userId, timestamp]`, the database must perform an expensive in-memory sort after filtering by the user.
+**Action:** Added `@@index([userId, createdAt])` and `@@index([userId, lastUsedAt])` to these models to support `ORDER BY ... DESC` access patterns directly from the B-Tree index, improving performance and preventing full-table scan/sorts.
