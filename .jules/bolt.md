@@ -1,0 +1,3 @@
+## 2024-05-24 - Composite Indexes for Chronological Queries
+**Learning:** Chronological queries (e.g., `orderBy: { createdAt: 'desc' }` combined with a `where: { relationId }` clause) on large tables without composite indexes result in expensive in-memory sorts (filesorts).
+**Action:** Always add composite database indexes covering both the foreign key and the sort timestamp (e.g., `@@index([parentId, createdAt])` for `ChildProfile`, `@@index([childId, at])` for `ParentalApproval` and `ParentalActivity`) to optimize query execution and avoid sequential scans combined with expensive sorting operations.
