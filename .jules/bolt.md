@@ -1,0 +1,3 @@
+## 2025-02-14 - Time-Series Access Pattern Indexes
+**Learning:** In PostgreSQL, queries sorting by timestamps (e.g. `orderBy: { at: 'desc' }`) on foreign key access patterns (e.g. filtering by `childId`) can cause expensive in-memory file sorts if proper composite indexes are missing. Adding composite indexes `@@index([foreignKeyId, timestampField])` allows Prisma to utilize the B-Tree index for both filtering and sorting seamlessly.
+**Action:** When adding new related models that will be queried in chronological order, explicitly add a composite index of the foreign key and the sort column in `prisma/schema.prisma`.
