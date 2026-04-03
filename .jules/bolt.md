@@ -1,0 +1,3 @@
+## 2024-05-24 - [Missing Composite Indexes]
+**Learning:** Found multiple models where filtering by a foreign key and sorting by a chronological field happens frequently, but there are no composite indexes. In Prisma and PostgreSQL, B-Tree composite indexes like `@@index([childId, at])` naturally support `ORDER BY ... DESC` without explicit `sort: Desc` declarations and prevent expensive in-memory sorts for pagination/latest record lookups.
+**Action:** When adding models with standard `.findMany` sorting by timestamps, explicitly check for and add composite indexes on Foreign Keys and sort columns in `prisma/schema.prisma` to improve performance.
