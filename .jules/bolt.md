@@ -1,0 +1,3 @@
+## 2024-06-25 - PostgreSQL/Prisma Foreign Key and Sort Indexing
+**Learning:** Prisma does not automatically index foreign key columns (like `userId` or `childId`) in PostgreSQL. Furthermore, B-Tree composite indexes (e.g., `@@index([childId, at])`) naturally support `ORDER BY ... DESC` queries without needing an explicit `sort: Desc` declaration in the schema. In this codebase, common query patterns involve filtering by a foreign key and sorting chronologically (e.g., `createdAt` or `lastUsedAt`), which results in expensive in-memory sorts if missing.
+**Action:** Always explicitly check for and add composite indexes on Foreign Keys and sort columns in `prisma/schema.prisma` to optimize sorting and avoid in-memory filesorts.
