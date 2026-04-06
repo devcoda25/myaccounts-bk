@@ -1,0 +1,3 @@
+## 2024-04-06 - Missing Composite Indexes for Chronological Queries
+**Learning:** The database was performing expensive in-memory sorts (filesort) for chronological queries (e.g., filtering by `userId`/`childId`/`parentId` and sorting by `createdAt`/`at`/`lastUsedAt` DESC) because it lacked B-Tree composite indexes on these foreign key and timestamp columns in PostgreSQL.
+**Action:** When creating models that represent a timeline or history (like activities, logs, tickets, notifications), always add a composite index `@@index([foreignKeyId, sortTimestamp])` to optimize these common access patterns.
