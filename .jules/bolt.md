@@ -1,0 +1,3 @@
+## 2024-05-24 - [PostgreSQL Chronological Query Optimization]
+**Learning:** Common backend query patterns often sort by chronological fields like `createdAt` or `lastUsedAt`. While Prisma automatically generates indexes for primary and unique keys, it does not index simple relational queries or composite structures without manual configuration. Omitting these causes large table scans or in-memory sorts during high-volume `findMany` queries sorted by date.
+**Action:** Always verify if a `findMany` query includes an `orderBy: { <dateField>: 'desc' }`. If so, ensure an `@@index([foreignKey, <dateField>])` exists in the schema to utilize B-Tree indexing effectively and prevent sort-related performance regressions.
