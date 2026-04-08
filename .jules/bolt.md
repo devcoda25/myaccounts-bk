@@ -1,0 +1,4 @@
+
+## 2024-05-24 - Database Optimization: Missing Composite Indexes for Chronological Queries
+**Learning:** Chronological query patterns on `Notification`, `SecurityReport`, `SupportTicket`, and `Session` models require composite indexes (e.g., `@@index([userId, createdAt])` and `@@index([userId, lastUsedAt])`) to prevent expensive in-memory sorts and improve query performance for common access patterns. Prisma does not automatically index foreign key columns (like `userId`) in PostgreSQL, making B-Tree composite indexes essential for `ORDER BY ... DESC` queries without explicit `sort: Desc` declarations.
+**Action:** Always explicitly check for and add missing indexes on Foreign Keys and sort columns in `prisma/schema.prisma` when optimizing, ensuring intended fields exist in the model before adding an `@@index` to prevent fatal schema compilation errors.
