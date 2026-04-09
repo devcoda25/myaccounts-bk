@@ -1,0 +1,3 @@
+## 2024-04-09 - Missing composite index on ChildProfile access patterns
+**Learning:** `ChildProfileRepository.findManyByParentId` frequently accesses the `ChildProfile` model and queries by `parentId` while sorting by `createdAt` descending. Similarly, `ChildProfile` nested relation queries inside `ChildProfileRepository` sort nested `ParentalActivity` records by `at` descending. Other related repositories such as `ParentalActivityRepository` and `ParentalApprovalRepository` do not natively have `createdAt` or `at` composite indices.
+**Action:** Adding composite indices on `(parentId, createdAt)` and nested query access patterns.
