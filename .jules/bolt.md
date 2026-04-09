@@ -1,0 +1,3 @@
+## 2024-04-09 - Missing Foreign Key Indexes & Chronological Queries in Prisma
+**Learning:** In Prisma with PostgreSQL, B-Tree composite indexes for foreign keys + timestamps (e.g., `@@index([childId, at])`) naturally support `ORDER BY ... DESC` queries without needing explicit sort direction in the schema. Prisma does not auto-index foreign keys in Postgres. Omitting these causes expensive in-memory sorts for common access patterns like `findManyByChildId` which order by creation date.
+**Action:** When creating models queried by a foreign key and sorted by a timestamp, always explicitly define a composite `@@index([foreignKeyId, timestampField])` in `schema.prisma`.
