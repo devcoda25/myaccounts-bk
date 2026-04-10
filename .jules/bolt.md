@@ -1,0 +1,3 @@
+## 2023-10-27 - Composite Indexes for Chronological Queries
+**Learning:** Found multiple repository methods (e.g., `findManyByChildId`, `findUserTickets`, `findUserReports`) fetching data chronologically filtering by a foreign key (like `userId` or `childId`) and sorting by a timestamp (like `createdAt` or `at`). Without a composite index, this causes the database to perform expensive in-memory filesorts when querying large datasets.
+**Action:** Always explicitly verify and add composite indexes (e.g., `@@index([userId, createdAt])`, `@@index([childId, at])`) on models when queries filter by a foreign key and sort by a timestamp column.
