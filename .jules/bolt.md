@@ -1,0 +1,3 @@
+## 2024-04-10 - Adding composite indexes for chronological foreign key queries
+**Learning:** Common backend query patterns often filter by a foreign key (e.g., `userId`, `childId`) and sort by a timestamp (e.g., `createdAt`, `at`, `lastUsedAt`). Without a composite index, this causes slow in-memory filesorts. Adding B-Tree composite indexes like `@@index([userId, createdAt])` naturally supports `ORDER BY ... DESC` without explicit `sort: Desc` declarations in Prisma schema, making such access patterns highly efficient.
+**Action:** Always verify if chronological list operations (e.g., `findMany` with `where: { userId }` and `orderBy: { createdAt: 'desc' }`) are backed by a composite index of the foreign key and timestamp field.
