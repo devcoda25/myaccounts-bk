@@ -1,0 +1,3 @@
+## 2024-04-12 - Missing Composite Indexes for Chronological Queries
+**Learning:** Found multiple instances where we filter by a foreign key (like `userId`, `childId`, `parentId`) and sort by a timestamp (`createdAt`, `lastUsedAt`, `at`) without composite indexes (e.g., `Session`, `ParentalApproval`, `ParentalActivity`, `Notification`). This missing pattern forces expensive in-memory sorts in PostgreSQL which could become a significant bottleneck as data grows.
+**Action:** Always verify access patterns (especially chronologically sorted lists by owner ID) and ensure matching composite B-Tree indexes (e.g., `@@index([userId, createdAt])`) are added to the Prisma schema.
