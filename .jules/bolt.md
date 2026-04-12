@@ -1,0 +1,3 @@
+## 2026-04-12 - Missing Composite Indexes for Chronological Queries
+**Learning:** Found multiple repository methods (e.g. `findManyByChildId`, `findManyByParentId`, `findUserTickets`, `findUserReports`, `findActiveSessionsByUser`) querying by a parent ID and sorting by a timestamp descending, but the database schema lacks the corresponding composite indexes (e.g. `@@index([childId, at])`). This leads to expensive in-memory sorts on the database side for these chronologically-ordered access patterns.
+**Action:** Add missing composite indexes in `prisma/schema.prisma` for these common query patterns.
