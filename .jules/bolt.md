@@ -1,0 +1,3 @@
+## 2024-05-24 - Missing Composite Indexes for Chronological Queries
+**Learning:** A common query pattern across multiple repositories (`Notification`, `SecurityReport`, `SupportTicket`, `Session`, `ChildProfile`, `ParentalApproval`, `ParentalActivity`) filters by a foreign key (e.g., `userId` or `childId`) and sorts by a timestamp descending. Because Prisma does not automatically index foreign keys and B-Tree indexes handle DESC sorting natively, failing to provide composite indexes like `@@index([userId, createdAt])` results in expensive in-memory sorts for pagination/limits.
+**Action:** When adding models that use chronological sorting along with a relation filter, always explicitly declare a composite index combining the relation ID and the sort timestamp.
