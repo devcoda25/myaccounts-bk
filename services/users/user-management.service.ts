@@ -1,5 +1,5 @@
-import { Injectable, ConflictException, Logger, ForbiddenException, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Injectable, ConflictException, Logger, ForbiddenException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Prisma, UserAccountStatus } from '@prisma/client';
 import { UserCreateRepository } from '../../repos/users/user-create.repository';
 import { UserUpdateRepository } from '../../repos/users/user-update.repository';
 import { UserDeleteRepository } from '../../repos/users/user-delete.repository';
@@ -35,7 +35,37 @@ export class UserManagementService {
         }
 
         // Exclude acceptTerms from persistence
-        const { countryCode, phone, phoneNumber: fullPhoneNumber, country, password, acceptTerms, ...rest } = data;
+        const { countryCode, phone, phoneNumber: fullPhoneNumber, country, password, acceptTerms, dob, parentEmail, ...rest } = data as any;
+        // Age-gating (Under-18 => parent approval required)
+        let dobDate: Date | undefined;
+        if (dob) {
+            dobDate = new Date(dob);
+            if (Number.isNaN(dobDate.getTime())) {
+                throw new BadRequestException('Invalid date of birth');
+            }
+        }
+
+        const calcAge = (d: Date) => {
+            const now = new Date();
+            let age = now.getFullYear() - d.getFullYear();
+            const m = now.getMonth() - d.getMonth();
+            if (m < 0 || (m === 0 && now.getDate() < d.getDate())) {
+                age -= 1;
+            }
+            return age;
+        };
+
+        let accountStatus: UserAccountStatus = UserAccountStatus.ACTIVE;
+        let guardianEmail: string | undefined = undefined;
+
+        if (dobDate && calcAge(dobDate) < 18) {
+            const pe = (parentEmail || '').toString().trim().toLowerCase();
+            if (!pe) {
+                throw new BadRequestException('Parent/guardian email is required for under-18 accounts');
+            }
+            accountStatus = UserAccountStatus.MINOR_PENDING_PARENT;
+            guardianEmail = pe;
+        }
 
         let phoneNumber = fullPhoneNumber || phone;
         if (countryCode && phone && !phone.startsWith('+')) {
@@ -52,6 +82,9 @@ export class UserManagementService {
             email: rest.email || '',
             phoneNumber: phoneNumber || undefined,
             country: country || undefined,
+            dob: dobDate || undefined,
+            accountStatus,
+            guardianEmail,
             passwordHash,
         });
 

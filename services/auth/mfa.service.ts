@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, UnauthorizedException, Inject, forwardRef, InternalServerErrorException } from '@nestjs/common';
+﻿import { Injectable, BadRequestException, UnauthorizedException, Inject, forwardRef, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from '../../prisma-lib/prisma.service';
 import { Prisma } from '@prisma/client';
 import { VerificationService } from './verification.service';
@@ -28,6 +28,14 @@ const ENCRYPTION_KEY_ENV_VAR = 'ENCRYPTION_KEY';
  */
 function validateEncryptionKey(key: string | undefined): string {
     if (!key) {
+        // In production we must fail-fast. In local/dev environments we generate
+        // an ephemeral key so engineers can run the stack without extra setup.
+        if (process.env.NODE_ENV !== 'production') {
+            const generated = randomBytes(48).toString('base64url').slice(0, 32);
+            process.env[ENCRYPTION_KEY_ENV_VAR] = generated;
+            return generated;
+        }
+
         throw new InternalServerErrorException(
             `Critical Security Error: ${ENCRYPTION_KEY_ENV_VAR} environment variable is not set. ` +
             `MFA encryption cannot function without a valid 32-byte key. ` +
@@ -303,3 +311,4 @@ export class MfaService {
         }
     }
 }
+

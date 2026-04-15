@@ -123,11 +123,20 @@ export class OidcInteractionController {
 
         const { email, password } = result.data;
 
-        // Validate User
+                // Validate User
         const user = await this.loginService.validateUser(email, password);
         if (!user) {
             console.warn(`[OIDC] Invalid credentials for ${email}`);
             return res.status(401).send({ error: 'Invalid credentials' });
+        }
+
+        // Under-18 hard-block: user may sign in to My Accounts portal, but OIDC access to apps is denied
+        if ((user as any).accountStatus === 'MINOR_PENDING_PARENT') {
+            const result = {
+                error: 'access_denied',
+                error_description: 'minor_pending_parent_approval',
+            };
+            return await this.provider.interactionFinished(req.raw, res.raw, result, { mergeWithLastSubmission: false });
         }
 
         // Get IP and location for session

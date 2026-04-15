@@ -201,6 +201,8 @@ import { RedisModule, REDIS_CLIENT } from '../redis/redis.module';
                                         given_name: user.firstName,
                                         family_name: user.otherNames,
                                         picture: user.avatarUrl,
+                                        account_status: (user as any).accountStatus,
+                                        is_minor: ((user as any).accountStatus || '').toString().startsWith('MINOR'),
                                         // Custom EVzone Claims: App-specific role
                                         app_role: user.role === 'SUPER_ADMIN'
                                             ? 'SUPER_APP_ADMIN'

@@ -1,9 +1,10 @@
-import { Controller, Post, Body, Inject, forwardRef, Req } from '@nestjs/common';
+import { BadRequestException, Body, Controller, forwardRef, Inject, Post, Req } from '@nestjs/common';
 import { FastifyRequest } from 'fastify';
-import { UserManagementService } from '../../services/users/user-management.service';
+import { CreateUserDto } from '../../common/dto/auth/create-user.dto';
+import { MinorApprovalService } from '../../services/auth/minor-approval.service';
 import { VerificationService } from '../../services/auth/verification.service';
 import { LocationService } from '../../services/users/location.service';
-import { CreateUserDto } from '../../common/dto/auth/create-user.dto';
+import { UserManagementService } from '../../services/users/user-management.service';
 
 @Controller('users')
 export class UserRegistrationController {
@@ -11,11 +12,17 @@ export class UserRegistrationController {
         private userManagementService: UserManagementService,
         @Inject(forwardRef(() => VerificationService))
         private verificationService: VerificationService,
-        private locationService: LocationService
+        private locationService: LocationService,
+        private minorApprovalService: MinorApprovalService,
     ) { }
 
     @Post()
     async create(@Body() createUserDto: CreateUserDto, @Req() req: FastifyRequest) {
+        // Required for EVzone age-gating / minor handling.
+        if (!createUserDto.dob) {
+            throw new BadRequestException('Date of birth is required');
+        }
+
         const user = await this.userManagementService.create(createUserDto);
 
         // Track Registration Location
@@ -26,8 +33,25 @@ export class UserRegistrationController {
             await this.userManagementService.updateProfile(user.id, { lastLocation: location } as any);
         }
 
-        // Trigger verification (using VerificationService directly)
-        const verification = await this.verificationService.requestVerification(user.email, 'EMAIL_VERIFY');
-        return { ...user };
+        // Trigger verification (only if we actually have an email)
+        if (user.email) {
+            await this.verificationService.requestVerification(user.email, 'EMAIL_VERIFY');
+        }
+
+        // Under-18: send parent approval email (hard-block OIDC until approved)
+        if ((user as any).accountStatus === 'MINOR_PENDING_PARENT' && (user as any).guardianEmail) {
+            await this.minorApprovalService.createAndSendApproval(user.id, (user as any).guardianEmail);
+        }
+
+        // Never return sensitive fields
+        const { passwordHash, twoFactorSecret, recoveryCodes, ...safeUser } = user as any;
+
+        return {
+            user: safeUser,
+            minor: {
+                status: safeUser.accountStatus || null,
+                guardianEmail: safeUser.guardianEmail || null,
+            },
+        };
     }
 }

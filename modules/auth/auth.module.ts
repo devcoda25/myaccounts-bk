@@ -1,25 +1,29 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { UsersModule } from '../users/users.module';
+
 import { LoginService } from '../../services/auth/login.service';
 import { VerificationService } from '../../services/auth/verification.service';
 import { PasswordService } from '../../services/auth/password.service';
 import { SessionManagementService } from '../../services/auth/session-management.service';
 import { MfaService } from '../../services/auth/mfa.service';
-
+import { MinorApprovalService } from '../../services/auth/minor-approval.service';
 import { SocialAuthService } from '../../services/auth/social-auth.service';
+
 import { LoginController } from '../../controllers/auth/login.controller';
 import { VerifyEmailController } from '../../controllers/auth/verify-email.controller';
 import { ForgotPasswordController } from '../../controllers/auth/forgot-password.controller';
 import { ResetPasswordController } from '../../controllers/auth/reset-password.controller';
 import { ChangePasswordController } from '../../controllers/auth/change-password.controller';
-
 import { VerifyPhoneController } from '../../controllers/auth/verify-phone.controller';
 import { SocialLoginController } from '../../controllers/auth/social-login.controller';
 import { SessionsController, OidcLogoutController } from '../../controllers/auth/sessions.controller';
 import { MfaController } from '../../controllers/auth/mfa.controller';
+import { MinorApprovalController } from '../../controllers/auth/minor-approval.controller';
+
 import { OAuthClientRepository } from '../../repos/users/oauth-client.repository';
 import { UserCredentialRepository } from '../../repos/users/user-credential.repository';
 import { SessionRepository } from '../../repos/auth/session.repository';
+
 import { SmsService } from '../../services/notifications/sms.service';
 import { EmailService } from '../../services/notifications/email.service';
 import { WhatsappService } from '../../services/notifications/whatsapp.service';
@@ -35,20 +39,22 @@ import { SendGridProvider } from '../../services/notifications/email-providers/s
         PasswordService,
         SessionManagementService,
         MfaService,
+        MinorApprovalService,
 
         SocialAuthService,
+
         SmsService,
         EmailService,
         WhatsappService,
         EmailJsProvider,
         SubmailProvider,
         SendGridProvider,
+
         OAuthClientRepository,
         UserCredentialRepository,
-        SessionRepository
+        SessionRepository,
     ],
     controllers: [
-
         LoginController,
         VerifyEmailController,
         ForgotPasswordController,
@@ -58,8 +64,16 @@ import { SendGridProvider } from '../../services/notifications/email-providers/s
         VerifyPhoneController,
         SessionsController,
         OidcLogoutController,
-        MfaController
+        MfaController,
+        MinorApprovalController,
     ],
-    exports: [LoginService, VerificationService, PasswordService, SocialAuthService, MfaService],
+    exports: [
+        LoginService,
+        VerificationService,
+        PasswordService,
+        SocialAuthService,
+        MfaService,
+        MinorApprovalService,
+    ],
 })
 export class AuthModule { }

@@ -13,9 +13,20 @@ async function main() {
             clientId: 'test-app',
             name: 'Developer Test App',
             redirectUris: ['http://localhost:3001/callback'],
-            isFirstParty: true
+            post_logout_redirect_uris: ['http://localhost:3001/signed-out'],
+            grantTypes: ['authorization_code', 'refresh_token'],
+            isPublic: true,
+            isFirstParty: true,
+            id_token_signed_response_alg: 'ES256'
         },
-        update: {}
+        update: {
+            redirectUris: ['http://localhost:3001/callback'],
+            post_logout_redirect_uris: ['http://localhost:3001/signed-out'],
+            grantTypes: ['authorization_code', 'refresh_token'],
+            isPublic: true,
+            isFirstParty: true,
+            id_token_signed_response_alg: 'ES256'
+        }
     });
     console.log(`- Seeded OIDC Client: ${client.clientId}`);
 
@@ -36,6 +47,9 @@ async function main() {
         update: {
             redirectUris: ['http://localhost:5173/auth/callback', 'https://accounts.evzone.app/auth/callback'],
             post_logout_redirect_uris: ['http://localhost:5173/auth/signed-out', 'https://accounts.evzone.app/auth/signed-out'],
+            grantTypes: ['authorization_code', 'refresh_token'],
+            isPublic: true,
+            isFirstParty: true,
             id_token_signed_response_alg: 'ES256'
         }
     });
@@ -52,7 +66,9 @@ async function main() {
             color: '#03CD8C',
             isFirstParty: true,
             isPublic: true,
-            redirectUris: ['https://wallet.evzone.app/callback']
+            redirectUris: ['https://wallet.evzone.app/callback'],
+            grantTypes: ['authorization_code', 'refresh_token'],
+            id_token_signed_response_alg: 'ES256'
         },
         {
             clientId: 'orgs',
@@ -63,7 +79,9 @@ async function main() {
             color: '#3B82F6',
             isFirstParty: true,
             isPublic: true,
-            redirectUris: ['https://orgs.evzone.app/callback']
+            redirectUris: ['https://orgs.evzone.app/callback'],
+            grantTypes: ['authorization_code', 'refresh_token'],
+            id_token_signed_response_alg: 'ES256'
         },
         {
             clientId: 'dev',
@@ -74,7 +92,9 @@ async function main() {
             color: '#8B5CF6',
             isFirstParty: true,
             isPublic: true,
-            redirectUris: ['https://developers.evzone.app/callback']
+            redirectUris: ['https://developers.evzone.app/callback'],
+            grantTypes: ['authorization_code', 'refresh_token'],
+            id_token_signed_response_alg: 'ES256'
         },
         {
             clientId: 'marketplace',
@@ -85,7 +105,9 @@ async function main() {
             color: '#10B981',
             isFirstParty: true,
             isPublic: true,
-            redirectUris: ['https://marketplace.evzone.app/callback']
+            redirectUris: ['https://marketplace.evzone.app/callback'],
+            grantTypes: ['authorization_code', 'refresh_token'],
+            id_token_signed_response_alg: 'ES256'
         },
         {
             clientId: 'rider',
@@ -96,7 +118,9 @@ async function main() {
             color: '#F59E0B',
             isFirstParty: true,
             isPublic: true,
-            redirectUris: ['https://rider.evzone.app/callback']
+            redirectUris: ['https://rider.evzone.app/callback'],
+            grantTypes: ['authorization_code', 'refresh_token'],
+            id_token_signed_response_alg: 'ES256'
         },
         {
             clientId: 'mylivedeals',
@@ -107,7 +131,9 @@ async function main() {
             color: '#EF4444',
             isFirstParty: true,
             isPublic: true,
-            redirectUris: ['https://mylivedeals.evzone.app/callback']
+            redirectUris: ['https://mylivedeals.evzone.app/callback'],
+            grantTypes: ['authorization_code', 'refresh_token'],
+            id_token_signed_response_alg: 'ES256'
         },
         {
             clientId: 'charging',
@@ -118,7 +144,9 @@ async function main() {
             color: '#03CD8C',
             isFirstParty: true,
             isPublic: true,
-            redirectUris: ['https://charging.evzone.app/callback']
+            redirectUris: ['https://charging.evzone.app/callback'],
+            grantTypes: ['authorization_code', 'refresh_token'],
+            id_token_signed_response_alg: 'ES256'
         }
     ];
 
@@ -133,7 +161,10 @@ async function main() {
                 website: app.website,
                 color: app.color,
                 isFirstParty: app.isFirstParty,
-                isPublic: app.isPublic
+                isPublic: app.isPublic,
+                redirectUris: app.redirectUris,
+                grantTypes: app.grantTypes,
+                id_token_signed_response_alg: app.id_token_signed_response_alg
             }
         });
         console.log(`- Seeded System App: ${app.name}`);

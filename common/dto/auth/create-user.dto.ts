@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength, MaxLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength, MaxLength, IsDateString } from 'class-validator';
 
 export class CreateUserDto {
     @IsString()
@@ -43,6 +43,17 @@ export class CreateUserDto {
     @MaxLength(128)
     @IsOptional()
     password?: string;
+
+    // Date of birth used for age gating (under-18 parental approval).
+    @IsDateString()
+    @IsOptional()
+    dob?: string;
+
+    // Required only when dob indicates age < 18.
+    @IsEmail()
+    @IsOptional()
+    @MaxLength(255)
+    parentEmail?: string;
 
     @IsString()
     @IsOptional()

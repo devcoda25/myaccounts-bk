@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+﻿import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { UserFindRepository } from '../../repos/users/user-find.repository';
 import { SessionRepository } from '../../repos/auth/session.repository';
 import * as argon2 from 'argon2';
@@ -30,6 +30,17 @@ export class LoginService {
     }
 
     async generateSessionToken(user: { id: string; email: string; role: string }, deviceInfo: Record<string, unknown> = {}) {
+        const issuer = (process.env.OIDC_ISSUER ||
+            process.env.JWT_ISSUER ||
+            (process.env.NODE_ENV === 'production'
+                ? 'https://accounts.evzone.app/oidc'
+                : 'http://localhost:3000/oidc')).replace(/\/$/, '');
+
+        const audience =
+            process.env.OIDC_AUDIENCE ||
+            process.env.JWT_AUDIENCE ||
+            'evzone-portal';
+
         // 1. Create Refresh Token (High Entropy)
         const refreshRandom = crypto.randomBytes(32).toString('hex');
         const refreshHash = await argon2.hash(refreshRandom);
@@ -60,10 +71,13 @@ export class LoginService {
             sub: user.id,
             jti: session.id, // Link to DB Session
             email: user.email,
-            role: user.role || 'USER'
+            role: user.role || 'USER',
+            token_use: 'session',
         })
             .setProtectedHeader({ alg: 'ES256', kid: 'evzone-key-1' })
             .setIssuedAt()
+            .setIssuer(issuer)
+            .setAudience(audience)
             .setExpirationTime('15m') // SHORT LIVED
             .sign(privateKey);
 
@@ -78,6 +92,17 @@ export class LoginService {
     }
 
     async refreshSession(compositeToken: string) {
+        const issuer = (process.env.OIDC_ISSUER ||
+            process.env.JWT_ISSUER ||
+            (process.env.NODE_ENV === 'production'
+                ? 'https://accounts.evzone.app/oidc'
+                : 'http://localhost:3000/oidc')).replace(/\/$/, '');
+
+        const audience =
+            process.env.OIDC_AUDIENCE ||
+            process.env.JWT_AUDIENCE ||
+            'evzone-portal';
+
         // 1. Parse Token
         const [sessionId, refreshRandom] = compositeToken.split('.');
         if (!sessionId || !refreshRandom) throw new UnauthorizedException('Invalid token format');
@@ -119,10 +144,13 @@ export class LoginService {
             sub: user.id,
             jti: session.id,
             email: user.email,
-            role: user.role
+            role: user.role,
+            token_use: 'session',
         })
             .setProtectedHeader({ alg: 'ES256', kid: 'evzone-key-1' })
             .setIssuedAt()
+            .setIssuer(issuer)
+            .setAudience(audience)
             .setExpirationTime('15m')
             .sign(privateKey);
 
@@ -138,3 +166,4 @@ export class LoginService {
         return this.sessionRepo.deleteSession(sessionId);
     }
 }
+

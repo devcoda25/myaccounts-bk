@@ -1,4 +1,4 @@
-import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, Logger } from '@nestjs/common';
+﻿import { Injectable, CanActivate, ExecutionContext, UnauthorizedException, Logger } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { jwtVerify } from 'jose';
@@ -47,24 +47,38 @@ export class AuthGuard implements CanActivate {
             // [Performance] Use cached KeyObject (Zero CPU overhead)
             const publicKey = this.jwkService.getPublicKey();
 
+            const issuer = (process.env.OIDC_ISSUER ||
+                process.env.JWT_ISSUER ||
+                (process.env.NODE_ENV === 'production'
+                    ? 'https://accounts.evzone.app/oidc'
+                    : 'http://localhost:3000/oidc')).replace(/\/$/, '');
+
+            const audiences = (process.env.OIDC_AUDIENCE ||
+                process.env.JWT_AUDIENCE ||
+                'evzone-portal')
+                .split(',')
+                .map((a) => a.trim())
+                .filter(Boolean);
+
             const { payload } = await jwtVerify(token, publicKey, {
                 algorithms: ['ES256'],
                 clockTolerance: 30,
-                audience: process.env.JWT_AUDIENCE || 'evzone-myaccounts',
+                issuer,
+                audience: audiences.length === 1 ? audiences[0] : audiences,
             });
 
-            // [Security] Validate issuer
-            const expectedIssuer = process.env.JWT_ISSUER || 'https://accounts.evzone.app';
-            if (payload.iss !== expectedIssuer) {
-                this.logger.warn(`Invalid issuer: ${payload.iss} != ${expectedIssuer}`);
-                throw new UnauthorizedException('Invalid token issuer');
+            const userId = payload.sub as string | undefined;
+            if (!userId) {
+                throw new UnauthorizedException('Token missing subject');
             }
 
-            // [Scalability] Redis-first strategy with pipeline for single round-trip
-            if (payload.jti) {
-                const sessionId = payload.jti as string;
+            const tokenUse = (payload as any).token_use as string | undefined;
+            const sessionId = typeof payload.jti === 'string' ? payload.jti : undefined;
+            const isSessionToken = tokenUse === 'session' && !!sessionId;
 
-                // Try to get session and user in single Redis pipeline operation
+            // Session-backed tokens (legacy/password login and social login)
+            if (isSessionToken) {
+                // [Scalability] Redis-first strategy with pipeline for single round-trip
                 const cachedData = await this.getSessionWithUserFromCache(sessionId);
 
                 if (cachedData) {
@@ -87,49 +101,38 @@ export class AuthGuard implements CanActivate {
 
                 // Cache miss - fallback to DB with optimized query
                 await this.handleCacheMissSession(sessionId, request);
-            } else {
-                // Legacy token handling
-                const userId = payload.sub as string;
-                const cachedUser = await this.authCache.getUser(userId);
+                return true;
+            }
 
-                if (cachedUser) {
-                    request.user = {
-                        id: cachedUser.id,
-                        sub: cachedUser.id,
-                        email: cachedUser.email,
-                        role: cachedUser.role || 'USER',
-                        jti: 'legacy',
-                    };
-                    return true;
-                }
-
-                const user = await this.prisma.user.findUnique({ where: { id: userId } });
-                if (!user) throw new UnauthorizedException('User not found');
-                await this.authCache.setUser(user);
+            // OIDC-provider access tokens (or any stateless JWT): resolve user by sub
+            const cachedUser = await this.authCache.getUser(userId);
+            if (cachedUser) {
                 request.user = {
-                    id: user.id,
-                    sub: user.id,
-                    email: user.email,
-                    role: user.role || 'USER',
-                    jti: 'legacy',
+                    id: cachedUser.id,
+                    sub: cachedUser.id,
+                    email: cachedUser.email,
+                    role: cachedUser.role || 'USER',
+                    jti: sessionId || 'oidc',
                 };
+                return true;
             }
 
-            if (!payload.sub) {
-                throw new UnauthorizedException('Token missing subject');
-            }
+            const user = await this.prisma.user.findUnique({
+                where: { id: userId },
+                select: { id: true, email: true, role: true },
+            });
+            if (!user) throw new UnauthorizedException('User not found');
 
-            if (!request.user) {
-                this.logger.error(`Verified signature but failed to resolve user context for sub: ${payload.sub} / jti: ${payload.jti}`);
-                request.user = {
-                    id: payload.sub,
-                    sub: payload.sub,
-                    email: payload.email as string,
-                    role: payload.role as string,
-                    jti: payload.jti as string,
-                };
-            }
+            await this.authCache.setUser(user as any);
+            request.user = {
+                id: user.id,
+                sub: user.id,
+                email: user.email,
+                role: user.role || 'USER',
+                jti: sessionId || 'oidc',
+            };
 
+            return true;
         } catch (err) {
             // Fallback: Check for Opaque OIDC Token
             try {
@@ -292,3 +295,4 @@ export class AuthGuard implements CanActivate {
         return request.cookies?.evzone_token;
     }
 }
+
