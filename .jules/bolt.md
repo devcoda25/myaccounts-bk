@@ -1,0 +1,3 @@
+## 2024-04-15 - [Database Schema Optimizations]
+**Learning:** Database queries with chronological sorting (e.g., `ORDER BY createdAt DESC` or `ORDER BY at DESC`) alongside a foreign key filter (e.g., `WHERE userId = X` or `WHERE childId = Y`) require composite indexes to avoid expensive in-memory filesorts. B-Tree composite indexes (e.g., `@@index([childId, at])`) naturally support `ORDER BY ... DESC` queries in PostgreSQL without needing an explicit `sort: Desc` declaration in the schema.
+**Action:** Always verify access patterns and add composite indexes for common query patterns involving a foreign key filter and a timestamp sort to optimize database performance.
