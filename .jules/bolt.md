@@ -1,0 +1,3 @@
+## 2024-04-19 - [Missing Composite Indexes]
+**Learning:** Found several models (Notification, SecurityReport, SupportTicket, Session, ParentalApproval, ParentalActivity) missing composite indexes for their most common access pattern (filtering by foreign key + sorting by timestamp), which causes expensive in-memory filesorts in PostgreSQL. B-Tree composite indexes naturally support ORDER BY DESC queries.
+**Action:** Always add composite indexes (e.g., `@@index([userId, createdAt])`) to tables that track chronological events linked to a specific user/parent/child to optimize performance and prevent bottlenecks as data scales.
