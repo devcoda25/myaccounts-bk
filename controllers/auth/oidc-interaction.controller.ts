@@ -5,6 +5,7 @@ import Provider from 'oidc-provider';
 import { OIDC_PROVIDER } from '../../modules/auth/oidc.constants';
 import { LoginService } from '../../services/auth/login.service';
 import { PrismaService } from '../../prisma-lib/prisma.service';
+import { MetricsService } from '../../src/metrics/metrics.service';
 import { z } from 'zod';
 import { OidcInteraction, OidcContext } from '../../common/interfaces/oidc.interface';
 
@@ -21,6 +22,7 @@ export class OidcInteractionController {
         @Inject(OIDC_PROVIDER) private provider: Provider,
         private loginService: LoginService,
         private prisma: PrismaService,
+        private metrics: MetricsService,
     ) { }
 
     @Get(':uid')
@@ -126,12 +128,14 @@ export class OidcInteractionController {
                 // Validate User
         const user = await this.loginService.validateUser(email, password);
         if (!user) {
+            this.metrics.recordLoginAttempt('oidc', 'invalid_credentials');
             console.warn(`[OIDC] Invalid credentials for ${email}`);
             return res.status(401).send({ error: 'Invalid credentials' });
         }
 
         // Under-18 hard-block: user may sign in to My Accounts portal, but OIDC access to apps is denied
         if ((user as any).accountStatus === 'MINOR_PENDING_PARENT') {
+            this.metrics.recordLoginAttempt('oidc', 'blocked');
             const result = {
                 error: 'access_denied',
                 error_description: 'minor_pending_parent_approval',
@@ -150,6 +154,8 @@ export class OidcInteractionController {
             browser: 'Unknown',
             location: 'Unknown'
         };
+
+        this.metrics.recordLoginAttempt('oidc', 'success');
 
         await this.loginService.generateSessionToken(user, deviceInfo);
 

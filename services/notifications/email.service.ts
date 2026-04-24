@@ -5,8 +5,31 @@ import { EmailProvider } from './email-providers/email-provider.interface';
 import { SendGridProvider } from './email-providers/sendgrid.provider';
 import { EmailJsProvider } from './email-providers/emailjs.provider';
 import { SubmailProvider } from './email-providers/submail.provider';
+import { MetricsService } from '../../src/metrics/metrics.service';
+import type { EmailProviderLabel, EmailTypeLabel } from '../../src/metrics/custom-metrics';
 
 const resolveMx = promisify(dns.resolveMx);
+
+type Region = 'CN' | 'Global';
+
+type EmailSendResult = {
+    success: boolean;
+    id?: string;
+    error?: string;
+};
+
+function toProviderLabel(providerName: string): EmailProviderLabel {
+    switch (providerName) {
+        case 'sendgrid':
+            return 'sendgrid';
+        case 'apiGlobal':
+            return 'emailjs';
+        case 'apiCN':
+            return 'submail';
+        default:
+            return 'unknown';
+    }
+}
 
 @Injectable()
 export class EmailService {
@@ -21,7 +44,8 @@ export class EmailService {
     constructor(
         private sendGridProvider: SendGridProvider,
         private emailJsProvider: EmailJsProvider,
-        private submailProvider: SubmailProvider
+        private submailProvider: SubmailProvider,
+        private metrics: MetricsService,
     ) {
         this.providers.set('sendgrid', sendGridProvider);
         this.providers.set('apiGlobal', emailJsProvider);
@@ -30,7 +54,8 @@ export class EmailService {
         this.THRESHOLD_RATE = Number(process.env.CIRCUIT_BREAKER_THRESHOLD) || 0.15;
     }
 
-    async sendEmail(to: string, subject: string, text: string, html?: string) {
+    // `type` is used for metrics (verification, password_reset, minor_approval, ...).
+    async sendEmail(to: string, subject: string, text: string, html?: string, type: EmailTypeLabel = 'other') {
         const region = await this.detectRegion(to);
         const plan = this.getRoutingPlan(region);
 
@@ -45,26 +70,41 @@ export class EmailService {
             const provider = this.providers.get(providerName);
             if (!provider) continue;
 
-            const result = await provider.send(to, subject, text, html);
+            const providerLabel = toProviderLabel(providerName);
+
+            let result: EmailSendResult;
+            try {
+                result = (await provider.send(to, subject, text, html)) as EmailSendResult;
+            } catch (err) {
+                this.metrics.recordEmailSend(providerLabel, 'failure', type);
+                this.recordFailure(providerName);
+                this.logger.warn(`Provider ${providerName} threw. Failover...`);
+                continue;
+            }
 
             if (result.success) {
+                this.metrics.recordEmailSend(providerLabel, 'success', type);
                 return result;
-            } else {
-                this.recordFailure(providerName);
-                this.logger.warn(`Provider ${providerName} failed. Failover...`);
             }
+
+            this.metrics.recordEmailSend(providerLabel, 'failure', type);
+            this.recordFailure(providerName);
+            this.logger.warn(`Provider ${providerName} failed. Failover...`);
         }
 
         if (process.env.NODE_ENV !== 'production') {
+            // DEV-only fallback so local development is not blocked by provider config.
             this.logger.warn('All providers failed. Falling back to console log (DEV ONLY).');
             this.logger.log(`[EMAIL FALLBACK] To: ${to}, Subject: ${subject}, Text: ${text}`);
+            this.metrics.recordEmailSend('console', 'success', type);
             return { success: true, id: 'console-fallback' };
         }
 
+        this.metrics.recordEmailSend('unknown', 'failure', type);
         return { success: false, error: 'All providers failed' };
     }
 
-    private async detectRegion(email: string): Promise<'CN' | 'Global'> {
+    private async detectRegion(email: string): Promise<Region> {
         const domain = email.split('@')[1];
         const cnDomains = (process.env.REGION_CN_DOMAINS || '').split(',');
 
@@ -79,7 +119,7 @@ export class EmailService {
                 if (mxRecords.some(r => r.exchange.includes('qq.com') || r.exchange.includes('163.com') || r.exchange.endsWith('.cn'))) {
                     return 'CN';
                 }
-            } catch (e) {
+            } catch {
                 // ignore DNS errors
             }
         }
@@ -87,7 +127,7 @@ export class EmailService {
         return 'Global';
     }
 
-    private getRoutingPlan(region: string): string[] {
+    private getRoutingPlan(region: Region): string[] {
         const primary = process.env.PROVIDER_PRIMARY || 'sendgrid';
         const failover1 = process.env.PROVIDER_FAILOVER_1 || 'apiGlobal';
         const failoverCn = process.env.PROVIDER_FAILOVER_CN || 'apiCN';

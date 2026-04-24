@@ -1,50 +1,76 @@
-import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Logger } from '@nestjs/common';
-import { FastifyReply } from 'fastify';
+import {
+    ArgumentsHost,
+    Catch,
+    ExceptionFilter,
+    HttpException,
+    HttpStatus,
+} from '@nestjs/common';
+import { FastifyReply, FastifyRequest } from 'fastify';
+import { context, trace } from '@opentelemetry/api';
+import { AppLogger } from '../../src/observability/app-logger.service';
+
+function getTraceMeta() {
+    const span = trace.getSpan(context.active());
+    const spanCtx = span?.spanContext();
+
+    return {
+        trace_id: spanCtx?.traceId,
+        span_id: spanCtx?.spanId,
+    };
+}
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
-    private readonly logger = new Logger(GlobalExceptionFilter.name);
+    constructor(private logger: AppLogger) { }
 
     catch(exception: unknown, host: ArgumentsHost) {
         const ctx = host.switchToHttp();
         const response = ctx.getResponse<FastifyReply>();
-        const request = ctx.getRequest<{ url?: string }>();
+        const request = ctx.getRequest<FastifyRequest>();
 
         let status = HttpStatus.INTERNAL_SERVER_ERROR;
-        let message = 'Internal server error';
+        let message: unknown = 'Internal server error';
         let error = 'Internal Server Error';
 
         if (exception instanceof HttpException) {
             status = exception.getStatus();
             const exceptionResponse = exception.getResponse();
-
             if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
                 const responseObj = exceptionResponse as Record<string, unknown>;
-                message = (responseObj.message as string) || exception.message;
+                message = responseObj.message ?? exception.message;
                 error = (responseObj.error as string) || exception.name;
             } else {
-                message = exceptionResponse as string;
+                message = exceptionResponse;
             }
         } else if (exception instanceof Error) {
             message = exception.message;
-            this.logger.error(`Unhandled error: ${exception.message}`, exception.stack);
-        } else {
-            this.logger.error(`Unknown error: ${String(exception)}`);
         }
 
-        // Sanitize error response - don't leak internal details
         const sanitizedMessage = this.sanitizeMessage(message, status);
 
-        // Log error details
+        const meta = {
+            ...getTraceMeta(),
+            req: {
+                method: request.method,
+                path: (request.url || '').split('?')[0],
+            },
+            res: {
+                status_code: status,
+            },
+            err: exception instanceof Error
+                ? { name: exception.name, message: exception.message, stack: exception.stack }
+                : { value: String(exception) },
+        };
+
         if (status >= 500) {
-            this.logger.error(`Server error: ${status} - ${sanitizedMessage}`, exception instanceof Error ? exception.stack : undefined);
+            this.logger.error(meta, `server_error: ${status}`);
         } else if (status >= 400) {
-            this.logger.warn(`Client error: ${status} - ${sanitizedMessage}`);
+            this.logger.warn(meta, `client_error: ${status}`);
         }
 
         const errorResponse = {
             statusCode: status,
-            error: error,
+            error,
             message: sanitizedMessage,
             timestamp: new Date().toISOString(),
             path: request.url || 'unknown',
@@ -53,20 +79,12 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         response.status(status).send(errorResponse);
     }
 
-    /**
-     * Sanitize error messages to prevent information leakage
-     * In production, don't expose internal error details to clients
-     */
-    private sanitizeMessage(message: string | unknown, status: number): string {
-        if (status >= 500) {
-            // For server errors, return generic message in production
-            if (process.env.NODE_ENV === 'production') {
-                return 'An unexpected error occurred. Please try again later.';
-            }
+    private sanitizeMessage(message: unknown, status: number): string {
+        if (status >= 500 && process.env.NODE_ENV === 'production') {
+            return 'An unexpected error occurred. Please try again later.';
         }
 
         if (typeof message === 'string') {
-            // Remove potential sensitive information
             return message
                 .replace(/password[:\s]*\S+/gi, '[REDACTED]')
                 .replace(/token[:\s]*\S+/gi, '[REDACTED]')
@@ -75,7 +93,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         }
 
         if (Array.isArray(message)) {
-            return message.join(', ');
+            return message.map((m) => String(m)).join(', ');
         }
 
         return String(message);

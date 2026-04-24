@@ -61,7 +61,8 @@ export class VerificationService {
                 <p>Your verification code is: <b>${code}</b></p>
                 <p><small>Code expires in 15 minutes.</small></p>
             `;
-            await this.emailService.sendEmail(identifier, subject, `Verification code: ${code}`, html);
+            const emailType = type === 'PASSWORD_RESET' ? 'password_reset' : type === 'OTP_SIGNIN' ? 'otp' : 'verification';
+            await this.emailService.sendEmail(identifier, subject, `Verification code: ${code}`, html, emailType);
         }
 
         // REMOVED debug_code for security

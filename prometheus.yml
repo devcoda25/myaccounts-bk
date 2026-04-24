@@ -1,0 +1,62 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'evzone-observability'
+    environment: '${NODE_ENV:-development}'
+
+# Alertmanager configuration (optional)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # ==========================================
+  # MyAccounts Service (NestJS + Prometheus)
+  # ==========================================
+  - job_name: 'myaccounts'
+    static_configs:
+      - targets: ['host.docker.internal:3000']
+        labels:
+          service: 'myaccounts'
+          group: 'application'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # ==========================================
+  # OpenTelemetry Collector (if using)
+  # ==========================================
+  # - job_name: 'otel-collector'
+  #   static_configs:
+  #     - targets: ['signoz:8889']
+  #       labels:
+  #         service: 'otel-collector'
+  #         group: 'observability'
+
+  # ==========================================
+  # Infrastructure Monitoring
+  # ==========================================
+  - job_name: 'node'
+    static_configs:
+      - targets: ['host.docker.internal:9100']
+    # For node_exporter running on host machine
+
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    # Requires redis_exporter: https://github.com/oliver006/redis_exporter
+
+  # ==========================================
+  # PostgreSQL (optional)
+  # ==========================================
+  # - job_name: 'postgres'
+  #   static_configs:
+  #     - targets: ['postgres:5432']
+  #   # Requires postgres_exporter: https://github.com/prometheus-community/postgres_exporter

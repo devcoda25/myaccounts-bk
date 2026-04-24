@@ -5,6 +5,7 @@ import { LoginDto } from '../../common/dto/auth/login.dto';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { AuthRequest } from '../../common/interfaces/auth-request.interface';
 import { VerificationService } from '../../services/auth/verification.service';
+import { MetricsService } from '../../src/metrics/metrics.service';
 
 import { LocationService } from '../../services/users/location.service';
 import { UserManagementService } from '../../services/users/user-management.service';
@@ -15,13 +16,15 @@ export class LoginController {
         private loginService: LoginService,
         private locationService: LocationService,
         private userManagementService: UserManagementService,
-        private verificationService: VerificationService
+        private verificationService: VerificationService,
+        private metrics: MetricsService
     ) { }
 
     @Post('login')
     async login(@Body() body: LoginDto, @Res({ passthrough: true }) res: FastifyReply, @Req() req: AuthRequest) {
         const user = await this.loginService.validateUser(body.identifier, body.password);
         if (!user) {
+            this.metrics.recordLoginAttempt('password', 'invalid_credentials');
             throw new UnauthorizedException('Invalid credentials');
         }
 
@@ -42,6 +45,8 @@ export class LoginController {
             browser: 'Unknown', // Could parse using library
             location: location // Add location to session device info too
         };
+
+        this.metrics.recordLoginAttempt('password', 'success');
 
         const tokens = await this.loginService.generateSessionToken(user, deviceInfo);
 
@@ -69,10 +74,19 @@ export class LoginController {
     @Post('refresh')
     async refresh(@Req() req: FastifyRequest, @Res({ passthrough: true }) res: FastifyReply) {
         const refreshToken = req.cookies['refresh_token'];
-        if (!refreshToken) throw new UnauthorizedException('No refresh token provided');
+        if (!refreshToken) {
+            this.metrics.recordTokenRefresh('missing');
+            throw new UnauthorizedException('No refresh token provided');
+        }
 
-        const tokens = await this.loginService.refreshSession(refreshToken);
-
+        let tokens: Awaited<ReturnType<LoginService['refreshSession']>>;
+        try {
+            tokens = await this.loginService.refreshSession(refreshToken);
+            this.metrics.recordTokenRefresh('success');
+        } catch (err) {
+            this.metrics.recordTokenRefresh(err instanceof UnauthorizedException ? 'invalid' : 'error');
+            throw err;
+        }
         // Rotate Cookies
         res.setCookie('evzone_token', tokens.access_token, {
             path: '/',
@@ -125,7 +139,10 @@ export class LoginController {
     @Post('otp/login')
     async loginWithOtp(@Body() body: { identifier: string, code: string }, @Res({ passthrough: true }) res: FastifyReply, @Req() req: AuthRequest) {
         const record = await this.verificationService.verifyCode(body.identifier, body.code, 'OTP_SIGNIN');
-        if (!record) throw new UnauthorizedException('Invalid or expired code');
+        if (!record) {
+            this.metrics.recordLoginAttempt('otp', 'invalid_credentials');
+            throw new UnauthorizedException('Invalid or expired code');
+        }
 
         const user = await this.userManagementService.findOneByIdentifier(body.identifier);
         if (!user) throw new UnauthorizedException('User not found');
@@ -141,6 +158,8 @@ export class LoginController {
             device: req.headers['user-agent'] || 'Unknown',
             location
         };
+
+        this.metrics.recordLoginAttempt('otp', 'success');
 
         const tokens = await this.loginService.generateSessionToken(user, deviceInfo);
 

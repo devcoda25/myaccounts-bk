@@ -5,6 +5,7 @@ import { MinorApprovalService } from '../../services/auth/minor-approval.service
 import { VerificationService } from '../../services/auth/verification.service';
 import { LocationService } from '../../services/users/location.service';
 import { UserManagementService } from '../../services/users/user-management.service';
+import { MetricsService } from '../../src/metrics/metrics.service';
 
 @Controller('users')
 export class UserRegistrationController {
@@ -14,6 +15,7 @@ export class UserRegistrationController {
         private verificationService: VerificationService,
         private locationService: LocationService,
         private minorApprovalService: MinorApprovalService,
+        private metrics: MetricsService,
     ) { }
 
     @Post()
@@ -24,6 +26,10 @@ export class UserRegistrationController {
         }
 
         const user = await this.userManagementService.create(createUserDto);
+
+        // Business metric: registration (minor vs adult)
+        const isMinor = (user as any).accountStatus === 'MINOR_PENDING_PARENT';
+        this.metrics.recordUserRegistration(isMinor);
 
         // Track Registration Location
         const ip = req.ip || (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '';

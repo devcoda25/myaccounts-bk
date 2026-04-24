@@ -3,12 +3,14 @@ import { MinorApprovalStatus, UserAccountStatus } from '@prisma/client';
 import * as crypto from 'crypto';
 import { PrismaService } from '../../prisma-lib/prisma.service';
 import { EmailService } from '../notifications/email.service';
+import { MetricsService } from '../../src/metrics/metrics.service';
 
 @Injectable()
 export class MinorApprovalService {
     constructor(
         private prisma: PrismaService,
         private emailService: EmailService,
+        private metrics: MetricsService,
     ) { }
 
     private hashToken(token: string) {
@@ -54,7 +56,13 @@ export class MinorApprovalService {
             <p>This link expires in 7 days.</p>
         `;
 
-        await this.emailService.sendEmail(email, subject, text, html);
+        try {
+            await this.emailService.sendEmail(email, subject, text, html, 'minor_approval');
+            this.metrics.recordMinorApproval('sent');
+        } catch {
+            this.metrics.recordMinorApproval('error');
+            throw new BadRequestException('Failed to send approval email');
+        }
 
         return { success: true };
     }
@@ -76,6 +84,7 @@ export class MinorApprovalService {
         }
 
         if (req.expiresAt < new Date()) {
+            this.metrics.recordMinorApproval('expired');
             await this.prisma.minorApprovalRequest.update({
                 where: { id: req.id },
                 data: { status: MinorApprovalStatus.EXPIRED },
@@ -85,8 +94,11 @@ export class MinorApprovalService {
 
         const guardianEmail = guardianUser.email.trim().toLowerCase();
         if (guardianEmail !== req.guardianEmail.trim().toLowerCase()) {
+            this.metrics.recordMinorApproval('denied');
             throw new ForbiddenException('This approval link is not assigned to your account');
         }
+
+        this.metrics.recordMinorApproval('approved');
 
         await this.prisma.$transaction([
             this.prisma.minorApprovalRequest.update({
@@ -122,6 +134,7 @@ export class MinorApprovalService {
             throw new BadRequestException('No parent/guardian email found for this account');
         }
 
+        this.metrics.recordMinorApproval('resend');
         return this.createAndSendApproval(childId, child.guardianEmail);
     }
 }

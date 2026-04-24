@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD, APP_FILTER } from '@nestjs/core';
+import { APP_GUARD, APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { PrismaModule } from './prisma-lib/prisma.module';
@@ -18,6 +18,10 @@ import { SupportModule } from './modules/support/support.module';
 import { PrivacyModule } from './modules/privacy/privacy.module';
 import { OrgsModule } from './modules/orgs/orgs.module';
 
+import { ObservabilityModule } from './modules/observability/observability.module';
+import { RequestLoggingInterceptor } from './common/interceptors/request-logging.interceptor';
+import { HttpMetricsInterceptor } from './common/interceptors/http-metrics.interceptor';
+
 import { EdgeGuard } from './middleware/edge-guard.middleware';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 
@@ -33,56 +37,75 @@ import { CommonModule } from './common/common.module';
 const env = validateEnv(process.env);
 
 @Module({
-    imports: [
-        ConfigModule.forRoot({
-            isGlobal: true,
-            validate: validateEnv,
-        }),
-        CommonModule,
-        ThrottlerModule.forRoot({
-            throttlers: [{
-                ttl: 60000,
-                limit: 100,
-            }],
-            storage: new ThrottlerStorageRedisService(env.REDIS_URL),
-        }),
-        RedisModule,
-        KafkaModule,
-        StorageModule,
-        PrometheusModule.register(),
-        
-        // Auth modules
-        AuthModule,
-        OidcModule,
-        
-        // Feature modules
-        UsersModule,
-        OrgsModule,
-        AdminModule,
-        PrismaModule,
-        DebugModule,
-        ParentalModule,
-        HealthModule,
-        SecurityModule,
-        AppsModule,
-        NotificationsModule,
-        SupportModule,
-        PrivacyModule,
-    ],
-    controllers: [],
-    providers: [
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validate: validateEnv,
+    }),
+    CommonModule,
+    ObservabilityModule,
+    ThrottlerModule.forRoot({
+      throttlers: [
         {
-            provide: APP_GUARD,
-            useClass: EdgeGuard,
+          ttl: 60000,
+          limit: 100,
         },
-        {
-            provide: APP_GUARD,
-            useClass: ThrottlerGuard,
+      ],
+      storage: new ThrottlerStorageRedisService(env.REDIS_URL),
+    }),
+    RedisModule,
+    KafkaModule,
+    StorageModule,
+    PrometheusModule.register({
+      path: '/metrics',
+      defaultMetrics: {
+        enabled: true,
+        config: {
+          prefix: 'myaccounts_',
         },
-        {
-            provide: APP_FILTER,
-            useClass: GlobalExceptionFilter,
-        },
-    ],
+      },
+    }),
+
+    // Auth modules
+    AuthModule,
+    OidcModule,
+
+    // Feature modules
+    UsersModule,
+    OrgsModule,
+    AdminModule,
+    PrismaModule,
+    DebugModule,
+    ParentalModule,
+    HealthModule,
+    SecurityModule,
+    AppsModule,
+    NotificationsModule,
+    SupportModule,
+    PrivacyModule,
+  ],
+  controllers: [],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: EdgeGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: RequestLoggingInterceptor,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: HttpMetricsInterceptor,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
+    },
+  ],
 })
-export class AppModule { }
+export class AppModule {}

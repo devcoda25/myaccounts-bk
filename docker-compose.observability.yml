@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+  # Prometheus - Metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: evzone-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prom-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - evzone-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Grafana - Metrics visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: evzone-grafana
+    depends_on:
+      - prometheus
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel
+    ports:
+      - "3001:3000"
+    networks:
+      - evzone-network
+    restart: unless-stopped
+
+  # Jaeger - Distributed tracing
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: evzone-jaeger
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - COLLECTOR_OTLP_HTTP_PORT=4318
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC
+      - "4318:4318"     # OTLP HTTP
+    networks:
+      - evzone-network
+    restart: unless-stopped
+
+  # SigNoz - Alternative all-in-one observability (optional)
+  # Uncomment to use SigNoz instead of Jaeger+Grafana+Prometheus
+  # signoz:
+  #   image: signoz/signoz-otel-collector:latest
+  #   container_name: evzone-signoz
+  #   ports:
+  #     - "3301:3301"   # SigNoz Frontend
+  #     - "4317:4317"   # OTLP gRPC
+  #     - "4318:4318"   # OTLP HTTP
+  #   volumes:
+  #     - signoz-data:/var/lib/signoz
+  #   networks:
+  #     - evzone-network
+  #   restart: unless-stopped
+
+  # Redis - For caching and session storage (if not already in main stack)
+  redis:
+    image: redis:7-alpine
+    container_name: evzone-redis-obs
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - evzone-network
+    restart: unless-stopped
+
+  # PostgreSQL - For metrics storage (optional, Prometheus doesn't need DB)
+  # Only needed if you want to store traces/ metrics long-term
+  # postgres:
+  #   image: postgres:15-alpine
+  #   container_name: evzone-postgres-obs
+  #   environment:
+  #     - POSTGRES_PASSWORD=observability
+  #     - POSTGRES_DB=observability
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5433:5432"
+  #   networks:
+  #     - evzone-network
+  #   restart: unless-stopped
+
+volumes:
+  prom-data:
+    driver: local
+  grafana-data:
+    driver: local
+  # signoz-data:
+  #   driver: local
+  redis-data:
+    driver: local
+  # postgres-data:
+  #   driver: local
+
+networks:
+  evzone-network:
+    driver: bridge

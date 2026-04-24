@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger, RequestMethod } from '@nestjs/common';
+import { ValidationPipe, RequestMethod } from '@nestjs/common';
 import {
     FastifyAdapter,
     NestFastifyApplication,
@@ -14,11 +14,11 @@ import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
 import cors from '@fastify/cors';
 
-
 import middie from '@fastify/middie';
 import formbody from '@fastify/formbody';
 import { OIDC_PROVIDER } from '../modules/auth/oidc.constants';
 import { KeyManager } from '../utils/keys';
+import { appLogger } from '../src/observability/logger';
 
 import { validateEnv } from '../utils/env.validation';
 import { FastifyRegisterOptions } from 'fastify';
@@ -32,13 +32,16 @@ export async function bootstrap() {
     // [Security] Strict Env Validation & Typed Config
     const config = validateEnv(process.env);
     const isProduction = config.NODE_ENV === 'production';
+    const bootstrapLogger = appLogger.child({ component: 'bootstrap' });
 
     const app = await NestFactory.create<NestFastifyApplication>(
         AppModule,
-        new FastifyAdapter({ trustProxy: true }), // [Security] Rule F: Trust Proxy (e.g. AWS/Nginx)
-        { logger: ['error', 'warn'] } // [Cleanup] Reduce log noise
+        new FastifyAdapter({ 
+            trustProxy: true, // [Security] Rule F: Trust Proxy (e.g. AWS/Nginx)
+            logger: false // Disable Fastify default logger - we'll use Pino
+        }),
+        { logger: false } // Disable NestJS logger - we'll use Pino via custom provider
     );
-
 
     // Enable CORS (Fastify Plugin to cover all routes including middleware)
     await app.register(cors, {
@@ -228,6 +231,8 @@ export async function bootstrap() {
 
     app.setGlobalPrefix('api/v1', {
         exclude: [
+            { path: 'metrics', method: RequestMethod.GET },
+            { path: 'health', method: RequestMethod.GET },
             { path: 'oidc/jwks', method: RequestMethod.GET },
             { path: 'oidc/.well-known/openid-configuration', method: RequestMethod.GET },
             { path: 'oidc/interaction/:uid', method: RequestMethod.ALL },
@@ -237,5 +242,5 @@ export async function bootstrap() {
 
     const port = process.env.PORT || 3000;
     await app.listen(port, '0.0.0.0');
-    Logger.log(`Application is running on: ${await app.getUrl()}`, 'Bootstrap');
+    bootstrapLogger.info({ url: await app.getUrl() }, 'app_listening');
 }

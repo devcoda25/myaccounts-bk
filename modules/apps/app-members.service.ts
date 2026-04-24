@@ -102,11 +102,11 @@ export class AppMembersService {
         if (isNewUser && setupToken) {
             // Send Invite Link
             const inviteLink = `${process.env.FRONTEND_URL || 'https://myaccounts.evzone.com'}/auth/setup-password?token=${setupToken}&email=${encodeURIComponent(email)}`;
-            await this.emailService.sendEmail(email, `You have been invited to ${app?.name}`, `You have been invited to manage ${app?.name} on EVzone. Click here to set up your account: ${inviteLink}`);
+            await this.emailService.sendEmail(email, `You have been invited to ${app?.name}`, `You have been invited to manage ${app?.name} on EVzone. Click here to set up your account: ${inviteLink}`, undefined, 'invite');
         } else {
             // Existing User Notification
             await this.notificationsService.create(user.id, 'New App Access', `You have been granted access to ${app?.name} as ${role}.`, 'SUCCESS');
-            await this.emailService.sendEmail(email, `Access Granted: ${app?.name}`, `You have been added to the team for ${app?.name} with role ${role}. You can now access the dashboard.`);
+            await this.emailService.sendEmail(email, `Access Granted: ${app?.name}`, `You have been added to the team for ${app?.name} with role ${role}. You can now access the dashboard.`, undefined, 'invite');
         }
 
         return newMembership;
@@ -127,7 +127,7 @@ export class AppMembersService {
             if (member.region !== requester.region) throw new ForbiddenException('Cannot remove member from another region');
         }
 
-        await this.emailService.sendEmail(member.user.email, `Access Revoked: ${app?.name}`, `Your access to ${app?.name} has been revoked.`);
+        await this.emailService.sendEmail(member.user.email, `Access Revoked: ${app?.name}`, `Your access to ${app?.name} has been revoked.`, undefined, 'invite');
 
         return this.prisma.appMembership.delete({ where: { id: memberId } });
     }
