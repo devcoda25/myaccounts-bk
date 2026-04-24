@@ -1,4 +1,4 @@
-import 'reflect-metadata';
+﻿import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, RequestMethod } from '@nestjs/common';
 import {
@@ -6,6 +6,7 @@ import {
     NestFastifyApplication,
 } from '@nestjs/platform-fastify';
 import { AppModule } from '../app.module';
+import { HealthController } from '../controllers/health/health.controller';
 import { join } from 'path';
 import { ServerResponse } from 'http';
 import multipart from '@fastify/multipart';
@@ -239,6 +240,15 @@ export async function bootstrap() {
             { path: 'oidc/(.*)', method: RequestMethod.ALL }
         ],
     });
+
+    // Load balancer compatibility: keep /api/v1/health even though health is excluded from the global prefix.
+    // This avoids having to change LB health-check paths.
+    const healthController = app.get(HealthController);
+    fastify.get('/api/v1/health', async (_req, reply) => {
+        const payload = await healthController.getHealth();
+        return reply.code(200).send(payload);
+    });
+
 
     const port = process.env.PORT || 3000;
     await app.listen(port, '0.0.0.0');
