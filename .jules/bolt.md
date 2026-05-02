@@ -1,0 +1,3 @@
+## 2026-05-02 - [Database Indexes]
+**Learning:** The codebase relies heavily on time-based sorting for related models (ChildProfile, ParentalApproval, ParentalActivity, Session, Notification, SecurityReport, SupportTicket). Prisma queries filtering by foreign keys (e.g., childId, userId) and sorting by a timestamp (e.g., createdAt, at, lastUsedAt) require composite indexes to avoid expensive in-memory sorts.
+**Action:** Add composite indexes to Prisma models: @@index([childId, at]) on ParentalApproval and ParentalActivity, @@index([parentId, createdAt]) on ChildProfile, @@index([userId, createdAt]) on Notification, SecurityReport, SupportTicket, and @@index([userId, lastUsedAt]) on Session.
