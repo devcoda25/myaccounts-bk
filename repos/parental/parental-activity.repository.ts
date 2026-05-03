@@ -10,6 +10,7 @@ export class ParentalActivityRepository {
         return this.prisma.parentalActivity.create({ data });
     }
 
+    // ⚡ Bolt: Added composite index on [childId, at] to prevent in-memory sorts for chronological access
     async findManyByChildId(childId: string, limit = 50) {
         return this.prisma.parentalActivity.findMany({
             where: { childId },

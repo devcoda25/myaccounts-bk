@@ -6,6 +6,7 @@ import { Prisma } from '@prisma/client';
 export class ChildProfileRepository {
     constructor(private prisma: PrismaService) { }
 
+    // ⚡ Bolt: Added composite index on [parentId, createdAt] to prevent in-memory sorts for chronological access
     async findManyByParentId(parentId: string) {
         const children = await this.prisma.childProfile.findMany({
             where: { parentId },

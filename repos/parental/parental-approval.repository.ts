@@ -10,6 +10,7 @@ export class ParentalApprovalRepository {
         return this.prisma.parentalApproval.create({ data });
     }
 
+    // ⚡ Bolt: Added composite index on [childId, at] to prevent in-memory sorts for chronological access
     async findManyByChildId(childId: string) {
         return this.prisma.parentalApproval.findMany({
             where: { childId },
