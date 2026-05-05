@@ -1,0 +1,3 @@
+## 2026-05-05 - Missing Composite Indexes for Chronological Query Patterns
+**Learning:** The codebase heavily relies on chronological query patterns (e.g., filtering by `userId` or `childId` and sorting by `createdAt` or `at` descending) across multiple modules. Missing composite indexes on these specific combinations cause expensive in-memory filesorts when querying nested relations via Prisma.
+**Action:** Add targeted B-Tree composite indexes (e.g., `@@index([childId, at])`) to models accessed with these patterns to naturally support the `ORDER BY ... DESC` queries without explicit schema declarations.
