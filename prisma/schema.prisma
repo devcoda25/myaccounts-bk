@@ -451,6 +451,8 @@ model ChildProfile {
   updatedAt DateTime @updatedAt
 
   @@index([apps], type: Gin)
+  // [Bolt] Added composite index to prevent in-memory sorts on nested chronological includes
+  @@index([parentId, createdAt])
   @@map("parental_child_profiles")
 }
 
@@ -510,6 +512,8 @@ model ParentalApproval {
 
   child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
 
+  // [Bolt] Added composite index to prevent in-memory sorts on nested chronological includes
+  @@index([childId, at])
   @@map("parental_approvals")
 }
 
@@ -523,6 +527,8 @@ model ParentalActivity {
 
   child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
 
+  // [Bolt] Added composite index to prevent in-memory sorts on nested chronological includes
+  @@index([childId, at])
   @@map("parental_activities")
 }
 
