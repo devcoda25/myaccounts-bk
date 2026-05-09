@@ -1,0 +1,3 @@
+## 2024-05-09 - Missing Composite Indexes for Chronological Queries
+**Learning:** Common access patterns in this codebase filter by relation IDs (`childId`, `userId`, `parentId`) and sort by a timestamp (`at`, `createdAt`, `lastUsedAt`), which leads to in-memory filesorts in PostgreSQL because only single-column indexes exist or no indexes exist on the models.
+**Action:** Always add composite indexes (e.g., `@@index([childId, at])`) on models like `ParentalActivity`, `ParentalApproval`, `ChildProfile`, `Notification`, `SecurityReport`, `SupportTicket`, and `Session` that have these query patterns.
