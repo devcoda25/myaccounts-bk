@@ -1,0 +1,3 @@
+## 2026-06-01 - [Database Chronological Sort Optimization]
+**Learning:** Chronological query patterns on models like Notification, SecurityReport, SupportTicket, Session, ParentalActivity, and ParentalApproval frequently filter by a foreign key (e.g., `userId` or `childId`) and sort by a timestamp (e.g., `createdAt` or `at`). Without composite indexes, the database must perform an expensive in-memory filesort after filtering.
+**Action:** Always add composite indexes matching the foreign key and sort column (e.g., `@@index([userId, createdAt])` or `@@index([childId, at])`) on models with frequent chronological access patterns.
