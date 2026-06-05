@@ -510,6 +510,8 @@ model ParentalApproval {
 
   child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
 
+// Performance optimization: Composite index to speed up findMany queries sorting by time
+  @@index([childId, at])
   @@map("parental_approvals")
 }
 
@@ -523,6 +525,8 @@ model ParentalActivity {
 
   child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
 
+// Performance optimization: Composite index to speed up findMany queries sorting by time
+  @@index([childId, at])
   @@map("parental_activities")
 }
 
