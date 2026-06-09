@@ -1,0 +1,3 @@
+## 2024-06-09 - Add Database Indexes for Parental Profile FindMany Queries
+**Learning:** The `findManyByChildId` access pattern on `ParentalApproval` and `ParentalActivity` models filter by `childId` and sort by `at`. Furthermore, `findManyByParentId` in `ChildProfileRepository` filters by `parentId` and sorts by `createdAt` descending. These operations lack a composite index causing expensive in-memory sorts which severely limits scalability.
+**Action:** Add `@@index([childId, at])` on `ParentalApproval` and `ParentalActivity`, and `@@index([parentId, createdAt])` on `ChildProfile` to optimize these queries.
