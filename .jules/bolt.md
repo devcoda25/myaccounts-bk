@@ -1,0 +1,3 @@
+## 2024-06-10 - Adding composite indexes for relational sorting queries
+**Learning:** The `findManyByParentId` query on the `ChildProfile` model, the `findManyByChildId` query on the `ParentalActivity` and `ParentalApproval` models, and the various `findMany` queries filtering by `userId` and sorting chronologically on the `SupportTicket`, `SecurityReport`, `Notification`, and `Session` models lacked composite indexes. This can lead to inefficient in-memory sorts.
+**Action:** Add composite indexes (`@@index([foreignKey, sortColumn])`) to these models to optimize `findMany` queries that involve both filtering and sorting.
