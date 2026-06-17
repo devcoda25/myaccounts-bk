@@ -1,0 +1,3 @@
+## 2024-06-17 - [Add composite indexes for frequently sorted queries]
+**Learning:** Queries sorting by a chronological field and filtering by a foreign key (e.g. `userId` or `childId`) can cause expensive in-memory sorts if they lack composite indexes matching the foreign key and sort column. In NestJS apps with Prisma, this is a common bottleneck for pagination endpoints like `findManyByParentId`, `findManyByChildId`, `findActiveSessionsByUser`, `findUserTickets`, and `findUserReports`.
+**Action:** Always add composite indexes matching the filter and sort column (e.g. `@@index([userId, createdAt])`) when writing `findMany` queries that involve ordering.
