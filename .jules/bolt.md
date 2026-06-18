@@ -1,0 +1,3 @@
+## 2024-06-18 - Optimize queries with composite index filtering by foreign key and sorting chronologically
+**Learning:** Prisma sequence scans and in-memory sorts on frequently accessed tables (e.g., ParentApproval, ParentActivity) filtering by `childId` and ordering by `at` cause unnecessary latency and CPU overhead. These paths heavily benefit from compound indices to traverse B-trees immediately.
+**Action:** Add composite indices (e.g., `@@index([childId, at])`) in `prisma/schema.prisma` on nested models matching the repository filtering + sorting signature to prevent sequential scan and in-memory sort overhead.
