@@ -542,6 +542,8 @@ model Notification {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // [Optimization] Index for fetching user notifications sorted by date
+  @@index([userId, createdAt])
   @@map("notifications")
 }
 
