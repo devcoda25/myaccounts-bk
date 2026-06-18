@@ -19,8 +19,8 @@ export class UserQueryService {
             // includeKyc: options?.kycRecord || options?.fullProfile,
             includeContacts: options?.fullProfile,
             includeCredentials: options?.fullProfile,
-            includeSessions: options?.includeSessions || options?.fullProfile,
-            includeAuditLogs: options?.includeAuditLogs || options?.fullProfile,
+            includeSessions: options?.includeSessions ?? options?.fullProfile,
+            includeAuditLogs: options?.includeAuditLogs ?? options?.fullProfile,
             includeOrgs: options?.fullProfile
         });
         if (!user) return null;
