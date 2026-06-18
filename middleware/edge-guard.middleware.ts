@@ -3,7 +3,19 @@ import { FastifyRequest } from 'fastify';
 
 @Injectable()
 export class EdgeGuard implements CanActivate {
-    private logger = new Logger(EdgeGuard.name);
+    private readonly logger = new Logger(EdgeGuard.name);
+    private readonly enforceIpAllowlist: boolean;
+    private readonly allowedIps: string[];
+    private readonly enforceApiKey: boolean;
+    private readonly validKeys: string[];
+
+    constructor() {
+        this.enforceIpAllowlist = process.env.ENFORCE_IP_ALLOWLIST === 'true';
+        this.allowedIps = (process.env.ALLOWED_IPS || '').split(',').map(ip => ip.trim());
+
+        this.enforceApiKey = process.env.ENFORCE_API_KEY === 'true';
+        this.validKeys = (process.env.VALID_API_KEYS || '').split(',').map(k => k.trim());
+    }
 
     canActivate(context: ExecutionContext): boolean {
         const req = context.switchToHttp().getRequest<FastifyRequest>();
@@ -14,22 +26,20 @@ export class EdgeGuard implements CanActivate {
         }
 
         // 1. IP Allowlist Guard
-        if (process.env.ENFORCE_IP_ALLOWLIST === 'true') {
-            const allowedIps = (process.env.ALLOWED_IPS || '').split(',').map(ip => ip.trim());
+        if (this.enforceIpAllowlist) {
             const clientIp = this.getClientIp(req);
 
-            if (!allowedIps.includes(clientIp)) {
+            if (!this.allowedIps.includes(clientIp)) {
                 this.logger.warn(`Blocked request from unauthorized IP: ${clientIp}`);
                 throw new ForbiddenException('Access denied');
             }
         }
 
         // 2. API Key Guard
-        if (process.env.ENFORCE_API_KEY === 'true') {
-            const validKeys = (process.env.VALID_API_KEYS || '').split(',').map(k => k.trim());
+        if (this.enforceApiKey) {
             const apiKey = req.headers['x-api-key'] as string;
 
-            if (!apiKey || !validKeys.includes(apiKey)) {
+            if (!apiKey || !this.validKeys.includes(apiKey)) {
                 this.logger.warn(`Blocked request with invalid API Key`);
                 throw new ForbiddenException('Invalid API Key');
             }
