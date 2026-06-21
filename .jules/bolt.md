@@ -1,0 +1,3 @@
+## 2024-06-21 - [Optimize findManyByChildId with sorting]
+**Learning:** The `findManyByChildId` access pattern on `ParentalApproval` and `ParentalActivity` models filters by `childId` and sorts chronologically (`orderBy: { at: 'desc' }`). These operations are prone to in-memory filesorts under heavy load because there's no compound index covering both the filter constraint and the sorting order.
+**Action:** Add compound indexes (`@@index([childId, at])`) to models that are frequently filtered by one relation ID and then ordered by a timestamp. This allows the database to read perfectly sorted data right off the index structure.

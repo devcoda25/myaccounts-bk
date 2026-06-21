@@ -510,6 +510,8 @@ model ParentalApproval {
 
   child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
 
+  // @performance Optimizes findManyByChildId with sorting
+  @@index([childId, at])
   @@map("parental_approvals")
 }
 
@@ -523,6 +525,8 @@ model ParentalActivity {
 
   child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
 
+  // @performance Optimizes findManyByChildId with sorting
+  @@index([childId, at])
   @@map("parental_activities")
 }
 
