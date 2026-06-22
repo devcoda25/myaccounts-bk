@@ -274,6 +274,8 @@ model Session {
   @@index([clientId])
   @@index([expiresAt])
   @@index([userId, clientId])
+  // @performance Optimizes findActiveSessionsByUser with sorting
+  @@index([userId, lastUsedAt])
   @@map("sessions")
 }
 
@@ -451,6 +453,8 @@ model ChildProfile {
   updatedAt DateTime @updatedAt
 
   @@index([apps], type: Gin)
+  // @performance Optimizes findManyByParentId with sorting
+  @@index([parentId, createdAt])
   @@map("parental_child_profiles")
 }
 
@@ -510,6 +514,8 @@ model ParentalApproval {
 
   child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
 
+  // @performance Optimizes findManyByChildId with sorting
+  @@index([childId, at])
   @@map("parental_approvals")
 }
 
@@ -523,6 +529,8 @@ model ParentalActivity {
 
   child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
 
+  // @performance Optimizes findManyByChildId with sorting
+  @@index([childId, at])
   @@map("parental_activities")
 }
 
@@ -542,6 +550,8 @@ model Notification {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // @performance Optimizes User notification queries with sorting
+  @@index([userId, createdAt])
   @@map("notifications")
 }
 
@@ -576,6 +586,8 @@ model SecurityReport {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // @performance Optimizes findUserReports with sorting
+  @@index([userId, createdAt])
   @@map("security_reports")
 }
 
@@ -593,5 +605,7 @@ model SupportTicket {
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+  // @performance Optimizes findUserTickets with sorting
+  @@index([userId, createdAt])
   @@map("support_tickets")
 }
