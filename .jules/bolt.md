@@ -1,0 +1,3 @@
+## 2026-07-06 - Support Tickets, Security Reports, Child Profile and Parental Activity composite indexes
+**Learning:** Models like SupportTicket, SecurityReport, ChildProfile, ParentalApproval and ParentalActivity that are heavily accessed by a parent ID (or userId/childId) and sorted by creation date (or activity date) need composite indexes on [parentId/userId/childId, createdAt/at] to support efficient queries, preventing expensive in-memory sorts.
+**Action:** Always verify access patterns (especially findMany calls with sorting) and ensure composite indexes exist to match those patterns exactly.
