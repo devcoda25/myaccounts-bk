@@ -1,0 +1,3 @@
+## 2024-05-18 - Optimize parental activity and child profile queries
+**Learning:** The \`ChildProfile\` model is frequently queried by \`parentId\` and sorted by \`createdAt\` descending (e.g., in \`findManyByParentId\`). Similarly, \`ParentalApproval\` and \`ParentalActivity\` are queried by \`childId\` and sorted by \`at\` descending. These queries are currently missing composite indexes, which can lead to expensive in-memory sorts.
+**Action:** Add composite indexes \`@@index([parentId, createdAt(sort: Desc)])\` to \`ChildProfile\` and \`@@index([childId, at(sort: Desc)])\` to \`ParentalApproval\` and \`ParentalActivity\` in \`prisma/schema.prisma\` to optimize these specific query patterns.
