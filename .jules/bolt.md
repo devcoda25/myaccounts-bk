@@ -1,0 +1,3 @@
+## 2024-07-22 - Missing Composite Indexes for Parental Queries
+**Learning:** Frequent queries in `ParentalActivity`, `ParentalApproval`, and `ChildProfile` models filter by `childId` or `parentId` and sort by `at` or `createdAt` (descending). The absence of composite indexes on these fields requires expensive in-memory sorts.
+**Action:** Add `@@index([childId, at])` and `@@index([parentId, createdAt])` to the respective Prisma models to optimize these read-heavy paths.
