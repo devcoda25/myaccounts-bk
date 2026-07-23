@@ -1,0 +1,3 @@
+## 2024-05-18 - Missing composite indexes for chronological queries
+**Learning:** Found that multiple models (ParentalApproval, ParentalActivity, ChildProfile, Notification, SecurityReport, SupportTicket, Session) frequently queried by an ID and sorted by a timestamp (e.g., createdAt, at, lastUsedAt) were missing composite indexes. This forces expensive in-memory sorts on the database.
+**Action:** Always verify if frequently queried one-to-many relationships involve sorting, and add composite indexes like `@@index([userId, createdAt])` to prevent N+1 and sorting performance bottlenecks.
