@@ -1,0 +1,3 @@
+## 2024-07-25 - Missing composite indexes in Prisma models
+**Learning:** Models like ChildProfile, ParentalActivity, ParentalApproval, Notification, SecurityReport, SupportTicket, and Session are missing performance-critical composite indexes for frequently queried fields (e.g., childId/userId + timestamp).
+**Action:** Add composite indexes to Prisma models frequently queried by relation IDs and sorted chronologically to optimize findMany queries.
