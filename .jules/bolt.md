@@ -1,0 +1,3 @@
+## 2024-07-26 - Missing Composite Indexes for Sorting
+**Learning:** The application frequently queries several models by an associated ID (e.g., childId, parentId, userId) and sorts the results chronologically (e.g., at 'desc', createdAt 'desc'). Missing composite indexes covering both the ID and the sort column forces the database to perform expensive in-memory sorts for queries like findManyByChildId or findManyByParentId.
+**Action:** Add composite indexes on both the queried ID and the sorted date field (e.g., @@index([childId, at])) for frequently queried models (ChildProfile, ParentalApproval, ParentalActivity, SecurityReport, SupportTicket) to optimize findMany queries with order by clauses.
