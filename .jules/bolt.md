@@ -1,0 +1,3 @@
+## 2024-05-18 - Missing Composite Indexes on Frequently Queried and Sorted Fields
+**Learning:** The application heavily queries models like `ChildProfile`, `ParentalApproval`, `ParentalActivity`, and `SupportTicket` by a relational ID (`parentId`, `childId`, or `userId`) and sorts them chronologically (`createdAt` or `at`). Prisma relies on the database to handle sorting, and without composite indexes, the database must perform expensive in-memory sorts for large datasets, leading to performance bottlenecks.
+**Action:** Add composite indexes (e.g., `@@index([userId, createdAt])`) to models that are frequently queried by an ID and sorted chronologically to optimize findMany queries.
