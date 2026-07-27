@@ -1,0 +1,3 @@
+## 2024-07-27 - Bolt: Add composite indexes to optimize parental queries
+**Learning:** The application heavily queries the ChildProfile model by parentId and the ParentalApproval and ParentalActivity models by childId, consistently sorting the results by a timestamp field (createdAt or at). Missing composite indexes on these foreign key + timestamp pairs can lead to performance bottlenecks, especially as datasets grow.
+**Action:** Added composite indexes (@@index([parentId, createdAt]), @@index([childId, at]), @@index([childId, at])) to ChildProfile, ParentalApproval, and ParentalActivity models in prisma/schema.prisma to optimize sorting queries.
