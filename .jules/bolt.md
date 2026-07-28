@@ -1,0 +1,3 @@
+## 2024-05-24 - Missing composite indexes for Parental queries
+**Learning:** The ParentalActivity and ParentalApproval models lack a composite index on [childId, at], causing potential bottlenecks during findManyByChildId queries that filter by childId and sort by 'at' descending.
+**Action:** Always verify query patterns against schema indexes. Added @@index([childId, at]) to optimize these specific query shapes.
