@@ -1,0 +1,3 @@
+## YYYY-MM-DD - [Missing Composite Indexes]
+**Learning:** Found multiple models (ChildProfile, ParentalApproval, ParentalActivity, SecurityReport, SupportTicket, Session) with findMany queries filtering by a foreign key (e.g., `parentId`, `childId`, `userId`) and sorting by a timestamp (e.g., `createdAt`, `at`, `lastUsedAt`), but missing the appropriate composite indexes to optimize the sort.
+**Action:** Add the missing composite indexes `@@index([parentId, createdAt])`, `@@index([childId, at])`, `@@index([userId, createdAt])`, and `@@index([userId, lastUsedAt])` to `prisma/schema.prisma` to eliminate expensive in-memory sorts for these frequently queried fields.
