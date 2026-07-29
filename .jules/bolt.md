@@ -1,0 +1,3 @@
+## 2024-07-29 - Missing composite database indexes
+ **Learning:** The `ParentalActivity` and `ParentalApproval` models are frequently queried by `childId` and sorted by `at` descending. Missing composite indexes on these fields leads to unoptimized queries and expensive in-memory sorts.
+ **Action:** Always add a composite index (e.g., `@@index([childId, at])`) when writing queries that filter by a foreign key and sort by a timestamp to optimize `findMany` operations.
