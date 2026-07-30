@@ -1,0 +1,3 @@
+## 2025-02-27 - Missing Composite Indexes for Sorted Queries
+**Learning:** Models like `ParentalApproval`, `ParentalActivity`, `ChildProfile`, `SecurityReport`, and `SupportTicket` are frequently queried by their parent relation ID (e.g., `childId`, `parentId`, `userId`) and sorted by a timestamp (e.g., `at`, `createdAt`, `desc`). The existing schema lacks composite indexes for these query patterns, leading to less efficient queries that cannot utilize indexes for the sorting step.
+**Action:** Added composite indexes (e.g., `@@index([childId, at])`, `@@index([parentId, createdAt])`) and performance comments to the Prisma schema to optimize these `findMany` calls.
