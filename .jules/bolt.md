@@ -1,0 +1,3 @@
+## 2026-07-31 - [Add composite indexes for parental dashboard queries]
+**Learning:** The `ChildProfile`, `ParentalActivity`, and `ParentalApproval` models frequently query their parent models (`User` or `ChildProfile`) using keys like `parentId` or `childId`, and sort by `createdAt` or `at` (descending). The lack of composite indexes resulted in slower database reads and expensive in-memory sorts for `findManyByParentId` and `findManyByChildId`.
+**Action:** Add composite indexes (`@@index([parentId, createdAt])` and `@@index([childId, at])`) to `ChildProfile`, `ParentalActivity`, and `ParentalApproval` in `schema.prisma` and explicitly generate the corresponding SQL migration files.
