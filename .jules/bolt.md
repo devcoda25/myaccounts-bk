@@ -1,0 +1,3 @@
+## 2025-02-27 - Bolt: Missing composite indexes for sorted queries
+**Learning:** Found multiple models (ChildProfile, ParentalApproval, ParentalActivity, SecurityReport, SupportTicket) missing composite indexes for frequent queries that sort by a timestamp (e.g., createdAt, at) after filtering by a relation ID (e.g., parentId, childId, userId). This leads to inefficient database operations because the database has to sort results in memory after fetching them.
+**Action:** Add composite indexes covering both the relation ID and the timestamp (e.g., `@@index([childId, at])`) to optimize these queries.
