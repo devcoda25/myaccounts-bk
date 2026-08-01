@@ -1,0 +1,3 @@
+## 2025-02-27 - Missing Composite Indexes on Parent/Child Models
+**Learning:** Models like ChildProfile, ParentalApproval, and ParentalActivity are frequently queried by their parent/child ID and sorted by chronological fields (like createdAt or at). Prisma requires composite indexes on these specific combinations to avoid expensive in-memory database sorts.
+**Action:** Add composite indexes on the exact filter and sort field combinations used in repository findMany queries.
