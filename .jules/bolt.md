@@ -1,0 +1,3 @@
+## 2025-02-27 - [Missing Composite Indexes]
+ **Learning:** Frequent `findMany` queries in Repositories (e.g. Session, ChildProfile, ParentalActivity, SupportTicket) filter by an ID and sort by a timestamp. These lack composite indexes in Prisma which leads to inefficient database sorts.
+ **Action:** When designing or optimizing Prisma models frequently queried by relation IDs and sorted chronologically, add composite indexes (e.g. `@@index([userId, createdAt])`) to avoid expensive in-memory database sorts.
