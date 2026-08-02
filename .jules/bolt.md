@@ -1,0 +1,3 @@
+## 2026-08-02 - Database Queries Missing Composite Indexes
+**Learning:** The NestJS Prisma backend frequently executes 'findMany' queries sorted by a specific timestamp field (e.g., `findManyByChildId` sorted by `at` desc, or `findManyByParentId` sorted by `createdAt` desc) but relies on single-field foreign key indexes. This forces the database to perform expensive in-memory sorts for these queries, leading to performance bottlenecks at scale.
+**Action:** Add composite indexes covering both the foreign key and the sort field (e.g., `@@index([childId, at])`) to `ChildProfile`, `ParentalApproval`, and `ParentalActivity` in `prisma/schema.prisma`, and generate the corresponding SQL migration file to ensure the database executes these sorts instantly via the index.
