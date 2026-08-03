@@ -1,0 +1,3 @@
+## 2025-02-27 - [Add Composite Indexes]
+**Learning:** Models like ChildProfile, ParentalApproval, and SupportTicket are frequently queried by their parent entity (e.g. childId or userId) and sorted by a timestamp (e.g. at or createdAt). Adding a composite index matching this exact query pattern avoids expensive in-memory sorts.
+**Action:** Always verify the query logic in the repository files, and then add a composite index with the explicit sort direction (e.g., `(sort: Desc)`) to the schema to optimize these lookups.
