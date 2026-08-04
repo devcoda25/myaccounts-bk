@@ -1,0 +1,3 @@
+## 2025-02-28 - Composite Indexes for Parental Module
+**Learning:** The `ChildProfile`, `ParentalApproval`, and `ParentalActivity` models are frequently queried by their foreign keys (`parentId` and `childId`) and sorted by their respective timestamp fields descending (`createdAt` and `at`). Adding composite indexes with the descending sort direction avoids in-memory sorts.
+**Action:** Add `@@index([fk, timestamp(sort: Desc)])` to optimize these queries.
