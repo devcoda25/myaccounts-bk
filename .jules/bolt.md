@@ -1,0 +1,3 @@
+## 2025-02-27 - [Database Query Optimization]
+**Learning:** The NestJS/Prisma architecture frequently queries models by relational IDs (`childId`, `userId`, `parentId`) and sorts by chronological fields (`at`, `createdAt`, `lastUsedAt`) descending (e.g., `findManyByChildId`, `findUserTickets`, `findActiveSessionsByUser`). Without composite indexes supporting both the filter and the sort direction, the database must perform expensive in-memory sorts on potentially large datasets, leading to N+1-like performance degradation as user activity grows.
+**Action:** Add composite indexes specifying the sort direction, e.g., `@@index([userId, createdAt(sort: Desc)])`, to offload sorting to the database engine and guarantee O(log N) lookup times for these common queries.
