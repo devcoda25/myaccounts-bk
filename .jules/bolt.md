@@ -1,0 +1,3 @@
+## 2025-02-27 - [Missing Composite Indexes for Chronological Queries]
+**Learning:** Models like `ParentalActivity`, `ParentalApproval`, `SecurityReport`, `SupportTicket` and `ChildProfile` frequently queried by parent IDs and sorted chronologically (using `orderBy: { at: 'desc' }` or `orderBy: { createdAt: 'desc' }`) are missing composite indexes, leading to expensive in-memory sorts.
+**Action:** Add composite indexes using `@@index([foreignKey, dateField(sort: Desc)])` in Prisma to optimize these queries.
