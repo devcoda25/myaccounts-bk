@@ -1,0 +1,3 @@
+## 2025-02-27 - Composite Indexes for Frequent Queries
+**Learning:** Several models (ParentalActivity, Notification) lack composite indexes for frequently executed findMany queries that sort by chronologically descending fields (e.g., createdAt(sort: Desc)), leading to suboptimal query performance.
+**Action:** Add composite indexes covering the foreign key and the sort field (e.g., @@index([childId, at(sort: Desc)])) to optimize these queries.
