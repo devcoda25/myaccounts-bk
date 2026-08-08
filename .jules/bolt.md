@@ -1,0 +1,3 @@
+## 2025-02-27 - [Composite Indexes for Common Sorted Queries]
+**Learning:** This codebase frequently performs queries to fetch records for a specific parent entity (e.g. `userId` or `childId`) and sorts them chronologically (e.g., `at desc`, `createdAt desc`). Without composite indexes covering both the foreign key and the sort field (with the correct sort direction), these queries can result in expensive in-memory sorts as the tables grow.
+**Action:** When working on backend performance, always inspect Prisma models that are frequently queried by an owner ID and returned sorted. If an index is missing, add a composite index like `@@index([userId, createdAt(sort: Desc)])` to optimize the read query.
