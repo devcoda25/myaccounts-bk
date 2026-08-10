@@ -1,0 +1,3 @@
+## 2025-02-28 - [Add Composite Indexes]
+**Learning:** Discovered that ParentalApproval, ParentalActivity, SecurityReport, and SupportTicket models were frequently queried by their relation IDs (childId/userId) and ordered by their timestamp fields descending (at/createdAt), but lacked composite indexes covering these access patterns, resulting in inefficient lookups and potentially expensive in-memory sorts on the database side.
+**Action:** Added composite indexes like @@index([userId, createdAt(sort: Desc)]) to the models to optimize the frequent time-series queries. When evaluating database performance on highly sequential data queried by a foreign key, check for indexes that cover both the join key and the sorting field natively.
