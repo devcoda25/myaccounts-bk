@@ -1,0 +1,3 @@
+## 2025-02-27 - [Add composite indexes for frequently queried and sorted fields]
+**Learning:** The database queries for ChildProfile, ParentalApproval, and ParentalActivity models frequently filter by an ID (e.g., parentId, childId) and sort by a timestamp (e.g., createdAt, at) in descending order. Without composite indexes matching these access patterns, the database will likely perform expensive in-memory sorts, causing performance bottlenecks as data scales.
+**Action:** Always inspect repository files to identify common query patterns and ensure the Prisma schema includes matching composite indexes with explicitly declared sort directions (e.g., @@index([childId, at(sort: Desc)])) to optimize these queries.
