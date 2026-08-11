@@ -1,0 +1,3 @@
+## 2025-02-27 - [Add composite indexes for frequently queried collections sorted by date]
+**Learning:** The database is frequently queried for collections scoped by an ID and sorted by a date field descending (e.g., ParentalActivity and ParentalApproval by childId and at DESC, ChildProfile by parentId and createdAt DESC, SecurityReport and SupportTicket by userId and createdAt DESC). Without composite indexes, these queries can cause expensive in-memory sorts.
+**Action:** Add composite indexes on (ID, Date(sort: Desc)) to optimize these queries and avoid performance bottlenecks.
