@@ -1,0 +1,3 @@
+## 2025-02-28 - [Performance: Add Database Indexes for findMany Queries]
+**Learning:** I found multiple models (ChildProfile, ParentalApproval, ParentalActivity, SecurityReport, SupportTicket) with missing indexes on frequently queried fields with sorting (e.g., `findMany` by `childId` ordered by `at(sort: Desc)`). Prisma requires explicit index declarations matching these query patterns to avoid expensive full-table scans or in-memory sorts on large datasets.
+**Action:** Always explicitly define composite indexes with the `(sort: Desc)` modifier when sorting is used in `findMany` queries on relational fields.
