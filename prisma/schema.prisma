@@ -7,7 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 enum UserAccountStatus {
   ACTIVE
   MINOR_PENDING_PARENT
@@ -21,6 +20,7 @@ enum MinorApprovalStatus {
   EXPIRED
   CANCELLED
 }
+
 // User Core
 model User {
   id           String  @id @default(uuid())
@@ -32,20 +32,20 @@ model User {
   passwordHash String?
 
   // Profile
-  dob           DateTime?
-  accountStatus UserAccountStatus @default(ACTIVE)
-  guardianEmail String?
+  dob            DateTime?
+  accountStatus  UserAccountStatus @default(ACTIVE)
+  guardianEmail  String?
   guardianUserId String?
 
-  country     String?
-  avatarUrl   String?
-  role        String    @default("USER") // e.g., "SUPER_ADMIN", "ADMIN", "USER"
-  preferences Json? // User settings (theme, notifications, etc.)
+  country      String?
+  avatarUrl    String?
+  role         String  @default("USER") // e.g., "SUPER_ADMIN", "ADMIN", "USER"
+  preferences  Json? // User settings (theme, notifications, etc.)
   lastLocation Json? // Store last detected location (country, city, coords)
 
-  emailVerified    Boolean @default(false)
-  phoneVerified    Boolean @default(false)
-  twoFactorEnabled Boolean @default(false)
+  emailVerified    Boolean  @default(false)
+  phoneVerified    Boolean  @default(false)
+  twoFactorEnabled Boolean  @default(false)
   twoFactorSecret  String? // Encrypted TOTP secret
   recoveryCodes    String[] // Hashed recovery codes
 
@@ -63,9 +63,9 @@ model User {
 
   // Under-18 / Guardian linking
   guardian                 User?                  @relation("MinorGuardian", fields: [guardianUserId], references: [id])
-  minorChildren             User[]                 @relation("MinorGuardian")
-  minorApprovalRequests     MinorApprovalRequest[] @relation("MinorApprovalChild")
-  guardianApprovalRequests  MinorApprovalRequest[] @relation("MinorApprovalGuardian")
+  minorChildren            User[]                 @relation("MinorGuardian")
+  minorApprovalRequests    MinorApprovalRequest[] @relation("MinorApprovalChild")
+  guardianApprovalRequests MinorApprovalRequest[] @relation("MinorApprovalGuardian")
 
   // Parental Control Relations
   ownedHousehold       Household?        @relation("HouseholdOwner")
@@ -86,16 +86,17 @@ model User {
   @@index([lastLocation], type: Gin)
   @@map("users")
 }
-model MinorApprovalRequest {
-  id             String             @id @default(uuid())
-  childId         String
-  guardianEmail   String
-  tokenHash       String
-  status          MinorApprovalStatus @default(PENDING)
-  expiresAt       DateTime
-  approvedAt      DateTime?
 
-  guardianUserId  String?
+model MinorApprovalRequest {
+  id            String              @id @default(uuid())
+  childId       String
+  guardianEmail String
+  tokenHash     String
+  status        MinorApprovalStatus @default(PENDING)
+  expiresAt     DateTime
+  approvedAt    DateTime?
+
+  guardianUserId String?
 
   child        User  @relation("MinorApprovalChild", fields: [childId], references: [id], onDelete: Cascade)
   guardianUser User? @relation("MinorApprovalGuardian", fields: [guardianUserId], references: [id], onDelete: SetNull)
@@ -103,9 +104,9 @@ model MinorApprovalRequest {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([tokenHash])
   @@index([childId])
   @@index([guardianEmail])
-  @@unique([tokenHash])
   @@map("minor_approval_requests")
 }
 
@@ -145,23 +146,22 @@ model UserCredential {
   @@map("user_credentials")
 }
 
-
 // OIDC Clients (EVzone Services)
 model OAuthClient {
-  id               String   @id @default(uuid()) // client_id
-  clientId         String   @unique
-  clientSecretHash String? // for confidential clients
-  name             String
-  description      String?
-  icon             String?  // e.g. "CreditCard"
-  color            String?  // e.g. "#03CD8C"
-  website          String? // App Homepage/Domain
-  redirectUris     String[]
-  post_logout_redirect_uris String[] @default([])
-  grantTypes       String[] // "authorization_code", "refresh_token"
-  isPublic         Boolean  @default(false)
-  isFirstParty     Boolean  @default(true) // skip consent if true
-  id_token_signed_response_alg String @default("ES256")
+  id                           String   @id @default(uuid()) // client_id
+  clientId                     String   @unique
+  clientSecretHash             String? // for confidential clients
+  name                         String
+  description                  String?
+  icon                         String? // e.g. "CreditCard"
+  color                        String? // e.g. "#03CD8C"
+  website                      String? // App Homepage/Domain
+  redirectUris                 String[]
+  post_logout_redirect_uris    String[] @default([])
+  grantTypes                   String[] // "authorization_code", "refresh_token"
+  isPublic                     Boolean  @default(false)
+  isFirstParty                 Boolean  @default(true) // skip consent if true
+  id_token_signed_response_alg String   @default("ES256")
 
   sessions Session[]
   consents OAuthConsent[]
@@ -169,14 +169,14 @@ model OAuthClient {
   // Ownership: Can be owned by a User (Dev) OR an Organization (Tenant App)
   ownerId String?
   owner   User?   @relation("ClientOwner", fields: [ownerId], references: [id])
-  
-  orgId   String?
+
+  orgId        String?
   organization Organization? @relation(fields: [orgId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  team      AppMembership[] // Relation to App Team
+  team AppMembership[] // Relation to App Team
 
   @@map("oauth_clients")
 }
@@ -203,46 +203,46 @@ enum OrgRole {
 }
 
 model Organization {
-  id          String   @id @default(uuid())
-  name        String
-  taxId       String?  // Lightweight VAT/Registration ref
-  icon        String?
-  
-  members     OrgMembership[]
-  clients     OAuthClient[]   // Apps managed by this org
+  id    String  @id @default(uuid())
+  name  String
+  taxId String? // Lightweight VAT/Registration ref
+  icon  String?
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  members OrgMembership[]
+  clients OAuthClient[] // Apps managed by this org
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("organizations")
 }
 
 model OrgMembership {
-  id             String       @id @default(uuid())
-  orgId          String
-  userId         String
-  role           OrgRole      @default(MEMBER)
-  
-  organization   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String  @id @default(uuid())
+  orgId  String
+  userId String
+  role   OrgRole @default(MEMBER)
 
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([orgId, userId])
   @@map("org_memberships")
 }
 
 model AppMembership {
-  id        String   @id @default(uuid())
-  userId    String
-  clientId  String
-  role      AppRole
-  region    String?  // For REGIONAL_ADMIN (e.g., "East Africa")
-  permissions Json?  // Optional fine-grained overrides
+  id          String  @id @default(uuid())
+  userId      String
+  clientId    String
+  role        AppRole
+  region      String? // For REGIONAL_ADMIN (e.g., "East Africa")
+  permissions Json? // Optional fine-grained overrides
 
-  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  client    OAuthClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client OAuthClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -263,7 +263,6 @@ model Session {
   deviceInfo       Json? // IP, UserAgent
   passkeyChallenge String? // For WebAuthn challenge verification (stateful)
 
-
   user   User         @relation(fields: [userId], references: [id])
   client OAuthClient? @relation(fields: [clientId], references: [id])
 
@@ -274,6 +273,8 @@ model Session {
   @@index([clientId])
   @@index([expiresAt])
   @@index([userId, clientId])
+  // @performance Optimizes findActiveSessionsByUser queries
+  @@index([userId, lastUsedAt(sort: Desc)])
   @@map("sessions")
 }
 
@@ -304,9 +305,9 @@ model VerificationRequest {
   attempts   Int      @default(0)
   createdAt  DateTime @default(now())
 
+  @@unique([identifier, type, token])
   @@index([identifier, type])
   @@index([expiresAt])
-  @@unique([identifier, type, token])
   @@map("verification_requests")
 }
 
@@ -327,7 +328,6 @@ model VerificationRequest {
 // -----------------------------------------------------------------------------
 // Compliance & Audit
 // -----------------------------------------------------------------------------
-
 
 model OAuthConsent {
   userId    String
@@ -353,7 +353,7 @@ model AuditLog {
   severity  String  @default("info") // "info", "warning", "critical"
   actorName String? // Snapshot of actor name
 
-  user         User?         @relation(fields: [userId], references: [id])
+  user User? @relation(fields: [userId], references: [id])
 
   createdAt DateTime @default(now())
 
@@ -451,6 +451,8 @@ model ChildProfile {
   updatedAt DateTime @updatedAt
 
   @@index([apps], type: Gin)
+  // @performance Optimizes findManyByParentId with sorting
+  @@index([parentId, createdAt(sort: Desc)])
   @@map("parental_child_profiles")
 }
 
@@ -502,14 +504,16 @@ model ParentalApproval {
   reason   String?
   details  String?
   status   String   @default("Pending") // "Pending", "Approved", "Declined"
-  
-  // Multi-guardian support
-  votes    String[] // List of Guardian IDs who approved
 
-  at       DateTime @default(now())
+  // Multi-guardian support
+  votes String[] // List of Guardian IDs who approved
+
+  at DateTime @default(now())
 
   child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
 
+  // @performance Optimizes findManyByChildId with sorting
+  @@index([childId, at(sort: Desc)])
   @@map("parental_approvals")
 }
 
@@ -523,6 +527,8 @@ model ParentalActivity {
 
   child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
 
+  // @performance Optimizes findManyByChildId with sorting
+  @@index([childId, at(sort: Desc)])
   @@map("parental_activities")
 }
 
@@ -547,17 +553,17 @@ model Notification {
 
 // OIDC Persistence (Sessions, Interactions, Grants)
 model OidcPayload {
-  id        String   @id
-  type      String   // 'Session', 'AccessToken', etc.
-  payload   Json
-  grantId   String?
-  userCode  String?
-  uid       String?
-  expiresAt DateTime?
+  id         String    @id
+  type       String // 'Session', 'AccessToken', etc.
+  payload    Json
+  grantId    String?
+  userCode   String?
+  uid        String?
+  expiresAt  DateTime?
   consumedAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
   @@index([type])
   @@index([grantId])
   @@index([uid])
@@ -566,10 +572,10 @@ model OidcPayload {
 model SecurityReport {
   id          String   @id @default(uuid())
   userId      String
-  type        String   // "SUSPICIOUS_LOGIN", "COMPROMISED_ACCOUNT", "OTHER"
+  type        String // "SUSPICIOUS_LOGIN", "COMPROMISED_ACCOUNT", "OTHER"
   severity    String   @default("high")
   description String
-  metadata    Json?    // Specific details like eventId, IP, etc.
+  metadata    Json? // Specific details like eventId, IP, etc.
   status      String   @default("OPEN") // "OPEN", "INVESTIGATING", "RESOLVED", "CLOSED"
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -584,14 +590,16 @@ model SupportTicket {
   userId      String?
   subject     String
   description String
-  category    String   // "Billing", "Technical", "Privacy", "General"
+  category    String // "Billing", "Technical", "Privacy", "General"
   priority    String   @default("medium")
   status      String   @default("OPEN")
-  metadata    Json?    // browser info, attachments labels
+  metadata    Json? // browser info, attachments labels
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+  // @performance Optimizes queries filtering by userId and sorting by createdAt
+  @@index([userId, createdAt(sort: Desc)])
   @@map("support_tickets")
 }

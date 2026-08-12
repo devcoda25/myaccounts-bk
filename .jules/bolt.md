@@ -1,0 +1,3 @@
+## 2025-02-27 - [Add composite indexes for chronological sorting]
+**Learning:** When models are frequently queried by an ID field and sorted by a timestamp descending (e.g., in SupportTicket, ParentalApproval, and Session queries), using a composite index like `@@index([userId, createdAt(sort: Desc)])` optimizes the `findMany` queries by allowing the database to look up by ID and retrieve pre-sorted results without needing an expensive in-memory sort.
+**Action:** Always verify repository access patterns for sorting requirements and ensure Prisma indexes explicitly declare `(sort: Desc)` when matching queries to prevent unindexed sorting overhead.
