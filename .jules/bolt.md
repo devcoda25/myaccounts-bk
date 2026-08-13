@@ -1,0 +1,3 @@
+## 2025-02-27 - [Missing Composite Indexes for Chronological Queries]
+**Learning:** Several models (ParentalActivity, ParentalApproval, ChildProfile, SupportTicket) are frequently queried by their parent ID (e.g., childId, parentId, userId) and sorted descending by a timestamp (e.g., at, createdAt). The lack of composite indexes for these specific query patterns leads to inefficient in-memory sorting and potential N+1-like performance degradation as data grows.
+**Action:** Add composite indexes to Prisma models combining the foreign key and the descending sort timestamp to optimize findMany queries.
