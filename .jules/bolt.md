@@ -1,0 +1,3 @@
+## 2025-02-27 - Optimize Database Queries with Composite Indexes
+**Learning:** Found multiple instances where database queries rely on filtering by one field (e.g., childId, parentId, userId) and sorting by a date field (e.g., createdAt, at, lastUsedAt) descending, but only single-field indexes exist. This results in expensive in-memory sorts for frequently queried collections.
+**Action:** Adding composite indexes matching the filter + sort pattern (e.g., @@index([childId, at(sort: Desc)])) significantly optimizes these read-heavy queries by utilizing index sorting.
