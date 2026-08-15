@@ -1,0 +1,3 @@
+## 2025-02-27 - Composite Indexes for Sorting
+**Learning:** Models frequently queried by a foreign key (like `userId` or `childId`) and sorted by a timestamp (like `createdAt` or `at` in descending order) suffer from expensive in-memory sorts if they only have single-column indexes. The query engine must fetch all rows matching the foreign key and then sort them.
+**Action:** Always add composite indexes (e.g., `@@index([userId, createdAt(sort: Desc)])`) for these common query patterns (like `findManyByUserId` or `findUserTickets`) to allow the database to return pre-sorted results directly.
