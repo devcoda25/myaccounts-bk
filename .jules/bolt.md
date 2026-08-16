@@ -1,0 +1,3 @@
+## 2025-02-27 - Missing Composite Indexes on Frequently Queried Collections
+**Learning:** The database schema lacked composite indexes for frequently queried patterns (e.g., querying by a foreign key and ordering by a timestamp). This causes expensive in-memory sorts for collections like ParentalActivity, ParentalApproval, and SupportTicket.
+**Action:** Always inspect the repository files for findMany queries containing an orderBy clause on a timestamp when filtering by an ID, and add matching composite indexes to optimize the queries.
