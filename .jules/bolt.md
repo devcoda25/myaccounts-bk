@@ -1,0 +1,3 @@
+## 2025-02-28 - Add composite indexes for common descending queries
+**Learning:** Found multiple instances where models (ParentalActivity, ParentalApproval, ChildProfile, SecurityReport, SupportTicket, Notification) are queried by an owner ID and sorted by a timestamp descending, but lack the composite index to support the sort directly in the database.
+**Action:** Add `@@index([foreignKey, timestampField(sort: Desc)])` to these models in the Prisma schema to avoid expensive in-memory sorts and optimize database queries.
