@@ -1,0 +1,3 @@
+## 2025-02-27 - [Prisma Composite Indexes for Chronological Queries]
+**Learning:** Found multiple instances (e.g., ParentalActivity, ChildProfile, ParentalApproval) where records are frequently queried by their parent ID (parentId, childId) and ordered by a timestamp in descending order. Without a composite index, this forces the database to perform an expensive sort operation on all matching records. Standard Prisma indexes only optimize the lookup, not the sort.
+**Action:** Add composite indexes with explicit `(sort: Desc)` modifiers directly in `prisma/schema.prisma` (e.g., `@@index([childId, at(sort: Desc)])`) to optimize these frequent dashboard/feed queries. Ensure migration files are generated to apply these indexes to the actual database.
