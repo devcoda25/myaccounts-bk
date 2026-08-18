@@ -1,0 +1,3 @@
+## 2025-02-27 - [Missing Composite Indexes]
+**Learning:** Repositories querying lists (e.g. `SupportTicket`, `SecurityReport`, `ChildProfile`, `ParentalApproval`) frequently filter by a foreign key and sort descending by date (e.g., `where: { userId }, orderBy: { createdAt: 'desc' }`). The lack of composite indexes for these exact patterns means database queries require more expensive in-memory sorts and sequential scans as data grows.
+**Action:** Always verify if heavily queried relation tables have composite indexes covering both the foreign key and the descending sort field to optimize findMany performance.
