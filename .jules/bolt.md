@@ -1,0 +1,3 @@
+## 2025-02-27 - [Missing Database Indexes for Chronological Queries]
+ **Learning:** Frequent `findMany` queries filtered by `childId` or `parentId` (e.g. `ParentalActivity`, `ParentalApproval`, `ChildProfile`) are ordered by time (e.g. `at(desc)`, `createdAt(desc)`), but their underlying Prisma models lack composite indexes for these fields. This creates N+1 query-like performance issues as the DB must sort results in memory instead of relying on an index.
+ **Action:** Added composite indexes like `@@index([childId, at(sort: Desc)])` to optimize these frequent dashboard/feed queries.
