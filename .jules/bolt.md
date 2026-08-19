@@ -1,0 +1,3 @@
+## 2025-02-27 - Composite Indexes for Chronological Queries
+**Learning:** The `ChildProfile`, `ParentalApproval`, and `ParentalActivity` models are frequently queried by ID and sorted chronologically, but lack composite indexes. Filtering by one field and sorting by another without a composite index causes expensive in-memory sorts.
+**Action:** Always add composite indexes (e.g., `@@index([parentId, createdAt(sort: Desc)])`) for models with `findMany` queries that filter by an ID and sort by a timestamp.
