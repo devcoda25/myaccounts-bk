@@ -1,0 +1,3 @@
+## 2025-02-27 - Missing Composite Indexes for Sorted Queries
+**Learning:** Repositories often query data by a foreign key (like childId or userId) and immediately sort by a timestamp (like createdAt or at descending). Without a composite index covering both fields and the sort direction, the database must perform an expensive in-memory sort after filtering.
+**Action:** Always add composite indexes with (sort: Desc) for fields commonly used together in where and orderBy clauses, such as @@index([childId, at(sort: Desc)]) for findManyByChildId queries.
