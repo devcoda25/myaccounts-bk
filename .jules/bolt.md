@@ -1,0 +1,3 @@
+## 2025-02-27 - [Missing Database Indexes on Frequently Queried Fields]
+**Learning:** Repositories in this project frequently use standard sorting fields like `createdAt` and `at` for list queries (e.g., `findManyByParentId` in `ChildProfileRepository`, `findUserReports` in `SupportRepository`). Without appropriate composite indexes on Prisma models, these queries can cause N+1-like performance issues and expensive in-memory sorts on the database side as data scales.
+**Action:** Always add composite indexes (e.g., `@@index([userId, createdAt(sort: Desc)])`) to optimize such queries. Make sure to define the `sort: Desc` explicitly if the query does descending order.
