@@ -1,0 +1,3 @@
+## 2025-02-27 - [Missing Descending Sort Indexes in Parental Module]
+**Learning:** The NestJS+Prisma app frequently sorts queries by descending dates (e.g., `findManyByChildId` ordering by `at: 'desc'` in `ParentalActivity` and `ParentalApproval`, and `findManyByParentId` ordering by `createdAt: 'desc'` in `ChildProfile`). These models lacked corresponding composite indexes, forcing the database to perform expensive in-memory sorts.
+**Action:** Add explicit composite indexes with descending sort directives (e.g., `@@index([childId, at(sort: Desc)])`) to all models that represent chronologically sorted collections belonging to a parent entity.
