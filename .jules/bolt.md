@@ -1,0 +1,3 @@
+## 2025-02-27 - Composite Indexes for Chronological Queries
+**Learning:** Models frequently queried by parent/child/user IDs and sorted chronologically (like `ChildProfile.findManyByParentId`, `ParentalApproval.findManyByChildId`, `ParentalActivity.findManyByChildId`, Session queries by userId, SecurityReport queries by userId, and `SupportTicket.findUserTickets`) experience N+1 performance bottlenecks or expensive in-memory sorts without explicit composite indexes matching both the relation ID and the sort direction.
+**Action:** Add composite indexes with explicit sort directions (e.g., `@@index([userId, createdAt(sort: Desc)])`) to these models to optimize database-level sorting.
