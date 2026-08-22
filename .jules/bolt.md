@@ -1,0 +1,3 @@
+## 2025-02-27 - Composite Indexes for Frequent Queries
+**Learning:** Models like ParentalApproval, ParentalActivity, and ChildProfile are frequently queried by their parent relations and ordered by chronological fields like at or createdAt. Without composite indexes explicitly defining sort direction, these queries can become performance bottlenecks as datasets grow.
+**Action:** Add composite indexes with explicit sort directions (e.g., @@index([childId, at(sort: Desc)])) to optimize findMany queries with sorting, avoiding expensive in-memory sorts.
