@@ -1,0 +1,3 @@
+## 2025-02-27 - Composite Indexes for Chronological Queries
+**Learning:** Models like Session, Notification, SecurityReport, and SupportTicket are frequently queried by `userId` and sorted chronologically (e.g., `createdAt` or `lastUsedAt` descending), but they lack composite indexes to support this. This forces the database to perform expensive in-memory sorts for queries like `findUserTickets`.
+**Action:** Always add composite indexes like `@@index([userId, createdAt(sort: Desc)])` to models that are frequently queried by a foreign key and sorted by a timestamp to avoid in-memory sorts and optimize `findMany` queries.
