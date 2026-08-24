@@ -1,0 +1,3 @@
+## 2025-02-27 - [Missing Composite Indexes on Temporal Queries]
+**Learning:** Models like Notification, SecurityReport, and SupportTicket are frequently queried by userId and sorted by createdAt (descending). These lack composite indexes for these specific patterns, leading to expensive in-memory database sorts on findMany operations.
+**Action:** Always add composite indexes (e.g., @@index([userId, createdAt(sort: Desc)])) when a table is predominantly queried by a foreign key and ordered chronologically to avoid full-table scans or file-sorts.
