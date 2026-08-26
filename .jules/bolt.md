@@ -1,0 +1,3 @@
+## 2025-02-27 - [Add Composite Indexes]
+ **Learning:** Frequent queries with sorting (e.g., in repos/parental/parental-activity.repository.ts, repos/support/support.repository.ts, and repos/auth/session.repository.ts) lack optimized composite indexes for filtering and sorting, causing potential performance bottlenecks on large tables.
+ **Action:** Added @@index([childId, at(sort: Desc)]), @@index([userId, createdAt(sort: Desc)]), and @@index([userId, lastUsedAt(sort: Desc)]) to ParentalActivity, ParentalApproval, SecurityReport, SupportTicket, Session, and ChildProfile models in prisma/schema.prisma to optimize findMany queries.
