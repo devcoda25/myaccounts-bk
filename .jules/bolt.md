@@ -1,0 +1,3 @@
+## 2026-08-26 - [Missing Indexes for Parental Queries]
+**Learning:** Found that findManyByChildId and findManyByParentId on Parental Activity/Approval and Child Profile are frequently queried but missing composite indexes on childId + at and parentId + createdAt.
+**Action:** Add composite indexes @@index([childId, at(sort: Desc)]) and @@index([parentId, createdAt(sort: Desc)]) to optimize sorting for queries.
