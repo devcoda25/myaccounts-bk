@@ -1,0 +1,3 @@
+## 2025-02-27 - [Add composite index for Session queries]
+**Learning:** Models like Session, SecurityReport, and SupportTicket which are frequently queried by userId and sorted chronologically (e.g. lastUsedAt or createdAt descending) can cause expensive in-memory sorts if they only have single-column indexes.
+**Action:** Adding composite indexes matching the common query pattern (filtering + sorting), such as `@@index([userId, lastUsedAt(sort: Desc)])` to optimize these findMany operations.
