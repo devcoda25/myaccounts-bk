@@ -1,0 +1,3 @@
+## 2025-02-27 - [Missing Index on Notification Queries]
+**Learning:** The NotificationsService frequently queries the Notification model by userId and sorts by createdAt (descending) without a composite index, which can cause slow in-memory sorts as the table grows.
+**Action:** Add a composite index `@@index([userId, createdAt(sort: Desc)])` to the `Notification` model to optimize the `findMany` query in `NotificationsService`.
