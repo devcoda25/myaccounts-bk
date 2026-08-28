@@ -1,0 +1,3 @@
+## 2025-02-27 - Composite Indexes for Chronological Queries
+**Learning:** The application frequently queries chronological data (like activities, approvals, and child profiles) by a foreign key (childId or parentId) and sorts descending by timestamp, which causes in-memory sorting without a composite index.
+**Action:** Always add composite indexes with descending sort directives (e.g., `@@index([childId, at(sort: Desc)])`) for models queried this way.
