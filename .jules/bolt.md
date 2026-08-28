@@ -1,0 +1,3 @@
+## 2025-02-27 - [Add Composite Indexes for Parental Queries]
+**Learning:** Queries in ChildProfileRepository (findManyByParentId), ParentalApprovalRepository (findManyByChildId), and ParentalActivityRepository (findManyByChildId) frequently filter by parentId or childId and sort by createdAt or at descending. Without explicit composite indexes with sort directions, this leads to expensive in-memory sorts.
+**Action:** Added composite indexes with (sort: Desc) to these models to optimize findMany queries.
