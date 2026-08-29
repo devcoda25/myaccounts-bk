@@ -1,0 +1,3 @@
+## 2025-02-27 - Composite Indexing for Frequently Sorted Queries
+**Learning:** Found multiple models (SupportTicket, SecurityReport, ParentalActivity) that are frequently queried by an ID (e.g. userId, childId) and then ordered by a date field (e.g. createdAt, at). For example: `findUserTickets` in SupportRepository and `findManyByChildId` in ParentalActivityRepository. Prisma models lack composite indexes for these fields. When missing, the DB must retrieve all rows matching the foreign key before performing an expensive in-memory sort.
+**Action:** Always verify if `.findMany()` queries with a `where` and `orderBy` clause are backed by a composite index matching `[foreignKey, dateField(sort: Desc)]`.
