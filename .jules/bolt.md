@@ -1,0 +1,3 @@
+## 2025-02-27 - [Prisma Composite Indexes]
+**Learning:** Models like ParentalActivity, ParentalApproval, and SecurityReport are frequently queried by an ID field and sorted by a timestamp descending. Without a composite index, this requires an expensive in-memory sort or table scan.
+**Action:** Always verify common findMany queries and add a matching composite index (e.g., `@@index([userId, createdAt(sort: Desc)])`) directly in the Prisma schema.
