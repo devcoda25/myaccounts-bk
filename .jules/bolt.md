@@ -1,0 +1,3 @@
+## 2025-02-27 - [Add composite indexes for parental models]
+**Learning:** Models like ChildProfile, ParentalApproval, and ParentalActivity are frequently queried by ID (parentId or childId) and sorted by a timestamp as verified in their repository files. Missing composite indexes can lead to slow, in-memory sorting.
+**Action:** Add composite indexes with `(sort: Desc)` to Prisma models to align with query patterns and avoid expensive sorts.
