@@ -1,0 +1,3 @@
+## 2025-02-28 - Optimizing Parental Queries with Composite Indexes
+**Learning:** The `findManyByChildId` and `findManyByParentId` queries in `ParentalActivityRepository`, `ParentalApprovalRepository`, and `ChildProfileRepository` sort chronologically but lack composite indexes. Filtering by the parent or child ID and sorting in-memory is inefficient. Adding a composite index (e.g., `@@index([childId, at(sort: Desc)])`) directly supports both the filter and the sort.
+**Action:** Add composite indexes with explicit sort directions to models that are frequently queried by an ID and sorted chronologically, and manually generate the corresponding SQL migrations if a database is not connected to use `prisma migrate dev`.
