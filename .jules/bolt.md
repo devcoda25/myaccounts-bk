@@ -1,0 +1,3 @@
+## 2025-02-27 - [Add Composite Indexes for Child Profiles and Activities]
+**Learning:** Models like ChildProfile and ParentalActivity that are frequently queried by an ID field and sorted by a timestamp field in the application logic (e.g. findManyByParentId) require a composite index that also includes the sort direction, `(sort: Desc)`, to ensure optimal database sorting performance.
+**Action:** Always verify application query access patterns during exploration to match database indexes properly.
