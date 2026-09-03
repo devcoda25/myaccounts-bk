@@ -1,0 +1,3 @@
+## 2025-02-27 - [Performance: Composite Indexes for Parental Queries]
+ **Learning:** Queries like findManyByChildId in ParentalActivity and ParentalApproval, and findManyByParentId in ChildProfile frequently sort by a timestamp descending. Adding a composite index matching the where and orderBy clause significantly improves performance by avoiding an in-memory sort.
+ **Action:** Always look for combined where/orderBy clauses in repositories and add composite indexes with explicitly matching sort directions.
