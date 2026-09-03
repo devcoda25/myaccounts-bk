@@ -1,0 +1,3 @@
+## 2025-02-27 - Composite Index Sorting Performance Gap
+**Learning:** Prisma queries relying on ordered relations (e.g. `orderBy: { at: 'desc' }` in `findManyByChildId`) suffer from missing composite indexes in the schema. Simple foreign key indexes (`@@index([childId])`) do not optimize the sort, leading to expensive in-memory sorts on PostgreSQL.
+**Action:** Always add explicit descending sort directives to composite indexes (`@@index([childId, at(sort: Desc)])`) for models frequently queried chronologically.
