@@ -1,0 +1,3 @@
+## 2025-02-27 - [Add Composite Indexes for Frequently Sorted Queries]
+**Learning:** Found multiple models (ParentalActivity, ParentalApproval, ChildProfile, Session, SupportTicket, SecurityReport) being frequently queried by a relation ID and sorted by a timestamp in the backend services (e.g. `orderBy: { at: 'desc' }`, `orderBy: { createdAt: 'desc' }`, `orderBy: { lastUsedAt: 'desc' }`). The application was missing composite indexes on these models, resulting in expensive in-memory sorts for `findMany` queries.
+**Action:** Always verify query sorting requirements and define appropriate composite indexes (e.g. `@@index([userId, createdAt(sort: Desc)])`) in the Prisma schema to avoid unoptimized database sorts.
