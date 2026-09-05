@@ -1,0 +1,3 @@
+## 2025-02-27 - [Composite Indexes on Foreign Keys]
+**Learning:** Missing composite indexes on frequently queried fields like `ParentalApproval.childId` sorted by `at`, and `ChildProfile.parentId` sorted by `createdAt` is a recurrent performance pattern causing slow lookups.
+**Action:** Always add composite indexes with sort directives (e.g. `@@index([childId, at(sort: Desc)])`) for parent-child relationship queries.
