@@ -1,0 +1,3 @@
+## 2025-02-27 - Composite indexes for findMany operations
+**Learning:** The parental control models `ParentalApproval`, `ParentalActivity`, and `ChildProfile` frequently utilize `findMany` filtered by foreign keys (e.g. `childId`, `parentId`) and sorted by timestamp fields like `at` and `createdAt` (descending). These operations lacked composite indexes, which are essential to avoid expensive in-memory sorts for paginated or limited queries.
+**Action:** Add composite indexes using the `(sort: Desc)` direction parameter in Prisma, matching the explicit sort direction in the code to ensure the index directly optimizes these frequent queries.
