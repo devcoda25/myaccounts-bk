@@ -1,0 +1,3 @@
+## 2025-02-27 - [Performance: Optimizing Sorted Queries with Composite Indexes]
+ **Learning:** Queries like findManyByParentId and findManyByChildId in Prisma which explicitly order by a field (e.g., createdAt or at DESC) can suffer from performance bottlenecks (in-memory sorting) if only the relation field is indexed.
+ **Action:** Added composite indexes in prisma/schema.prisma (e.g., @@index([parentId, createdAt(sort: Desc)])) that include the sort field and direction to optimize these specific read paths.
