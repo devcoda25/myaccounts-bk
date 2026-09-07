@@ -1,0 +1,3 @@
+## 2025-02-27 - [Missing Composite Indexes on Parental Models]
+**Learning:** The `ParentalActivity` model is frequently queried by its parent ID (`childId`) and sorted by descending date (`at`), as seen in its repository. Without composite indexes matching the sort direction, the database must perform an expensive in-memory sort after filtering. Prisma defaults to ascending sort direction for indexes if not specified, which would drift from the database's `DESC` sort.
+**Action:** Add composite indexes with explicit sort directions (e.g., `@@index([childId, at(sort: Desc)])`) directly in Prisma models and write a raw SQL migration to apply them correctly to the database, ensuring queries like `findManyByChildId` stay optimal.
