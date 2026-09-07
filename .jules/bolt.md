@@ -1,0 +1,3 @@
+## 2025-02-27 - [Parental Queries Composite Indexes]
+**Learning:** Prisma models like ParentalActivity and ParentalApproval are frequently queried by childId and sorted by at(desc), and ChildProfile by parentId and createdAt(desc), but lack composite indexes for these specific query access patterns.
+**Action:** Add composite indexes with (sort: Desc) to prisma schema and corresponding SQL migrations for frequently sorted queries to avoid in-memory sorts.
