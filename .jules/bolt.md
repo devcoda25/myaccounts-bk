@@ -1,0 +1,3 @@
+## 2025-02-27 - [Missing Indexes on Chronological Feeds]
+**Learning:** Found that `Notification`, `SecurityReport`, and `SupportTicket` are frequently queried by `userId` and sorted by `createdAt` descending, but lack composite indexes for these fields. This could lead to slow queries or expensive in-memory sorting as the tables grow.
+**Action:** Always verify if `findMany` queries with `orderBy` have corresponding composite indexes in Prisma schema to optimize database performance.
