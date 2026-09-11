@@ -1,0 +1,3 @@
+## 2025-02-27 - [Add composite indexes for parental queries]
+**Learning:** The `ChildProfile` model is frequently queried by `parentId` and sorted by `createdAt` (descending). The `ParentalApproval` and `ParentalActivity` models are frequently queried by `childId` and sorted by `at` (descending). Adding a composite index on these fields significantly improves database query performance by avoiding expensive in-memory sorts.
+**Action:** Added composite indexes to these models to ensure queries execute optimally.
