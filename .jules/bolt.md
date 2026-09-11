@@ -1,0 +1,3 @@
+## 2025-02-27 - [Composite Indexes for Sorted Queries]
+**Learning:** Prisma models like ChildProfile, ParentalApproval, and Session that are frequently queried by foreign keys (parentId, childId, userId) and sorted by dates require composite indexes with explicit sort directions (Desc) to avoid in-memory sorts.
+**Action:** Always add composite indexes with sort directions when finding records by a parent ID and sorting chronologically.
