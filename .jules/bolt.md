@@ -1,0 +1,3 @@
+## 2025-02-28 - [Add composite indexes for chronological user queries]
+**Learning:** Models like `Notification`, `SecurityReport`, and `SupportTicket` are frequently queried by `userId` and sorted by `createdAt` descending. Without a composite index covering both fields and the specific sort direction, the database must perform an expensive in-memory sort after filtering by `userId`.
+**Action:** Add composite indexes with the descending sort direction explicitly specified (e.g., `@@index([userId, createdAt(sort: Desc)])`) to models that are frequently queried by a foreign key and sorted chronologically, to avoid expensive database sorts.
