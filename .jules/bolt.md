@@ -1,0 +1,3 @@
+## 2025-02-27 - [Parental Queries Bottleneck]
+**Learning:** The `ParentalActivity` and `ParentalApproval` models are frequently queried by `childId` and sorted by `at` descending. The `ChildProfile` model is frequently queried by `parentId` and sorted by `createdAt` descending. Without composite indexes, these queries require expensive in-memory sorts which can slow down operations.
+**Action:** Always add composite indexes with descending sort definitions in Prisma schema when a model is frequently queried by a foreign key and sorted descending chronologically to prevent database query bottlenecks.
