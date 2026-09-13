@@ -1,0 +1,3 @@
+## 2025-02-27 - [Session Query Optimization]
+**Learning:** The `Session` model is queried by `userId` and sorted by `lastUsedAt` (descending) in `findActiveSessionsByUser`. Without a composite index, this query can become a performance bottleneck as the table grows.
+**Action:** Add a composite index `@@index([userId, lastUsedAt(sort: Desc)])` to the `Session` model to avoid expensive in-memory sorts and improve query performance.
