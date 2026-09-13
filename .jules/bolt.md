@@ -1,0 +1,3 @@
+## 2025-02-27 - [Add composite indexes for parental queries]
+**Learning:** Models frequently queried by a relation ID and sorted chronologically (like ParentalActivity and ParentalApproval by childId, and ChildProfile by parentId) require composite indexes specifying the sort direction `(sort: Desc)` to optimize findMany queries and avoid expensive in-memory sorts.
+**Action:** Always verify query parameters in repository methods and add explicit `(sort: Desc)` indexes in `schema.prisma` and corresponding SQL migrations for descending ordered queries.
