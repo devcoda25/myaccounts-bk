@@ -1,0 +1,3 @@
+## 2025-02-27 - [Missing Database Indexes on Parental Queries]
+**Learning:** The `ChildProfile` model is frequently queried by `parentId` and sorted by `createdAt` (descending) via `findManyByParentId`. Similarly, the `ParentalApproval` and `ParentalActivity` models are queried by `childId` and sorted by `at` (descending) via `findManyByChildId`. These operations lack the necessary composite indexes in the database schema, which can lead to performance bottlenecks (in-memory sorting/full table scans) as the data grows.
+**Action:** Always verify if frequently queried fields that also require sorting have corresponding composite indexes in `schema.prisma`, and explicitly specify the sort direction using `(sort: Desc)`.
