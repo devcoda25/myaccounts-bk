@@ -1,0 +1,3 @@
+## 2025-02-27 - [Missing Composite Indexes on Parental Models]
+**Learning:** Models like ParentalActivity and ParentalApproval are frequently queried by childId and sorted descending by at, while ChildProfile is queried by parentId and sorted descending by createdAt. These require composite indexes with explicit (sort: Desc) modifiers in Prisma to avoid expensive in-memory sorts.
+**Action:** Always add composite indexes in prisma/schema.prisma and ensure sort: Desc is explicitly used when descending order is needed.
