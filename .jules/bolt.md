@@ -1,0 +1,3 @@
+## 2026-09-18 - [Prisma Missing Composite Index]
+**Learning:** The database has `Session` queries filtering by `userId` and sorting by `lastUsedAt` DESC (`findActiveSessionsByUser`), but lacks a composite index for this pattern. Instead, it only has single-field indexes on `userId` and `expiresAt`, leading to potential database sorting overhead.
+**Action:** Add a composite index `@@index([userId, lastUsedAt(sort: Desc)])` to models like `Session` when there are frequent findMany queries filtering by user and sorting by date.
