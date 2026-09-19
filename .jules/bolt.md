@@ -1,0 +1,3 @@
+## 2025-02-27 - Composite Indexes for Chronological Queries
+**Learning:** The application frequently queries child profile data like approvals and activities by childId/parentId while sorting by date descending. Missing composite indexes on these foreign keys and sorting timestamps causes expensive database sorts and unoptimized queries.
+**Action:** Always add composite indexes with descending sort definitions `@@index([foreignKeyId, dateField(sort: Desc)])` to optimize chronological listing queries.
