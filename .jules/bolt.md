@@ -1,0 +1,3 @@
+## 2025-02-27 - [Missing composite indexes on chronological parental queries]
+**Learning:** The `ChildProfileRepository`, `ParentalApprovalRepository`, and `ParentalActivityRepository` query by a parent or child ID and sort chronologically (e.g. `orderBy: { at: 'desc' }` or `orderBy: { createdAt: 'desc' }`), but `schema.prisma` only had foreign key relations without sorting composite indexes. This causes Prisma/PostgreSQL to perform expensive in-memory sorts on large datasets.
+**Action:** Always add composite descending indexes (e.g., `@@index([childId, at(sort: Desc)])`) matching both the lookup field and the `orderBy` direction to optimize these pagination/listing queries.
