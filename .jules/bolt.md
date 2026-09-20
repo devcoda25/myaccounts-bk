@@ -1,0 +1,3 @@
+## 2025-02-28 - [Add composite indexes for chronological queries]
+**Learning:** The database is PostgreSQL. Several models (Notification, SecurityReport, SupportTicket, Session) are queried by `userId` and sorted chronologically (e.g., `createdAt` DESC or `lastUsedAt` DESC), but only had single-field indexes on `userId` or none. This leads to in-memory sorting or inefficient index usage.
+**Action:** Add composite indexes with descending sort (e.g., `@@index([userId, createdAt(sort: Desc)])`) to these models to optimize queries and avoid expensive sorts.
