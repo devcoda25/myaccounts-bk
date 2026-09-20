@@ -274,6 +274,8 @@ model Session {
   @@index([clientId])
   @@index([expiresAt])
   @@index([userId, clientId])
+    // @performance Optimizes findActiveSessionsByUser queries by userId with descending sort
+  @@index([userId, lastUsedAt(sort: Desc)])
   @@map("sessions")
 }
 
@@ -542,6 +544,8 @@ model Notification {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+    // @performance Optimizes findAll queries by userId with descending sort
+  @@index([userId, createdAt(sort: Desc)])
   @@map("notifications")
 }
 
@@ -576,6 +580,8 @@ model SecurityReport {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+    // @performance Optimizes findUserReports queries by userId with descending sort
+  @@index([userId, createdAt(sort: Desc)])
   @@map("security_reports")
 }
 
@@ -593,5 +599,7 @@ model SupportTicket {
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+    // @performance Optimizes findUserTickets queries by userId with descending sort
+  @@index([userId, createdAt(sort: Desc)])
   @@map("support_tickets")
 }
