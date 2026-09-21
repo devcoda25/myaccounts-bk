@@ -1,0 +1,3 @@
+## 2025-02-28 - [Add Notification Composite Index]
+**Learning:** Found an unindexed frequent query pattern in notifications.service.ts where findMany queries by userId and sorts by createdAt descending. This can cause slow queries or in-memory sorts for users with many notifications.
+**Action:** Added a composite index @@index([userId, createdAt(sort: Desc)]) to the Notification model to optimize the findMany query. Always consider composite indexes for frequent query patterns involving filtering and sorting on the same model.
