@@ -576,6 +576,8 @@ model SecurityReport {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // @performance Optimizes SecurityReport queries with sorting
+  @@index([userId, createdAt(sort: Desc)])
   @@map("security_reports")
 }
 
@@ -593,5 +595,7 @@ model SupportTicket {
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+  // @performance Optimizes SupportTicket queries with sorting
+  @@index([userId, createdAt(sort: Desc)])
   @@map("support_tickets")
 }
