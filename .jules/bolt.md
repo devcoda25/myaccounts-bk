@@ -1,0 +1,3 @@
+## 2025-02-27 - Composite Indexes for Chronological Queries
+**Learning:** Models like Notification, SecurityReport, and SupportTicket are frequently queried by userId and sorted chronologically by createdAt (desc). Without composite indexes, the database must perform expensive in-memory sorts for these queries.
+**Action:** Add composite indexes using `@@index([userId, createdAt(sort: Desc)])` to optimize these specific findMany queries and avoid missing descending sort directives.
