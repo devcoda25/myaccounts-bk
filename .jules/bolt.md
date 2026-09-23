@@ -1,0 +1,3 @@
+## 2026-09-23 - [Optimizing Parental Queries]
+**Learning:** The `ParentalActivity`, `ParentalApproval`, and `ChildProfile` models are frequently queried by `childId` or `parentId` and sorted chronologically (descending). Without composite indexes, the database must retrieve all matching records and sort them in memory, which is inefficient for large datasets.
+**Action:** Add composite indexes with explicit sort directions (e.g., `@@index([childId, at(sort: Desc)])`) directly in `prisma/schema.prisma` and generate the corresponding SQL migration to push these indexes to the production database.
