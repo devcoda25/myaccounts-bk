@@ -1,0 +1,3 @@
+## 2025-02-27 - [Parental Queries N+1 and Missing Indexes]
+**Learning:** Found missing indexes for ChildProfile, ParentalApproval, and ParentalActivity models, causing potential N+1 or slow query issues due to unindexed foreign keys and sorts (parentId and childId with date sorting).
+**Action:** Add composite indexes on the foreign key and sort column (sort: Desc) for queries identified in the repositories.
