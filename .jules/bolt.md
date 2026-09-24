@@ -1,0 +1,3 @@
+## 2025-02-27 - [Missing Database Indexes on Frequently Queried Fields]
+ **Learning:** The ParentalActivity and ParentalApproval models are frequently queried by childId and sorted by at (descending), requiring a composite index @@index([childId, at(sort: Desc)]) to optimize findManyByChildId queries. The ChildProfile model is queried by parentId and sorted by createdAt (descending), requiring @@index([parentId, createdAt(sort: Desc)]) to optimize findManyByParentId queries. These missing indexes create a performance bottleneck for list views.
+ **Action:** When models are frequently queried by a foreign key and ordered by a timestamp, always add a composite index covering both fields.
