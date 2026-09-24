@@ -1,0 +1,3 @@
+## 2025-02-27 - [Missing Descending Composite Indexes]
+**Learning:** Models like SupportTicket, SecurityReport, and Session are frequently queried by userId and sorted chronologically (descending). These queries benefit from composite descending indexes (e.g., `@@index([userId, createdAt(sort: Desc)])`).
+**Action:** Add these specific descending composite indexes to optimize chronological user queries in Postgres.
