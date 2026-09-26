@@ -1,0 +1,3 @@
+## 2025-02-28 - Chronological Index Optimization
+**Learning:** Models like `Notification`, `SecurityReport`, and `SupportTicket` are frequently queried by `userId` and sorted chronologically, but lacked composite indexes to support this access pattern.
+**Action:** Add `@@index([userId, createdAt(sort: Desc)])` to these models in `schema.prisma` and generate the corresponding SQL migration to avoid expensive in-memory sorts during findMany queries.
