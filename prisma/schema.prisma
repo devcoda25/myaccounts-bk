@@ -542,6 +542,9 @@ model Notification {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // @performance Optimizes finding and sorting notifications by user
+  @@index([userId, createdAt(sort: Desc)])
+
   @@map("notifications")
 }
 
@@ -576,6 +579,9 @@ model SecurityReport {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // @performance Optimizes finding and sorting security reports by user
+  @@index([userId, createdAt(sort: Desc)])
+
   @@map("security_reports")
 }
 
@@ -592,6 +598,9 @@ model SupportTicket {
   updatedAt   DateTime @updatedAt
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // @performance Optimizes finding and sorting support tickets by user
+  @@index([userId, createdAt(sort: Desc)])
 
   @@map("support_tickets")
 }
