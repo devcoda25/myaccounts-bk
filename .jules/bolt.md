@@ -1,0 +1,3 @@
+## 2025-02-27 - Added composite indexes for Parental Control queries
+ **Learning:** The Parental Control models (ChildProfile, ParentalApproval, ParentalActivity) are frequently queried by their parent or child ID and sorted chronologically (createdAt, at). Without composite indexes, these queries require expensive in-memory sorts.
+ **Action:** Added composite indexes with explicit sort directions (e.g., `@@index([childId, at(sort: Desc)])`) to Prisma schema to optimize these findMany queries at the database level, and manually generated the corresponding SQL migration.
