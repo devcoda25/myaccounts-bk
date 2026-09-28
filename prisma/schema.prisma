@@ -451,6 +451,8 @@ model ChildProfile {
   updatedAt DateTime @updatedAt
 
   @@index([apps], type: Gin)
+  // @performance Optimizes findManyByParentId with sorting
+  @@index([parentId, createdAt(sort: Desc)])
   @@map("parental_child_profiles")
 }
 
