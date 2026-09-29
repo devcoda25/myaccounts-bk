@@ -1,0 +1,3 @@
+## 2025-02-27 - Optimize findMany queries for notifications, security reports, and support tickets by adding chronological sorting index
+**Learning:** Models like `Notification`, `SecurityReport`, and `SupportTicket` are frequently queried by `userId` and sorted by `createdAt` descending. Without a composite index, these queries can cause expensive in-memory sorts.
+**Action:** Always add composite indexes like `@@index([userId, createdAt(sort: Desc)])` for models frequently queried by user ID and sorted chronologically.
