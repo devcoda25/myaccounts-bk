@@ -1,0 +1,3 @@
+## 2025-02-27 - [Composite Indexes for User Queries]
+**Learning:** Models frequently queried by `userId` and sorted chronologically (e.g., Notification, SecurityReport, SupportTicket) require composite indexes like `@@index([userId, createdAt(sort: Desc)])` to optimize findMany queries and avoid expensive in-memory sorts.
+**Action:** Add composite indexes on `userId` and `createdAt` with a descending sort for tables frequently queried in this pattern.
