@@ -1,0 +1,3 @@
+## 2025-02-27 - [Missing composite indexes for notification/support queries]
+**Learning:** Models like Notification, SecurityReport, and SupportTicket are frequently queried by userId and sorted by createdAt (descending). Without a composite index, the database must perform expensive in-memory sorts for pagination/list queries.
+**Action:** Add composite indexes on [userId, createdAt(sort: Desc)] for models frequently queried by user and sorted chronologically.
