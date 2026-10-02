@@ -1,0 +1,3 @@
+## 2025-02-27 - [Missing Parental Composite Indexes]
+**Learning:** The `ChildProfile`, `ParentalApproval`, and `ParentalActivity` models are frequently queried by their parent entity (`parentId` or `childId`) and sorted by descending date (`createdAt` or `at`), but lack composite indexes, leading to expensive in-memory sorts.
+**Action:** Add `@@index([foreignKey, dateField(sort: Desc)])` to optimize these `findMany` operations and avoid unnecessary database overhead.
