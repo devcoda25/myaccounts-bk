@@ -523,6 +523,8 @@ model ParentalActivity {
 
   child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
 
+  // @performance Optimizes findManyByChildId with sorting
+  @@index([childId, at(sort: Desc)])
   @@map("parental_activities")
 }
 
