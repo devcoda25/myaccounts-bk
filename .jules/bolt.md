@@ -1,0 +1,3 @@
+## 2025-02-27 - Composite Indexes for Chronological Queries
+**Learning:** The `ParentalActivity`, `ParentalApproval`, and `ChildProfile` models are frequently queried by their parent foreign keys (`childId` / `parentId`) and ordered chronologically (`at` / `createdAt` descending). Without composite indexes specifying the sort direction `(sort: Desc)`, the database must perform expensive in-memory sorts for every fetch.
+**Action:** Always add composite indexes (e.g., `@@index([childId, at(sort: Desc)])`) on frequently filtered and sorted fields in Prisma to enable index-only scans and prevent performance degradation on large tables.
