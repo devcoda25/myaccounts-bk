@@ -1,0 +1,3 @@
+## 2025-02-27 - [Support and Security FindMany Optimization]
+**Learning:** Models like SupportTicket and SecurityReport often experience heavy reads by `userId` while also requiring sorting chronologically `createdAt` descending. Without a composite index, this causes the database to perform an in-memory sort after the index seek. Adding `@@index([userId, createdAt(sort: Desc)])` effectively pushes the sort to the index, skipping sorting during execution.
+**Action:** Always consider the sort direction `(sort: Desc)` in composite index declarations matching query structures using `orderBy: { createdAt: 'desc' }`.
