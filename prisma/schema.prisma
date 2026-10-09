@@ -542,6 +542,8 @@ model Notification {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // @performance Optimizes findAll queries by user with chronological sorting
+  @@index([userId, createdAt(sort: Desc)])
   @@map("notifications")
 }
 
@@ -576,6 +578,8 @@ model SecurityReport {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // @performance Optimizes findUserReports queries by user with chronological sorting
+  @@index([userId, createdAt(sort: Desc)])
   @@map("security_reports")
 }
 
@@ -593,5 +597,7 @@ model SupportTicket {
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+  // @performance Optimizes findUserTickets queries by user with chronological sorting
+  @@index([userId, createdAt(sort: Desc)])
   @@map("support_tickets")
 }
