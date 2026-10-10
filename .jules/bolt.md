@@ -1,0 +1,3 @@
+## 2025-02-27 - [Prisma Missing Sort Direction in Composite Indexes]
+ **Learning:** When adding performance-related composite indexes to `prisma/schema.prisma` that correspond to descending SQL indexes, explicitly declare the sort direction using `(sort: Desc)` (e.g., `@@index([childId, at(sort: Desc)])`). Omitting this defaults to ascending (`ASC`), causing schema drift between Prisma and the database.
+ **Action:** Always explicitly define the sort direction for composite indexes in `prisma/schema.prisma` when the query requires descending order.
