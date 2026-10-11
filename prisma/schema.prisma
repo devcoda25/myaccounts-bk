@@ -274,6 +274,8 @@ model Session {
   @@index([clientId])
   @@index([expiresAt])
   @@index([userId, clientId])
+  // @performance Optimizes active session queries filtered by expiration
+  @@index([userId, expiresAt(sort: Desc)])
   @@map("sessions")
 }
 
