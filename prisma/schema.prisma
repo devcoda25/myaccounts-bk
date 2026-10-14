@@ -542,6 +542,9 @@ model Notification {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // @performance Optimizes findMany queries by userId sorted by createdAt desc
+  @@index([userId, createdAt(sort: Desc)])
+
   @@map("notifications")
 }
 
