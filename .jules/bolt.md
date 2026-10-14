@@ -1,0 +1,3 @@
+## 2025-02-27 - Added Missing Composite Indexes for findMany Queries
+**Learning:** Models frequently queried by `userId` and sorted chronologically (e.g., `Session`, `Notification`, `SecurityReport`, `SupportTicket`) require composite indexes to optimize `findMany` queries and avoid expensive in-memory sorts.
+**Action:** Always add composite indexes like `@@index([userId, createdAt(sort: Desc)])` or `@@index([userId, lastUsedAt(sort: Desc)])` for models queried by user and sorted.
