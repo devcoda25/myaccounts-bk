@@ -1,0 +1,3 @@
+## 2025-02-27 - Composite Indexing for Prisma Sorting
+**Learning:** Models frequently queried by userId and sorted chronologically require composite indexes with explicit sort directions like @@index([userId, lastUsedAt(sort: Desc)]) to optimize findMany queries and avoid expensive in-memory sorts.
+**Action:** Always add explicit sort directions to composite indexes when Prisma queries involve sorting.
