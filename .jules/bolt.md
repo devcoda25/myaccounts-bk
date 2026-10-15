@@ -1,0 +1,3 @@
+## 2025-02-27 - [Add composite indexes to models to optimize sequential reads]
+**Learning:** The models `SupportTicket`, `SecurityReport`, `Notification` and `Session` are frequently queried by their `userId` and sorted by `createdAt` or `lastUsedAt` timestamp in the `desc` order by their repository functions (e.g. Session queries or SupportTicket queries). As this is a common pattern, applying the indexes directly to the database layer reduces overall overheads by not maintaining a sort structure in the backend memory per each query.
+**Action:** Use composite indexes with the descending order sorting structure over the date/timestamp fields directly in the Prisma schema for all associated models.
