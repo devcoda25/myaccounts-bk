@@ -450,6 +450,8 @@ model ChildProfile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // @performance Adding index on parentId to speed up guardian-related lookups
+  @@index([parentId])
   @@index([apps], type: Gin)
   @@map("parental_child_profiles")
 }
