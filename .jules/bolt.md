@@ -1,0 +1,3 @@
+## 2023-10-19 - Missing Index on parentId in ChildProfile
+**Learning:** The database model `ChildProfile` frequently queries by `parentId` as seen in `ChildProfileRepository.findManyByParentId`, `ParentalActivityRepository.findManyByOwner`, and `ParentalApprovalRepository.findPendingByOwner`. However, the `parentId` field lacks a database index, causing a performance bottleneck on these lookup queries, especially for large datasets. This type of bottleneck is common and represents a simple, scalable optimization.
+**Action:** Add `@@index([parentId])` to the `ChildProfile` model in `prisma/schema.prisma` to improve query performance for guardian-related lookups.
