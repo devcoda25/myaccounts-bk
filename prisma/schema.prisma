@@ -142,6 +142,8 @@ model UserCredential {
   user User @relation(fields: [userId], references: [id])
 
   @@unique([providerType, providerId])
+  // @performance Adds index on userId to speed up passkey and other credential lookups (O(log N) instead of O(N)).
+  @@index([userId])
   @@map("user_credentials")
 }
 
