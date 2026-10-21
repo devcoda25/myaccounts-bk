@@ -1,0 +1,3 @@
+## 2026-10-21 - [Missing Index on OidcPayload userCode]
+**Learning:** The OidcPayload model lacked an index on userCode, which is heavily queried via findFirst during the OIDC device code flow, leading to O(N) sequential scans as the payload table grows.
+**Action:** Always ensure that fields used in lookup methods (like findByUserCode in custom adapters) have a dedicated database index to maintain O(1) B-tree lookup performance.

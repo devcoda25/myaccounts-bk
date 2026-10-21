@@ -561,6 +561,7 @@ model OidcPayload {
   @@index([type])
   @@index([grantId])
   @@index([uid])
+  @@index([userCode]) // @performance Optimizes device flow code lookups in findByUserCode
 }
 
 model SecurityReport {
