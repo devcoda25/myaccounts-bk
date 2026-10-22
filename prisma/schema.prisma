@@ -542,6 +542,10 @@ model Notification {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  // @performance Added index to optimize markAllAsRead by userId and read status
+  @@index([userId, read])
+  @@index([userId, createdAt(sort: Desc)])
+
   @@map("notifications")
 }
 
