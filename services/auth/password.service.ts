@@ -43,13 +43,9 @@ export class PasswordService {
         const hash = await argon2.hash(newPass);
         await this.userUpdateRepo.updatePassword(userId, hash);
 
+        // @performance Replaced N+1 deleteSession loop with a single deleteMany query to reduce DB roundtrips
         if (logoutOthers && currentSessionId) {
-            const sessions = await this.sessionRepo.findActiveSessionsByUser(userId);
-            for (const s of sessions) {
-                if (s.id !== currentSessionId) {
-                    await this.sessionRepo.deleteSession(s.id);
-                }
-            }
+            await this.sessionRepo.deleteOtherSessions(userId, currentSessionId);
         }
 
         return { success: true };
