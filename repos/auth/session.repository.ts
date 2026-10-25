@@ -41,6 +41,15 @@ export class SessionRepository {
         });
     }
 
+    async deleteOtherSessions(userId: string, currentSessionId: string): Promise<any> {
+        return this.prisma.session.deleteMany({
+            where: {
+                userId,
+                id: { not: currentSessionId }
+            },
+        });
+    }
+
     async findActiveSessionsByUser(userId: string) {
         return this.prisma.session.findMany({
             where: {
