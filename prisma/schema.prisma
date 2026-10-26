@@ -450,6 +450,7 @@ model ChildProfile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([parentId]) // @performance Prevents full table scan on guardian queries
   @@index([apps], type: Gin)
   @@map("parental_child_profiles")
 }
@@ -487,6 +488,8 @@ model HouseholdMember {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([householdId]) // @performance Speeds up household member resolution
+  @@index([userId]) // @performance Speeds up user household lookups
   @@map("parental_household_members")
 }
 
@@ -510,6 +513,7 @@ model ParentalApproval {
 
   child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
 
+  @@index([childId]) // @performance Optimizes frequent child approval lookups
   @@map("parental_approvals")
 }
 
