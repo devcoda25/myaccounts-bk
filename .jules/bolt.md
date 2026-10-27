@@ -1,0 +1,3 @@
+## 2026-10-27 - [Database Missing Index on Foreign Keys]
+**Learning:** The `ChildProfile` model in `prisma/schema.prisma` has a `parentId` field referencing `User` and an `inviteCode` field that's unique. However, `parentId` does not have an index, which can cause full table scans when looking up children for a guardian. The same issue exists for `HouseholdMember` (`householdId`, `userId`), `ParentalApproval` (`childId`), and `ParentalActivity` (`childId`).
+**Action:** Always add `@@index` to foreign key fields manually in Prisma to prevent N+1 and full table scan performance bottlenecks, especially in parental control or relation-heavy models.
