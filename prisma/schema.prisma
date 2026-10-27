@@ -451,6 +451,8 @@ model ChildProfile {
   updatedAt DateTime @updatedAt
 
   @@index([apps], type: Gin)
+  // @performance Index foreign key to prevent full table scans on parent lookups
+  @@index([parentId])
   @@map("parental_child_profiles")
 }
 
@@ -487,6 +489,9 @@ model HouseholdMember {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // @performance Index foreign keys to prevent full table scans on household member lookups
+  @@index([householdId])
+  @@index([userId])
   @@map("parental_household_members")
 }
 
@@ -510,6 +515,8 @@ model ParentalApproval {
 
   child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
 
+  // @performance Index foreign key to prevent full table scans on approval lookups
+  @@index([childId])
   @@map("parental_approvals")
 }
 
@@ -523,6 +530,8 @@ model ParentalActivity {
 
   child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
 
+  // @performance Index foreign key to prevent full table scans on activity lookups
+  @@index([childId])
   @@map("parental_activities")
 }
 
