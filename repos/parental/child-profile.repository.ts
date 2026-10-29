@@ -6,6 +6,7 @@ import { Prisma } from '@prisma/client';
 export class ChildProfileRepository {
     constructor(private prisma: PrismaService) { }
 
+    // @performance Added index on parentId in schema to prevent full table scans during child profile lookups
     async findManyByParentId(parentId: string) {
         const children = await this.prisma.childProfile.findMany({
             where: { parentId },

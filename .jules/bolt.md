@@ -1,0 +1,3 @@
+## 2024-10-29 - [Missing Index on Foreign Key parentId]
+**Learning:** The ChildProfile model in Prisma uses 'parentId' as a foreign key to the User model, but lacks an explicit index for it. In PostgreSQL, foreign keys are not automatically indexed by Prisma, leading to full table scans when querying children by their parent. This was identified by observing missing index declarations in the '@@map("parental_child_profiles")' block.
+**Action:** Add an explicit '@@index([parentId])' to the 'ChildProfile' model in schema.prisma and create a corresponding raw SQL migration for the database to optimize parent-child queries and avoid full table scans.
