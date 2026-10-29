@@ -451,6 +451,7 @@ model ChildProfile {
   updatedAt DateTime @updatedAt
 
   @@index([apps], type: Gin)
+  @@index([parentId])
   @@map("parental_child_profiles")
 }
 
