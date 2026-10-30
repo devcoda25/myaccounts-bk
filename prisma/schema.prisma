@@ -451,6 +451,7 @@ model ChildProfile {
   updatedAt DateTime @updatedAt
 
   @@index([apps], type: Gin)
+  @@index([parentId])
   @@map("parental_child_profiles")
 }
 
@@ -487,6 +488,7 @@ model HouseholdMember {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([householdId])
   @@map("parental_household_members")
 }
 
@@ -510,6 +512,7 @@ model ParentalApproval {
 
   child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
 
+  @@index([childId])
   @@map("parental_approvals")
 }
 
@@ -523,6 +526,7 @@ model ParentalActivity {
 
   child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
 
+  @@index([childId])
   @@map("parental_activities")
 }
 
