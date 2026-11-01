@@ -135,17 +135,12 @@ export class SessionManagementService {
         }
 
         // Get count before deletion for response
-        const sessionsToDelete = await this.prisma.session.findMany({
-            where: whereClause,
-            select: { id: true },
-        });
-
-        // Delete all matching sessions
-        await this.prisma.session.deleteMany({
+        // @performance Replaced findMany() + deleteMany() with a single deleteMany() operation to avoid redundant query.
+        const result = await this.prisma.session.deleteMany({
             where: whereClause,
         });
 
-        return { revokedCount: sessionsToDelete.length };
+        return { revokedCount: result.count };
     }
 
     /**
