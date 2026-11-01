@@ -1,0 +1,3 @@
+## 2024-11-01 - Avoid Redundant Session Lookups during Revocation
+**Learning:** The session revocation functionality in `services/auth/session-management.service.ts` performs a redundant `findMany` query immediately before a `deleteMany` query using the exact same where clause, solely to count the number of sessions deleted. Since Prisma's `deleteMany` natively returns the count of deleted records, the `findMany` call can be safely removed to cut database load in half for this frequent operation.
+**Action:** Replaced the `findMany()` and subsequent `deleteMany()` with a single `deleteMany()` operation, utilizing its return value for the revocation count.
