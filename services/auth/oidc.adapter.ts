@@ -95,6 +95,7 @@ export class PrismaOidcAdapter implements Provider.Adapter {
         return doc.payload as Provider.AdapterPayload;
     }
 
+    // @performance Added index on userCode field to optimize OIDC interactions
     async findByUserCode(userCode: string): Promise<Provider.AdapterPayload | undefined> {
         const doc = await PrismaOidcAdapter.prisma.oidcPayload.findFirst({
             where: { userCode },

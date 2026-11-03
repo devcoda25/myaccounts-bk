@@ -560,6 +560,7 @@ model OidcPayload {
   
   @@index([type])
   @@index([grantId])
+  @@index([userCode])
   @@index([uid])
 }
 
