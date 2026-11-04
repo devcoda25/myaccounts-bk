@@ -339,12 +339,8 @@ export class SecurityController {
         @CurrentUser() user: AuthRequest['user'],
         @Ip() ip: string
     ) {
-        const sessions = await this.sessionRepo.findActiveSessionsByUser(user.id);
-
         // Revoke all sessions
-        for (const s of sessions) {
-            await this.sessionRepo.deleteSession(s.id);
-        }
+        await this.sessionRepo.deleteUserSessions(user.id);
 
         // Log the action
         await this.service.logSecurityEvent(user.id, 'ALL_DEVICES_REVOKED', ip, {
