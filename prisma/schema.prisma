@@ -561,6 +561,7 @@ model OidcPayload {
   @@index([type])
   @@index([grantId])
   @@index([uid])
+  @@index([userCode])
 }
 
 model SecurityReport {
