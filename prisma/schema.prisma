@@ -558,6 +558,7 @@ model OidcPayload {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
+  @@index([userCode])
   @@index([type])
   @@index([grantId])
   @@index([uid])
