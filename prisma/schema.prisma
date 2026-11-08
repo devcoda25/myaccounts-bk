@@ -451,6 +451,8 @@ model ChildProfile {
   updatedAt DateTime @updatedAt
 
   @@index([apps], type: Gin)
+  // ⚡ Bolt: Index added to prevent full table scans on parent-child lookups
+  @@index([parentId])
   @@map("parental_child_profiles")
 }
 
@@ -487,6 +489,8 @@ model HouseholdMember {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // ⚡ Bolt: Index added to prevent full table scans on household-member lookups
+  @@index([householdId])
   @@map("parental_household_members")
 }
 
@@ -510,6 +514,8 @@ model ParentalApproval {
 
   child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
 
+  // ⚡ Bolt: Index added to prevent full table scans on child-approval lookups
+  @@index([childId])
   @@map("parental_approvals")
 }
 
@@ -523,6 +529,8 @@ model ParentalActivity {
 
   child ChildProfile @relation(fields: [childId], references: [id], onDelete: Cascade)
 
+  // ⚡ Bolt: Index added to prevent full table scans on child-activity lookups
+  @@index([childId])
   @@map("parental_activities")
 }
 
