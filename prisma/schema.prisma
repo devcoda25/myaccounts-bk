@@ -561,6 +561,8 @@ model OidcPayload {
   @@index([type])
   @@index([grantId])
   @@index([uid])
+  /// Index added to optimize device code lookup performance
+  @@index([userCode])
 }
 
 model SecurityReport {
