@@ -561,6 +561,7 @@ model OidcPayload {
   @@index([type])
   @@index([grantId])
   @@index([uid])
+  @@index([userCode]) // ⚡ Bolt: Added index to prevent O(n) table scans on OIDC payload queries
 }
 
 model SecurityReport {
